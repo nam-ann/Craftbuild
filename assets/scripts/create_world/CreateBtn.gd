@@ -1,7 +1,7 @@
 extends Button
 
 func _ready() -> void:
-	pressed.connect(_on_pressed)
+	button_up.connect(_on_pressed)
 	var dir = DirAccess.open(Global.world_saves)
 	if dir == null: return
 		

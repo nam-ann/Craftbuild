@@ -117,7 +117,7 @@ grow_horizontal = 2
 grow_vertical = 0
 
 [node name="Sun" type="Sun" parent="." unique_id=954182571]
-transform = Transform3D(0.73168886, 0.48817942, -0.47572276, 0, 0.69791025, 0.71618503, 0.6816388, -0.52402455, 0.5106532, 0, 0, 0)
+transform = Transform3D(0.73168886, 0.48862848, -0.47526148, 0, 0.6972336, 0.7168438, 0.6816388, -0.5245065, 0.5101581, 0, 0, 0)
 light_color = Color(1, 0.93, 0.78, 1)
 light_energy = 1.2
 light_indirect_energy = 0.55

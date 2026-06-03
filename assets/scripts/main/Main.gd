@@ -11,11 +11,11 @@ var chat_history = [""]
 var current_history = 0
 
 func _ready() -> void:
-	set_seed_and_world_name(Global.world_seed, Global.world_name)
-	set_render_distance(int(Global.render_distance))
 	chat_output.connect(_on_chat_output)
 	chat_box.visible = false
 	init()
+	set_seed_and_world_name(Global.world_seed, Global.world_name)
+	set_render_distance(int(Global.render_distance))
 
 func _input(_event):
 	if Input.is_action_just_pressed("enter"):
@@ -33,7 +33,7 @@ func _input(_event):
 			if current_history <= 0: return
 			current_history -= 1
 		chat_box.text = chat_history[current_history]
-		chat_box.set_caret_column(len(chat_history[current_history]) - 1)
+		chat_box.set_caret_column(len(chat_history[current_history]))
 	
 	if Input.is_action_just_pressed("open_chat") and not pausing:
 		if chat_box.visible: return
