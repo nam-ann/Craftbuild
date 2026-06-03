@@ -8,6 +8,7 @@ module;
 #undef ERROR
 
 #include <includes.hpp>
+#include <mutex>
 
 export module game.network;
 
@@ -25,22 +26,55 @@ export namespace craftbuild {
 
     struct SendQueue {
         std::vector<Message> msg;
+        mutable std::mutex msg_mutex;
 
         none store(const Message& message) {
+            std::lock_guard lock(msg_mutex);
             msg.push_back(message);
         }
 
         none send(SOCKET socket) {
-			for (const auto& message : msg) {
+            std::vector<Message> send_msg;
+
+            {
+                std::lock_guard lock(msg_mutex);
+                msg.swap(send_msg);
+            }
+
+			for (const auto& message : send_msg) {
                 std::string arg = message.content.std_str() + '\2';
-				for (const auto& E : message.arguments) arg += E + '\1';
-				uint64 arg_size = arg.size();
-				::send(socket, reinterpret_cast<char*>(&arg_size), sizeof(uint64), 0);
-				if (::send(socket, arg.data(), arg.size(), 0) == SOCKET_ERROR) {
-					log<LogType::ERROR>(format{} << "Failed to send message: " << message.content);
-				}
+                for (const auto& E : message.arguments) arg += E + '\1';
+
+                uint64 arg_size = arg.size();
+
+                const char* header_ptr = reinterpret_cast<const char*>(&arg_size);
+                int total_header_sent = 0;
+                while (total_header_sent < sizeof(uint64)) {
+                    int sent = ::send(socket, header_ptr + total_header_sent, sizeof(uint64) - total_header_sent, 0);
+                    if (sent == SOCKET_ERROR) {
+                        if (WSAGetLastError() == WSAEWOULDBLOCK) {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                            continue;
+                        }
+                        break;
+                    }
+                    total_header_sent += sent;
+                }
+
+                int total_payload_sent = 0;
+                while (total_payload_sent < arg.size()) {
+                    int sent = ::send(socket, arg.data() + total_payload_sent, arg.size() - total_payload_sent, 0);
+                    if (sent == SOCKET_ERROR) {
+                        if (WSAGetLastError() == WSAEWOULDBLOCK) {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                            continue;
+                        }
+                        log<LogType::ERROR>(format{} << "Failed to send message: " << message.content);
+                        break;
+                    }
+                    total_payload_sent += sent;
+                }
 			}
-			msg.clear();
         }
     };
 
@@ -62,9 +96,7 @@ export namespace craftbuild {
 
         ReceiveState receive(SOCKET socket, List<char>& out_data) {
             if (current_state == State::READING_HEADER) {
-                if (len(buffer) < sizeof(uint64_t)) {
-                    buffer.archive(sizeof(uint64_t));
-                }
+                if (len(buffer) < sizeof(uint64_t)) buffer.resize(sizeof(uint64_t));
 
                 int r = recv(socket, buffer.c_ptr() + current_offset, sizeof(uint64_t) - current_offset, 0);
 
@@ -79,7 +111,11 @@ export namespace craftbuild {
                     }
                 }
                 else if (r == 0) return ReceiveState::ERROR;
-                else return ReceiveState::WAITING;
+                else {
+                    int err = WSAGetLastError();
+                    if (err == WSAEWOULDBLOCK) return ReceiveState::WAITING;
+                    return ReceiveState::ERROR;
+                }
             }
 
             if (current_state == State::READING_PAYLOAD) {
@@ -100,7 +136,11 @@ export namespace craftbuild {
                     }
                 }
                 else if (r == 0) return ReceiveState::ERROR;
-                else return ReceiveState::WAITING;
+                else {
+                    int err = WSAGetLastError();
+                    if (err == WSAEWOULDBLOCK) return ReceiveState::WAITING;
+                    return ReceiveState::ERROR;
+                }
             }
 
             return ReceiveState::WAITING;

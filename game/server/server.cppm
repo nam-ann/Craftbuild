@@ -100,6 +100,11 @@ export namespace craftbuild {
         friend none craftbuild_mod_main();
 	};
 
+    struct Client {
+        SendQueue send_queue;
+        Str name;
+    };
+
     class Server : public Node {
         GDCLASS(Server, Node)
 
@@ -108,8 +113,7 @@ export namespace craftbuild {
         sockaddr_in server_addr{};
         TCPServer server;
         ReceiveQueue receive_queue;
-		Dict<SOCKET, SendQueue> clients;
-        Dict<SOCKET, Str> player_names;
+		Dict<SOCKET, Client> clients;
 
     public:
         none _ready() override {
@@ -145,7 +149,12 @@ export namespace craftbuild {
             }
 
             u_long mode = 1;
-            ioctlsocket(server_socket, FIONBIO, &mode);
+            if (ioctlsocket(server_socket, FIONBIO, &mode) != 0) {
+                log<LogType::ERROR>("Failed to set socket to non-blocking mode");
+                closesocket(server_socket);
+                WSACleanup();
+                return;
+            }
 
             log<LogType::INFO>("TCP Server listening on port 8888...");
         }
@@ -158,17 +167,24 @@ export namespace craftbuild {
                 int client_len = sizeof(client_addr);
 
                 SOCKET client_socket = accept(server_socket, (sockaddr*)&client_addr, &client_len);
-                if (client_socket != INVALID_SOCKET) clients[client_socket] = SendQueue{};
+                if (client_socket != INVALID_SOCKET) {
+                    clients[client_socket];
+                    log<LogType::INFO>(format{} << "Accepted client: " << client_socket);
+                }
             }
 
 			std::vector<SOCKET> disconnected_clients;
             for (auto& [client_socket, client] : clients) {
                 const auto recv_state = receive_queue.receive(client_socket, buffer);
 
-                if (recv_state == ReceiveState::WAITING) continue;
+                if (recv_state == ReceiveState::WAITING) {
+                    client.send_queue.send(client_socket);
+                    continue;
+                }
                 if (recv_state == ReceiveState::ERROR) {
-                    server.disconnect(player_names[client_socket]);
+                    server.disconnect(client.name);
                     disconnected_clients.push_back(client_socket);
+                    log<LogType::WARNING>(format{} << "Lost connect to client: " << client_socket);
                     continue;
                 }
 
@@ -178,32 +194,33 @@ export namespace craftbuild {
                     if (message.content == "Connect") {
                         const Str& name = message.arguments[0];
                         server.connect(name);
-                        player_names[client_socket] = name;
-                        client.store({ "Connected" });
+                        client.name = name;
+                        client.send_queue.store({ "Connected" });
                     }
                     else if (message.content == "Chat") {
                         Str response = server.chat(message.arguments[0]);
-                        client.store({ "Chat response", { response.std_str() }});
+                        client.send_queue.store({ "Chat response", { response.std_str() }});
                     }
                     else if (message.content == "Get chunk data") {
                         const std::string world_data = server.serialize_chunk(std::stoi(message.arguments[0]), std::stoi(message.arguments[1]));
-                        client.store({ "Chunk data", { world_data } });
+                        if (not world_data.empty()) client.send_queue.store({ "Chunk data", { world_data } });
+                        else client.send_queue.store({ "Chunk not ready", { message.arguments[0], message.arguments[1]} });
                     }
                     else if (message.content == "Set seed and world name") {
                         int32 seed = std::stoi(message.arguments[0]);
                         Str world_name = message.arguments[1];
                         server.set_seed_and_world_name(seed, world_name);
-                        client.store({ "Set" });
+                        client.send_queue.store({ "Set" });
                     }
                     else if (message.content == "Set render distance") {
                         int32 rd = std::stoi(message.arguments[0]);
                         server.set_render_distance(rd);
-                        client.store({ "Set" });
+                        client.send_queue.store({ "Set" });
                     }
                     else if (message.content == "Set sleep time CPU") {
                         int32 stc = std::stoi(message.arguments[0]);
                         server.set_sleep_time_cpu(stc);
-                        client.store({ "Set" });
+                        client.send_queue.store({ "Set" });
                     }
                     else if (message.content == "Update player pos") {
                         Pos3D<real> pos;
@@ -211,15 +228,15 @@ export namespace craftbuild {
                         pos.y = std::stod(message.arguments[2]);
                         pos.z = std::stod(message.arguments[3]);
                         server.update(message.arguments[0], pos);
-                        client.store({ "Updated" });
+                        client.send_queue.store({ "Updated" });
                     }
                 }
                 catch (const std::exception& e) {
                     log<LogType::ERROR>(format{} << "Error processing message: " << e.what());
-                    client.store({ "Error" });
+                    client.send_queue.store({ "Error" });
                 }
 
-                client.send(client_socket);
+                client.send_queue.send(client_socket);
             }
 
 			for (const auto& client : disconnected_clients) {

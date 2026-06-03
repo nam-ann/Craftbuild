@@ -112,9 +112,9 @@ namespace craftbuild {
         setup_voxel_material();
 
         if (multiplayer) {
+            start_network_thread();
             log<LogType::INFO>("Connecting to server...");
             send_queue.store({ "Connect", { player_name.std_str() } });
-            start_network_thread();
         }
         else {
 			log<LogType::INFO>("Starting server...");
@@ -336,16 +336,25 @@ void fragment() {
             }
 
             u_long mode = 1;
-            ioctlsocket(client_socket, FIONBIO, &mode);
+            if (ioctlsocket(client_socket, FIONBIO, &mode) != 0) {
+                log<LogType::ERROR>("Failed to set socket to non-blocking mode");
+                closesocket(client_socket);
+                WSACleanup();
+                return;
+            }
 
             while (running.load(std::memory_order_relaxed)) {
                 send_queue.send(client_socket);
                 List<char> buffer;
 
                 const auto recv_state = receive_queue.receive(client_socket, buffer);
-                if (recv_state == ReceiveState::WAITING) continue;
+                if (recv_state == ReceiveState::WAITING) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    continue;
+                }
                 if (recv_state == ReceiveState::ERROR) {
                     log<LogType::ERROR>("recv failed");
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
                     continue;
                 }
 
@@ -386,7 +395,7 @@ void fragment() {
                     std::string world_data((const char*)decompressed_pba.ptr(), decompressed_pba.size());
                     std::stringstream is(world_data);
 
-                    Pos3D<int> pos{};
+                    Pos3D<int32> pos{};
                     is.read(reinterpret_cast<byte*>(&pos.x), sizeof(int32));
                     is.read(reinterpret_cast<byte*>(&pos.z), sizeof(int32));
 
@@ -457,8 +466,17 @@ void fragment() {
 
 						if (name == player_name) break;
                     }
+
+                    {
+                        std::lock_guard lock(requested_chunks_mutex);
+                        requested_chunks.erase({ pos.x, 0, pos.z });
+                    }
 				}
-				else if (message.content == "Chat response") emit_signal("chat_output", message.arguments[0].c_str());
+                else if (message.content == "Chunk not ready") {
+                    std::lock_guard lock(requested_chunks_mutex);
+                    requested_chunks.erase({ std::stoi(message.arguments[0]), 0, std::stoi(message.arguments[1]) });
+                }
+				else if (message.content == "Chat response") call_deferred("emit_signal", "chat_output", message.arguments[0].c_str());
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
@@ -503,8 +521,15 @@ void fragment() {
 
                     Ptr<Chunk> chunk;
                     if (multiplayer) {
+                        {
+                            std::lock_guard lock(requested_chunks_mutex);
+                            if (requested_chunks.contains({ chunk_pos.x, 0, chunk_pos.z })) {
+                                continue;
+                            }
+                            requested_chunks.insert({ chunk_pos.x, 0, chunk_pos.z });
+                        }
                         send_queue.store({ "Get chunk data", { std::to_string(chunk_pos.x), std::to_string(chunk_pos.z) } });
-                        auto chunk = get_chunk(chunk_pos.x, chunk_pos.z);
+                        chunk = get_chunk(chunk_pos.x, chunk_pos.z);
                     }
                     else chunk = server.value().get_chunk(chunk_pos.x, chunk_pos.z);
                     if (not chunk) continue;

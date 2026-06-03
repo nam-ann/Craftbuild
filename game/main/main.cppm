@@ -50,6 +50,9 @@ export namespace craftbuild {
         Dict<Pos3D<int32>, Ptr<Chunk>> chunks;
         mutable std::shared_mutex chunks_mutex;
 
+        std::unordered_set<Pos3D<int32>, Hasher<Pos3D<int32>>> requested_chunks;
+        std::mutex requested_chunks_mutex;
+
         Ref<ShaderMaterial> world_material;
         std::atomic<int32> world_seed = 0;
         Str world_name = "My World";
