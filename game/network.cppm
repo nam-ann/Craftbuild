@@ -12,6 +12,7 @@ module;
 export module game.network;
 
 import misc.str;
+import misc.list;
 import misc.number;
 import misc.format;
 import game.logger;
@@ -43,42 +44,99 @@ export namespace craftbuild {
         }
     };
 
-	bool receive(SOCKET socket, char* data, uint64& size) {
-		int r = recv(socket, reinterpret_cast<char*>(&size), sizeof(uint64), 0);
-		if (r <= 0) return false;
+    enum class ReceiveState {
+        COMPLETE,
+        WAITING,
+        ERROR
+    };
+    struct ReceiveQueue {
+        enum class State {
+            READING_HEADER,
+            READING_PAYLOAD
+        };
 
-		uint64 received = 0;
-		while (received < size) {
-			int r = recv(socket, data + received, size - received, 0);
-			if (r <= 0) return false;
-			received += r;
-		}
+        State current_state = State::READING_HEADER;
+        uint64_t expected_size = 0;
+        size_t current_offset = 0;
+        List<char> buffer;
 
-		return true;
-	}
+        ReceiveState receive(SOCKET socket, List<char>& out_data) {
+            if (current_state == State::READING_HEADER) {
+                if (len(buffer) < sizeof(uint64_t)) {
+                    buffer.archive(sizeof(uint64_t));
+                }
 
-	Message parse(const char* buffer, size len) {
-		std::string str(buffer, len);
+                int r = recv(socket, buffer.c_ptr() + current_offset, sizeof(uint64_t) - current_offset, 0);
 
-		size pos = str.find('\2');
-		if (pos == std::string::npos) return { Str(str), {} };
+                if (r > 0) {
+                    current_offset += r;
+                    if (current_offset == sizeof(uint64_t)) {
+                        expected_size = *reinterpret_cast<uint64_t*>(buffer.c_ptr());
+                        current_state = State::READING_PAYLOAD;
+                        current_offset = 0;
 
-		Message message;
-		message.content = Str(str.substr(0, pos));
+                        buffer.resize(expected_size);
+                    }
+                }
+                else if (r == 0) return ReceiveState::ERROR;
+                else return ReceiveState::WAITING;
+            }
 
-		std::string args_str = str.substr(pos + 1);
-		size start = 0;
+            if (current_state == State::READING_PAYLOAD) {
+                if (expected_size == 0) {
+                    out_data.clear();
+                    reset_state();
+                    return ReceiveState::COMPLETE;
+                }
 
-		while (true) {
-			size end = args_str.find('\1', start);
-			if (end == std::string::npos) {
-				message.arguments.push_back(args_str.substr(start));
-				break;
-			}
-			message.arguments.push_back(args_str.substr(start, end - start));
-			start = end + 1;
-		}
+                int r = recv(socket, buffer.c_ptr() + current_offset, expected_size - current_offset, 0);
 
-		return message;
-	}
+                if (r > 0) {
+                    current_offset += r;
+                    if (current_offset == expected_size) {
+                        out_data = std::move(buffer);
+                        reset_state();
+                        return ReceiveState::COMPLETE;
+                    }
+                }
+                else if (r == 0) return ReceiveState::ERROR;
+                else return ReceiveState::WAITING;
+            }
+
+            return ReceiveState::WAITING;
+        }
+
+        static Message parse(List<char> buffer) {
+            std::string str(buffer, len(buffer));
+
+            size pos = str.find('\2');
+            if (pos == std::string::npos) return { Str(str), {} };
+
+            Message message;
+            message.content = Str(str.substr(0, pos));
+
+            std::string args_str = str.substr(pos + 1);
+            size start = 0;
+
+            while (true) {
+                size end = args_str.find('\1', start);
+                if (end == std::string::npos) {
+                    message.arguments.push_back(args_str.substr(start));
+                    break;
+                }
+                message.arguments.push_back(args_str.substr(start, end - start));
+                start = end + 1;
+            }
+
+            return message;
+        }
+
+    private:
+        void reset_state() {
+            current_state = State::READING_HEADER;
+            current_offset = 0;
+            expected_size = 0;
+            buffer.clear();
+        }
+	};
 }

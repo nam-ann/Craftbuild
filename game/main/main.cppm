@@ -80,6 +80,7 @@ export namespace craftbuild {
         bool multiplayer = false;
 
         SendQueue send_queue;
+        ReceiveQueue receive_queue;
 		Ptr<TCPServer> server;
 
     public:

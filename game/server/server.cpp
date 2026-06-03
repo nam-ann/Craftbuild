@@ -118,6 +118,17 @@ namespace craftbuild {
 		save_world(format{} << "user://game/saves/" << world_name << "/overworld.cbsave");
     }
 
+    none TCPServer::disconnect(const Str& player_name) {
+        std::unique_lock lock(player_mutex);
+        if (not players.contains(player_name)) {
+            log<LogType::WARNING>(format{} << "Player are not connected: " << player_name);
+            return;
+        }
+        players.erase(player_name);
+        player_names.erase(std::find(player_names.begin(), player_names.end(), player_name));
+        log<LogType::INFO>(format{} << "Player disconnected: " << player_name);
+    }
+
 	none TCPServer::connect(const Str& player_name) {
 		std::unique_lock lock(player_mutex);
 		if (players.contains(player_name)) {

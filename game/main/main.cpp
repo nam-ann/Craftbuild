@@ -339,24 +339,22 @@ void fragment() {
             ioctlsocket(client_socket, FIONBIO, &mode);
 
             while (running.load(std::memory_order_relaxed)) {
-                char buffer[65535];
-                int serverLen = sizeof(server_addr);
+                send_queue.send(client_socket);
+                List<char> buffer;
 
-                uint64 buffer_size = sizeof(buffer) - 1;
-                if (not receive(client_socket, buffer, buffer_size)) return;
-                buffer[buffer_size] = '\0';
+                const auto recv_state = receive_queue.receive(client_socket, buffer);
+                if (recv_state == ReceiveState::WAITING) continue;
+                if (recv_state == ReceiveState::ERROR) {
+                    log<LogType::ERROR>("recv failed");
+                    continue;
+                }
 
-				if (buffer_size <= 0) {
-					std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    send_queue.send(client_socket);
-					continue;
-				}
-                Message message = parse(buffer, buffer_size);
+                Message message = ReceiveQueue::parse(buffer);
 
 				if (message.content == "Chunk data") {
                     // Unzip
-                    if (buffer_size < sizeof(uint32)) {
-                        log<LogType::ERROR>(format{} << "Received chunk data is too small(" << buffer_size << "). Packet might be corrupted");
+                    if (len(buffer) < sizeof(uint32)) {
+                        log<LogType::ERROR>(format{} << "Received chunk data is too small(" << len(buffer) << "). Packet might be corrupted");
                         continue;
                     }
 
@@ -462,7 +460,6 @@ void fragment() {
 				}
 				else if (message.content == "Chat response") emit_signal("chat_output", message.arguments[0].c_str());
 
-                send_queue.send(client_socket);
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
 
