@@ -2,9 +2,9 @@ module;
 
 #include <godot_cpp/classes/marshalls.hpp>
 #include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/classes/fast_noise_lite.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/variant/packed_byte_array.hpp>
-#include <FastNoiseLite.h>
 
 #include <includes.hpp>
 #include <random>
@@ -86,9 +86,9 @@ namespace craftbuild {
 
         command_ptr = new CommandInterpreter(this);
 
-        noise = new FastNoiseLite();
-        noise.value().SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-        noise.value().SetFrequency(0.1f);
+        noise.instantiate();
+        noise->set_noise_type(FastNoiseLite::TYPE_SIMPLEX);
+        noise->set_frequency(0.02f);
         if (not load_world(format{} << "user://game/saves/" << world_name << "/overworld.cbsave")) {
             log<LogType::WARNING>("Save file not found, starting new world.");
             if (world_seed.load(std::memory_order_acquire) == 0) {
@@ -97,7 +97,7 @@ namespace craftbuild {
                 world_seed.store(distribution(generator), std::memory_order_release);
             }
         }
-        else noise.value().SetSeed(world_seed.load(std::memory_order_acquire));
+        else noise->set_seed(world_seed.load(std::memory_order_acquire));
 
         log<LogType::VERBOSE>("Assets loaded");
 
@@ -495,7 +495,7 @@ namespace craftbuild {
 
         uint32 seed = 0;
         ifs.read(reinterpret_cast<byte*>(&seed), sizeof(uint32));
-        noise.value().SetSeed(seed);
+        noise->set_seed(seed);
         world_seed.store(static_cast<int32>(seed), std::memory_order_release);
 
         uint32 chunk_count = 0;

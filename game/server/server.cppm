@@ -7,7 +7,7 @@ module;
 #undef ERROR
 
 #include <godot_cpp/classes/node.hpp>
-#include <FastNoiseLite.h>
+#include <godot_cpp/classes/fast_noise_lite.hpp>
 
 #include <includes.hpp>
 #include <string>
@@ -43,7 +43,7 @@ export namespace craftbuild {
         Dict<Pos3D<int32>, Ptr<Chunk>> chunks;
         mutable std::shared_mutex chunks_mutex;
 
-        Ptr<FastNoiseLite> noise;
+        Ref<FastNoiseLite> noise;
         std::atomic<int32> world_seed = 0;
         Str world_name = "My World";
 

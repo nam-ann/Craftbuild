@@ -1,8 +1,7 @@
 module;
 
-#include <FastNoiseLite.h>
-
 #include <godot_cpp/classes/array_mesh.hpp>
+#include <godot_cpp/classes/fast_noise_lite.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 
 #include <includes.hpp>
@@ -107,10 +106,10 @@ export namespace craftbuild {
             };
         }
 
-        static Biome select_biome_at(int32 wx, int32 wz, Ptr<FastNoiseLite> noise, size biome_count) {
+        static Biome select_biome_at(int32 wx, int32 wz, Ref<FastNoiseLite> noise, size biome_count) {
             if (biome_count == 0) return { 0.01f, 40.0f, 0.4f, 4.0f, 60.0f, 0 };
 
-            const float32 biome_noise_val = noise.value().GetNoise(
+            const float32 biome_noise_val = noise->get_noise_2d(
                 static_cast<real_t>(wx + 10000) * 0.005f,
                 static_cast<real_t>(wz + 10000) * 0.005f
             );
@@ -119,7 +118,7 @@ export namespace craftbuild {
             return BiomeRegistry::get_biome(biome_idx);
         }
 
-        static Biome get_blended_biome(int32 wx, int32 wz, Ptr<FastNoiseLite> noise, size biome_count) {
+        static Biome get_blended_biome(int32 wx, int32 wz, Ref<FastNoiseLite> noise, size biome_count) {
             if (biome_count <= 1) return select_biome_at(wx, wz, noise, biome_count);
 
             static constexpr int32 BLEND_CELL_SIZE = 96;
@@ -250,7 +249,7 @@ export namespace craftbuild {
             return tag_ids.find(blocks[pos.x][pos.y][pos.z].tag) != tag_ids.end() ? tag_ids.at(blocks[pos.x][pos.y][pos.z].tag) : std::make_pair(0U, (size)0);
         }
 
-        none generate_terrain(int32 seed, Ptr<FastNoiseLite> noise) {
+        none generate_terrain(int32 seed, Ref<FastNoiseLite> noise) {
             const uint32 AIR     = BlockRegistry::get_id("Air");
             const uint32 DIRT    = BlockRegistry::get_id("Dirt");
             const uint32 WATER   = BlockRegistry::get_id("Air");
@@ -291,11 +290,11 @@ export namespace craftbuild {
 
                     const Biome current_biome = get_blended_biome(global_x, global_z, noise, biome_count);
 
-                    float32 base_noise = noise.value().GetNoise(static_cast<real_t>(global_x) * current_biome.base_noise, static_cast<real_t>(global_z) * current_biome.base_noise);
+                    float32 base_noise = noise->get_noise_2d(static_cast<real_t>(global_x) * current_biome.base_noise, static_cast<real_t>(global_z) * current_biome.base_noise);
                     float32 base_elevation = ((base_noise + 1.0f) * 0.5f) * current_biome.base_height;
                     float32 detail_elevation = 0.0f;
                     if (current_biome.detail_noise > 0.0f and current_biome.detail_height > 0.0f) {
-                        const float32 detail_noise = noise.value().GetNoise(static_cast<real_t>(global_x) * current_biome.detail_noise, static_cast<real_t>(global_z) * current_biome.detail_noise);
+                        const float32 detail_noise = noise->get_noise_2d(static_cast<real_t>(global_x) * current_biome.detail_noise, static_cast<real_t>(global_z) * current_biome.detail_noise);
                         detail_elevation = detail_noise * current_biome.detail_height;
                     }
                     float32 terrain_base_y = current_biome.min_height + base_elevation + detail_elevation;
@@ -308,23 +307,23 @@ export namespace craftbuild {
                             continue;
                         }
 
-                        float32 cave_noise = noise.value().GetNoise(
+                        float32 cave_noise = noise->get_noise_3d(
                             global_x * CHEESE_CAVE.frequency,
                             y * CHEESE_CAVE.frequency,
                             global_z * CHEESE_CAVE.frequency
                         );
 
-                        float32 noise_3d = noise.value().GetNoise(
-                            static_cast<real_t>(global_x) * 0.04f,
-                            static_cast<real_t>(y) * 0.05f,
-                            static_cast<real_t>(global_z) * 0.04f
+                        float32 noise_3d = noise->get_noise_3d(
+                            static_cast<real_t>(global_x) * 0.2f,
+                            static_cast<real_t>(y) * 0.3f,
+                            static_cast<real_t>(global_z) * 0.2f
                         );
 
-                        float32 density = terrain_base_y - static_cast<float32>(y) + (noise_3d * 40.0f);
+                        float32 density = terrain_base_y - static_cast<float32>(y) + (noise_3d * 25.0f);
                         uint32 block_id = AIR;
 
                         if (cave_noise <= CHEESE_CAVE.threshold) {
-                            if (density > current_biome.base_height * 0.01f) {
+                            if (density > current_biome.base_height * 0.005f) {
                                 if (solid_depth == -1) {
                                     block_id = GRASS;
                                     solid_depth = 1;
