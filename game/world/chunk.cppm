@@ -1,9 +1,9 @@
 module;
 
+#include <FastNoiseLite.h>
+
 #include <godot_cpp/classes/array_mesh.hpp>
-#include <godot_cpp/classes/fast_noise_lite.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
-#include <godot_cpp/variant/vector2.hpp>
 
 #include <includes.hpp>
 #include <mutex>
@@ -23,6 +23,7 @@ import misc.number;
 import misc.pos;
 import game.block;
 import game.logger;
+import game.world.cave;
 import game.world.biome;
 import game.world.terrain;
 
@@ -30,12 +31,12 @@ using namespace godot;
 
 export namespace craftbuild {
     struct MeshData {
-        List<Pos<real>> vertices;
-        List<Pos<real>> normals;
+        List<Pos3D<real>> vertices;
+        List<Pos3D<real>> normals;
         List<int32> indices;
-        List<Vector2> uvs;
-        List<Vector2> uvs_layer;
-        List<Pos<real>> collision_faces;
+        List<Pos2D<real>> uvs;
+        List<Pos2D<real>> uvs_layer;
+        List<Pos3D<real>> collision_faces;
     };
 
     struct FaceMask {
@@ -55,7 +56,7 @@ export namespace craftbuild {
 
         Dict<uint8, uint32> block_ids;
         Dict<uint8, std::pair<uint32, size>> tag_ids;
-        Dict<Pos<uint8>, BlockStorageFull> complex_blocks;
+        Dict<Pos3D<uint8>, BlockStorageFull> complex_blocks;
         BlockStorage blocks[SIZE_X][SIZE_Y][SIZE_Z] = {};
 
         MeshInstance3D* mesh_instance = nullptr;
@@ -106,10 +107,10 @@ export namespace craftbuild {
             };
         }
 
-        static Biome select_biome_at(int32 wx, int32 wz, Ref<FastNoiseLite> noise, size biome_count) {
+        static Biome select_biome_at(int32 wx, int32 wz, Ptr<FastNoiseLite> noise, size biome_count) {
             if (biome_count == 0) return { 0.01f, 40.0f, 0.4f, 4.0f, 60.0f, 0 };
 
-            const float32 biome_noise_val = noise->get_noise_2d(
+            const float32 biome_noise_val = noise.value().GetNoise(
                 static_cast<real_t>(wx + 10000) * 0.005f,
                 static_cast<real_t>(wz + 10000) * 0.005f
             );
@@ -118,7 +119,7 @@ export namespace craftbuild {
             return BiomeRegistry::get_biome(biome_idx);
         }
 
-        static Biome get_blended_biome(int32 wx, int32 wz, Ref<FastNoiseLite> noise, size biome_count) {
+        static Biome get_blended_biome(int32 wx, int32 wz, Ptr<FastNoiseLite> noise, size biome_count) {
             if (biome_count <= 1) return select_biome_at(wx, wz, noise, biome_count);
 
             static constexpr int32 BLEND_CELL_SIZE = 96;
@@ -144,10 +145,10 @@ export namespace craftbuild {
             return lerp_biome(bx0, bx1, tz);
         }
 
-        none set_block(const Pos<uint8>& pos, const Str& block) {
+        none set_block(const Pos3D<uint8>& pos, const Str& block) {
 			set_block(pos, BlockRegistry::get_id(block));
         }
-        none set_block(const Pos<uint8>& pos, uint32 block_id) {
+        none set_block(const Pos3D<uint8>& pos, uint32 block_id) {
             std::unique_lock lock(data_mutex);
             if (block_ids.size() >= 256) {
                 complex_blocks.emplace(pos, BlockStorageFull(block_id, 0, 0));
@@ -166,10 +167,10 @@ export namespace craftbuild {
             block_ids.emplace(block_ids.size(), block_id);
         }
 
-        none tag_block(const Pos<uint8>& pos, const Str& tag, size tag_data = 0) {
+        none tag_block(const Pos3D<uint8>& pos, const Str& tag, size tag_data = 0) {
             tag_block(pos, TagRegistry::get_id(tag), tag_data);
         }
-        none tag_block(const Pos<uint8>& pos, uint32 tag_id, size tag_data = 0) {
+        none tag_block(const Pos3D<uint8>& pos, uint32 tag_id, size tag_data = 0) {
             std::unique_lock lock(data_mutex);
             if (tag_ids.size() >= 256) {
                 complex_blocks[pos].tag = tag_id;
@@ -189,10 +190,10 @@ export namespace craftbuild {
             tag_ids.emplace(tag_ids.size(), std::make_pair(tag_id, tag_data));
         }
 
-        bool has_tag(const Pos<uint8>& pos, const Str& tag, size tag_data = 0) const {
+        bool has_tag(const Pos3D<uint8>& pos, const Str& tag, size tag_data = 0) const {
 			return has_tag(pos, TagRegistry::get_id(tag), tag_data);
         }
-        bool has_tag(const Pos<uint8>& pos, uint32 tag_id, size tag_data = 0) const {
+        bool has_tag(const Pos3D<uint8>& pos, uint32 tag_id, size tag_data = 0) const {
             std::shared_lock lock(data_mutex);
             if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return false;
 
@@ -205,12 +206,12 @@ export namespace craftbuild {
         }
 
         template <bool lock = true>
-        uint32 get_block(const Pos<uint8>& pos) const;
+        uint32 get_block(const Pos3D<uint8>& pos) const;
         template <bool lock = true>
-        std::pair<uint32, size> get_tag(const Pos<uint8>& pos) const;
+        std::pair<uint32, size> get_tag(const Pos3D<uint8>& pos) const;
 
         template<>
-        uint32 get_block<true>(const Pos<uint8>& pos) const {
+        uint32 get_block<true>(const Pos3D<uint8>& pos) const {
             std::shared_lock lock(data_mutex);
             if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return 0;
             auto it = complex_blocks.find(pos);
@@ -220,7 +221,7 @@ export namespace craftbuild {
             return block_ids.find(blocks[pos.x][pos.y][pos.z].block_id) != block_ids.end() ? block_ids.at(blocks[pos.x][pos.y][pos.z].block_id) : 0;
         }
         template<>
-        std::pair<uint32, size> get_tag<true>(const Pos<uint8>& pos) const {
+        std::pair<uint32, size> get_tag<true>(const Pos3D<uint8>& pos) const {
             std::shared_lock lock(data_mutex);
             if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return std::make_pair(0, 0);
             auto it = complex_blocks.find(pos);
@@ -231,7 +232,7 @@ export namespace craftbuild {
         }
 
         template<>
-        uint32 get_block<false>(const Pos<uint8>& pos) const {
+        uint32 get_block<false>(const Pos3D<uint8>& pos) const {
             if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return 0;
             auto it = complex_blocks.find(pos);
             if (it != complex_blocks.end()) {
@@ -240,7 +241,7 @@ export namespace craftbuild {
             return block_ids.find(blocks[pos.x][pos.y][pos.z].block_id) != block_ids.end() ? block_ids.at(blocks[pos.x][pos.y][pos.z].block_id) : 0;
         }
         template<>
-        std::pair<uint32, size> get_tag<false>(const Pos<uint8>& pos) const {
+        std::pair<uint32, size> get_tag<false>(const Pos3D<uint8>& pos) const {
             if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return std::make_pair(0, 0);
             auto it = complex_blocks.find(pos);
             if (it != complex_blocks.end()) {
@@ -249,19 +250,21 @@ export namespace craftbuild {
             return tag_ids.find(blocks[pos.x][pos.y][pos.z].tag) != tag_ids.end() ? tag_ids.at(blocks[pos.x][pos.y][pos.z].tag) : std::make_pair(0U, (size)0);
         }
 
-        none generate_terrain(int32 seed, Ref<FastNoiseLite> noise) {
+        none generate_terrain(int32 seed, Ptr<FastNoiseLite> noise) {
             const uint32 AIR     = BlockRegistry::get_id("Air");
-            const uint32 GRASS   = BlockRegistry::get_id("Grass Block");
             const uint32 DIRT    = BlockRegistry::get_id("Dirt");
+            const uint32 WATER   = BlockRegistry::get_id("Air");
+            const uint32 GRASS   = BlockRegistry::get_id("Grass Block");
             const uint32 STONE   = BlockRegistry::get_id("Stone");
             const uint32 BEDROCK = BlockRegistry::get_id("Bedrock");
+            const Cave CHEESE_CAVE = CaveRegistry::get_cave(CaveRegistry::get_id("Large Cavern"));
 
             auto new_blocks = std::make_unique<BlockStorage[][SIZE_Y][SIZE_Z]>(SIZE_X);
             Dict<uint8, uint32> new_block_ids;
             Dict<uint8, std::pair<uint32, size>> new_tag_ids;
-            Dict<Pos<uint8>, BlockStorageFull> new_complex_blocks;
+            Dict<Pos3D<uint8>, BlockStorageFull> new_complex_blocks;
 
-            auto add_block_unlocked = [&](const Pos<uint8>& pos, uint32 block_id) {
+            auto add_block_unlocked = [&](const Pos3D<uint8>& pos, uint32 block_id) {
                 if (new_block_ids.size() >= 256) {
                     new_complex_blocks.emplace(pos, BlockStorageFull(block_id, 0, 0));
                     return;
@@ -288,11 +291,11 @@ export namespace craftbuild {
 
                     const Biome current_biome = get_blended_biome(global_x, global_z, noise, biome_count);
 
-                    float32 base_noise = noise->get_noise_2d(static_cast<real_t>(global_x) * current_biome.base_noise, static_cast<real_t>(global_z) * current_biome.base_noise);
+                    float32 base_noise = noise.value().GetNoise(static_cast<real_t>(global_x) * current_biome.base_noise, static_cast<real_t>(global_z) * current_biome.base_noise);
                     float32 base_elevation = ((base_noise + 1.0f) * 0.5f) * current_biome.base_height;
                     float32 detail_elevation = 0.0f;
                     if (current_biome.detail_noise > 0.0f and current_biome.detail_height > 0.0f) {
-                        const float32 detail_noise = noise->get_noise_2d(static_cast<real_t>(global_x) * current_biome.detail_noise, static_cast<real_t>(global_z) * current_biome.detail_noise);
+                        const float32 detail_noise = noise.value().GetNoise(static_cast<real_t>(global_x) * current_biome.detail_noise, static_cast<real_t>(global_z) * current_biome.detail_noise);
                         detail_elevation = detail_noise * current_biome.detail_height;
                     }
                     float32 terrain_base_y = current_biome.min_height + base_elevation + detail_elevation;
@@ -305,27 +308,38 @@ export namespace craftbuild {
                             continue;
                         }
 
-                        float32 noise_3d = noise->get_noise_3d(
-                            static_cast<real_t>(global_x) * 0.2f,
-                            static_cast<real_t>(y) * 0.3f,
-                            static_cast<real_t>(global_z) * 0.2f
+                        float32 cave_noise = noise.value().GetNoise(
+                            global_x * CHEESE_CAVE.frequency,
+                            y * CHEESE_CAVE.frequency,
+                            global_z * CHEESE_CAVE.frequency
                         );
 
-                        float32 density = terrain_base_y - static_cast<float32>(y) + (noise_3d * 25.0f);
+                        float32 noise_3d = noise.value().GetNoise(
+                            static_cast<real_t>(global_x) * 0.04f,
+                            static_cast<real_t>(y) * 0.05f,
+                            static_cast<real_t>(global_z) * 0.04f
+                        );
+
+                        float32 density = terrain_base_y - static_cast<float32>(y) + (noise_3d * 40.0f);
                         uint32 block_id = AIR;
 
-                        if (density > 0.0f) {
-                            if (solid_depth == -1) {
-                                block_id = GRASS;
-                                solid_depth = 1;
+                        if (cave_noise <= CHEESE_CAVE.threshold) {
+                            if (density > current_biome.base_height * 0.01f) {
+                                if (solid_depth == -1) {
+                                    block_id = GRASS;
+                                    solid_depth = 1;
+                                }
+                                else if (solid_depth < 4) {
+                                    block_id = DIRT;
+                                    solid_depth++;
+                                }
+                                else block_id = STONE;
                             }
-                            else if (solid_depth < 4) {
-                                block_id = DIRT;
-                                solid_depth++;
+                            else {
+                                if (y <= 62) block_id = AIR;
+                                solid_depth = -1;
                             }
-                            else block_id = STONE;
                         }
-                        else solid_depth = -1;
 
                         add_block_unlocked({ x, (uint8)y, z }, block_id);
                     }
@@ -485,12 +499,12 @@ export namespace craftbuild {
                             start[u] = (float32)i;
                             start[v] = (float32)j;
 
-                            Pos<float32> p0(start[0], start[1], start[2]);
-                            Pos<float32> p1(start[0] + du[0], start[1] + du[1], start[2] + du[2]);
-                            Pos<float32> p2(start[0] + du[0] + dv[0], start[1] + du[1] + dv[1], start[2] + du[2] + dv[2]);
-                            Pos<float32> p3(start[0] + dv[0], start[1] + dv[1], start[2] + dv[2]);
+                            Pos3D<float32> p0(start[0], start[1], start[2]);
+                            Pos3D<float32> p1(start[0] + du[0], start[1] + du[1], start[2] + du[2]);
+                            Pos3D<float32> p2(start[0] + du[0] + dv[0], start[1] + du[1] + dv[1], start[2] + du[2] + dv[2]);
+                            Pos3D<float32> p3(start[0] + dv[0], start[1] + dv[1], start[2] + dv[2]);
 
-                            auto get_uv = [&](const Pos<float32>& p) -> Vector2 {
+                            auto get_uv = [&](const Pos3D<float32>& p) -> Vector2 {
                                 const float32 dx = p.x - p0.x;
                                 const float32 dy = p.y - p0.y;
                                 const float32 dz = p.z - p0.z;

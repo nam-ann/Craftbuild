@@ -4,16 +4,16 @@ module;
 
 module game.command;
 
-import game.main;
+import game.server;
 import game.world.chunk;
 
 namespace craftbuild {
 	bool CommandInterpreter::is_valid_coordinate(int64 x, int64 y, int64 z) {
-        return (x >= -Main::SIZE_X and x <= Main::SIZE_X and y >= 0 and y <= Chunk::SIZE_Y and z >= -Main::SIZE_Z and z <= Main::SIZE_Z);
+        return (x >= -TCPServer::SIZE_X and x <= TCPServer::SIZE_X and y >= 0 and y <= Chunk::SIZE_Y and z >= -TCPServer::SIZE_Z and z <= TCPServer::SIZE_Z);
     }
 
     Str CommandInterpreter::execute_set_block(const std::vector<Str>& args) {
-        Main* world = static_cast<Main*>(world_ptr);
+        TCPServer* world = static_cast<TCPServer*>(world_ptr);
         if (not world) return "";
         Str output;
 
@@ -53,7 +53,7 @@ namespace craftbuild {
     }
 
     Str CommandInterpreter::execute_fill(const std::vector<Str>& args) {
-        Main* world = static_cast<Main*>(world_ptr);
+        TCPServer* world = static_cast<TCPServer*>(world_ptr);
         if (not world) return "";
         Str output;
 
@@ -111,22 +111,20 @@ namespace craftbuild {
     }
 
     Str CommandInterpreter::execute_give(const std::vector<Str>& args) {
-        Main* world = static_cast<Main*>(world_ptr);
+        TCPServer* world = static_cast<TCPServer*>(world_ptr);
         if (not world) return "";
-        Player* player = static_cast<Player*>(world->player_ptr);
-        if (not player) return "";
         Str output;
 
-        if (args.size() < 2) {
-            output = "Must fill atleast (item_name)";
+        if (args.size() < 3) {
+            output = "Must fill atleast (player_name item_name)";
             log<LogType::ERROR>(output);
             return output;
         }
 
         int64 amount = 1;
-        if (args.size() >= 3) {
+        if (args.size() >= 4) {
             try {
-                amount = std::stoi(args[2].std_str());
+                amount = std::stoi(args[3].std_str());
                 if (amount <= 0) {
                     output = "Amount cannot be negative";
                     log<LogType::ERROR>(output);
@@ -144,15 +142,16 @@ namespace craftbuild {
             }
         }
 
-        if (not is_valid_block_type(args[1])) {
-            output = format{} << "Invalid block: '" << args[1];
+        if (not is_valid_block_type(args[2])) {
+            output = format{} << "Invalid block: '" << args[2];
             log<LogType::ERROR>(output);
             return output;
         }
 
-        player->hotbar[player->selected_slot] = BlockRegistry::get_id(args[1]);
+        // args[1]: player name
+        // player->hotbar[player->selected_slot] = BlockRegistry::get_id(args[2]);
 
-        output += format{} << "Gave " << amount << " " << args[1] << "(s)";
+        output += format{} << "Gave " << args[1] << " " << amount << " " << args[2] << "(s)";
         log<LogType::INFO>(output);
         return output;
     }

@@ -140,7 +140,7 @@
       <LanguageStandard>stdcpp23</LanguageStandard>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.hpp</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>.\;.\godot-cpp\gen\include;.\godot-cpp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;.\godot-cpp\gen\include;.\godot-cpp\include;.\FastNoiseLite;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/vmg %(AdditionalOptions)</AdditionalOptions>
       <CompileAs>Default</CompileAs>
     </ClCompile>
@@ -158,7 +158,11 @@
     <ClCompile Include="game\command\command.cpp" />
     <ClCompile Include="game\command\command.cppm" />
     <ClCompile Include="game\core.cppm" />
+    <ClCompile Include="game\network.cppm" />
     <ClCompile Include="game\player\skin_manager.cpp" />
+    <ClCompile Include="game\server\server.cpp" />
+    <ClCompile Include="game\server\server.cppm" />
+    <ClCompile Include="game\world\cave.cppm" />
     <ClCompile Include="misc\list.cppm" />
     <ClCompile Include="misc\pos.cppm" />
     <ClCompile Include="game\environment.cppm" />

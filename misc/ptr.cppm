@@ -81,11 +81,13 @@ export namespace craftbuild {
 			__rc__ = nullptr;
 		}
 
-		inline T& value() const {
+		template <typename V = T>
+		inline V& value() const {
 			if (__value__) return *__value__;
 			throw std::runtime_error("Cannot access nullptr of ptr");
 		}
-		inline T& value() {
+		template <typename V = T>
+		inline V& value() {
 			if (__value__) return *__value__;
 			throw std::runtime_error("Cannot access nullptr of ptr");
 		}

@@ -73,7 +73,7 @@ export namespace craftbuild {
 
         Ref<ShaderMaterial> create_selection_box_material();
         Dictionary raycast_block(float max_distance = 5.0f);
-        Face get_face(Pos<real> n);
+        Face get_face(Pos3D<real> n);
 
         none cycle_hotbar(int dir);
         none select_slot(int slot);

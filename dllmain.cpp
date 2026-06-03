@@ -1,13 +1,15 @@
-#include <godot_cpp/classes/engine.hpp>
-
-#include <includes.hpp>
 #include <windows.h>
 
+#include <godot_cpp/classes/engine.hpp>
+#include <includes.hpp>
+
+import misc.pos;
 import misc.number;
 import misc.format;
 import game.core;
 import game.environment;
 import game.main;
+import game.server;
 import game.player;
 import game.logger;
 import game.thread;
@@ -27,30 +29,44 @@ none initialize_module(ModuleInitializationLevel p_level) {
     ClassDB::register_class<CraftSky>();
 }
 
+none initialize_server(ModuleInitializationLevel p_level) {
+	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
+
+	log<LogType::VERBOSE>(format{} << "Hello from the Server DLL! Process ID: " << (uint32)GetCurrentProcessId() << ", Thread ID: " << (uint32)GetCurrentThreadId());
+	log<LogType::VERBOSE>(format{} << "Game version: " << full_version);
+
+	ClassDB::register_class<Server>();
+}
+
 none uninitialize_module(ModuleInitializationLevel p_level) {
     if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
 }
 
-extern "C" GDExtensionBool GDE_EXPORT craftbuild_init(GDExtensionInterfaceGetProcAddress p_get_proc_address, const GDExtensionClassLibraryPtr p_library, GDExtensionInitialization* r_initialization) {
-	ThreadRegistry::register_thread("Main Thread");
-
-    GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
-
-    init_obj.register_initializer(initialize_module);
-    init_obj.register_terminator(uninitialize_module);
-    init_obj.set_minimum_library_initialization_level(MODULE_INITIALIZATION_LEVEL_SCENE);
-
-    return init_obj.init();
+none uninitialize_server(ModuleInitializationLevel p_level) {
+    if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
 }
 
+extern "C" {
+    GDExtensionBool __declspec(dllexport) craftbuild_init(GDExtensionInterfaceGetProcAddress p_get_proc_address, const GDExtensionClassLibraryPtr p_library, GDExtensionInitialization* r_initialization) {
+        ThreadRegistry::register_thread("Main Thread");
 
-BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
-    switch (ul_reason_for_call) {
-    case DLL_PROCESS_ATTACH:
-    case DLL_THREAD_ATTACH:
-    case DLL_THREAD_DETACH:
-    case DLL_PROCESS_DETACH:
-        break;
+        GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
+
+        init_obj.register_initializer(initialize_module);
+        init_obj.register_terminator(uninitialize_module);
+        init_obj.set_minimum_library_initialization_level(MODULE_INITIALIZATION_LEVEL_SCENE);
+
+        return init_obj.init();
     }
-    return TRUE;
+    GDExtensionBool __declspec(dllexport) craftbuild_server(GDExtensionInterfaceGetProcAddress p_get_proc_address, const GDExtensionClassLibraryPtr p_library, GDExtensionInitialization* r_initialization) {
+        ThreadRegistry::register_thread("Main Thread");
+
+        GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
+
+        init_obj.register_initializer(initialize_server);
+        init_obj.register_terminator(uninitialize_server);
+        init_obj.set_minimum_library_initialization_level(MODULE_INITIALIZATION_LEVEL_SCENE);
+
+        return init_obj.init();
+    }
 }

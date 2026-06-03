@@ -1,5 +1,6 @@
 module;
 
+#include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/classes/texture2d_array.hpp>
 #include <includes.hpp>
 

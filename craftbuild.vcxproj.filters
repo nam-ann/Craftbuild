@@ -107,5 +107,17 @@
     <ClCompile Include="game\command\command.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="game\server\server.cppm">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game\server\server.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game\network.cppm">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game\world\cave.cppm">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

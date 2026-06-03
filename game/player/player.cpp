@@ -27,8 +27,8 @@ module;
 
 module game.player;
 
-import game.player.skin_manager;
 import game.main;
+import game.player.skin_manager;
 
 namespace craftbuild {
     bool SkinManager::load_skin(Player& player, const char* path) {
@@ -91,8 +91,8 @@ namespace craftbuild {
     }
 
     none Player::_process(float64 delta) {
-        if (not world_ptr) return;
         Main* world = static_cast<Main*>(world_ptr);
+        if (not world) return;
         if (world->pausing.load(std::memory_order_relaxed)) return;
 
         hit = raycast_block();
@@ -106,7 +106,7 @@ namespace craftbuild {
         const Vector3 normal = hit["normal"];
 
         const Vector3 pos_float = hit_pos - (normal * 0.001f);
-        Pos<int> block_pos = pos_float.floor();
+        Pos3D<int> block_pos = pos_float.floor();
 
         selection_box->set_position(Vector3(block_pos.x, block_pos.y, block_pos.z) + Vector3(0.5, 0.5, 0.5));
     }
@@ -238,7 +238,7 @@ namespace craftbuild {
                             chunk.value().dirty.store(true, std::memory_order_release);
 
                             if (block_pos.x >= 0 or block_pos.z >= 0 or block_pos.x < Chunk::SIZE_X or block_pos.z < Chunk::SIZE_Z) {
-                                Pos<int> neighbor_offsets[4] = { {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1} };
+                                Pos3D<int> neighbor_offsets[4] = { {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1} };
                                 for (const auto& offset : neighbor_offsets) {
                                     if (auto neighbor = world->get_chunk(cx + offset.x, cz + offset.z)) neighbor.value().dirty.store(true, std::memory_order_release);
                                 }
@@ -312,13 +312,13 @@ void fragment() {
         return space_state->intersect_ray(query);
     }
 
-    Face Player::get_face(Pos<real> n) {
-        if (n == Pos<real>(0, 1, 0))  return Face::TOP;
-        if (n == Pos<real>(0, -1, 0)) return Face::BOTTOM;
-        if (n == Pos<real>(1, 0, 0))  return Face::LEFT;
-        if (n == Pos<real>(-1, 0, 0)) return Face::RIGHT;
-        if (n == Pos<real>(0, 0, 1))  return Face::FRONT;
-        if (n == Pos<real>(0, 0, -1)) return Face::BACK;
+    Face Player::get_face(Pos3D<real> n) {
+        if (n == Pos3D<real>(0, 1, 0))  return Face::TOP;
+        if (n == Pos3D<real>(0, -1, 0)) return Face::BOTTOM;
+        if (n == Pos3D<real>(1, 0, 0))  return Face::LEFT;
+        if (n == Pos3D<real>(-1, 0, 0)) return Face::RIGHT;
+        if (n == Pos3D<real>(0, 0, 1))  return Face::FRONT;
+        if (n == Pos3D<real>(0, 0, -1)) return Face::BACK;
         return Face::TOP;
     }
 

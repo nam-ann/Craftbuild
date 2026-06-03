@@ -303,7 +303,6 @@ export namespace craftbuild {
 
         void archive(size extra) {
             if (__space__ >= extra) return;
-            __space__ = extra;
 
             uint8* cache = new uint8[extra];
             if (__value__) {
@@ -311,8 +310,8 @@ export namespace craftbuild {
                 delete[] __value__;
             }
 
+            __space__ = extra;
             __value__ = cache;
-            cache = nullptr;
         }
 
         size& sync_pos(size& pos) const {
@@ -352,6 +351,9 @@ export namespace craftbuild {
             std::swap(__len__, other.__len__);
             std::swap(__space__, other.__space__);
         }
+
+        uint8* c_ptr() { return __value__; }
+        const uint8* c_ptr() const { return __value__; }
 
         Iterator begin() { return Iterator(__value__); }
         Iterator end() { return Iterator(__value__ + __len__); }

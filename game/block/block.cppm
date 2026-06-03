@@ -93,7 +93,7 @@ export namespace craftbuild {
 
 		virtual std::vector<std::pair<Str, size>> init_tags() { return {}; }
 
-        static none create_face(Face face, const Vector3& pos, List<Pos<real>>& vertices) {
+        static none create_face(Face face, const Vector3& pos, List<Pos3D<real>>& vertices) {
             switch (face) {
             case Face::TOP: // +Y
                 vertices.append(pos + Vector3(1, 1, 0));
@@ -169,7 +169,7 @@ export namespace craftbuild {
     struct BlockEntry {
         Ptr<Block> block;
         Str name;
-        Ref<Texture2D> texture;
+        Ref<Texture2D> texture = nullptr;
 
         BlockEntry(Ptr<Block> b, const Str& n, Ref<Texture2D> t) : block(b), name(n), texture(t) {}
     };
@@ -192,9 +192,9 @@ export namespace craftbuild {
             else if (dynamic_cast<Block6F*>(block.c_ptr())) {
                 texture = AssetLoader::load_block_texture(registry.size(), path, FaceCount::SIX);
             }
-			for (const auto& pair : block.value().init_tags()) {
-				TagRegistry::set_value(TagRegistry::get_id(pair.first), pair.second, 0);
-			}
+            for (const auto& pair : block.value().init_tags()) {
+                TagRegistry::set_value(TagRegistry::get_id(pair.first), pair.second, 0);
+            }
             registry.emplace_back(block, name, texture);
             name2id[name] = registry.size() - 1;
         }

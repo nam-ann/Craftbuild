@@ -18,7 +18,10 @@ export namespace craftbuild {
 	class Dirt : public Block1F {};
 	class Grass : public Block3F {};
 	class Stone : public Block1F {};
+	class Pebble : public Block1F {};
+	class OakLog : public Block3F {};
 	class OakPlanks : public Block1F {};
+	class OakLeaves : public Block1F {};
 	class DiamondBlock : public Block1F {};
 	class DiamondOre : public Block1F {};
 	class Bedrock : public Block1F {};
