@@ -59,7 +59,6 @@ namespace craftbuild {
         BlockRegistry::register_block<DiamondOre>   ("Diamond Ore",   "diamond_ore.png");
         BlockRegistry::register_block<Bedrock>      ("Bedrock",       "bedrock.png");
 
-
         Biome plains;
         plains.base_height = 5.0f;
         plains.base_noise = 0.1f;
@@ -111,19 +110,6 @@ namespace craftbuild {
         AtlasTexture::build_texture_array();
         setup_voxel_material();
 
-        if (multiplayer) {
-            start_network_thread();
-            log<LogType::INFO>("Connecting to server...");
-            send_queue.store({ "Connect", { player_name.std_str() } });
-        }
-        else {
-			log<LogType::INFO>("Starting server...");
-            server = new TCPServer(false);
-            server.value().connect("Player");
-        }
-
-        start_scheduler_thread();
-
         log<LogType::INFO>("Main initialized");
     }
 
@@ -136,8 +122,8 @@ namespace craftbuild {
         player_y.store(player_pos.y, std::memory_order_relaxed);
         player_z.store(player_pos.z, std::memory_order_relaxed);
 
-        static Pos3D<float> last_sent_pos;
-        if ((player_pos - last_sent_pos).length_squared() > 0.01f) {
+        static Pos3D<real> last_sent_pos;
+        if ((player_pos - last_sent_pos) > Pos3D<real>(0.01f, 0.01f, 0.01f)) {
             if (multiplayer) {
                 last_sent_pos = player_pos;
                 send_queue.store({ "Update player pos", { player_name.std_str(), std::to_string(player_pos.x), std::to_string(player_pos.y), std::to_string(player_pos.z)} });
@@ -145,29 +131,30 @@ namespace craftbuild {
             else server.value().update(player_name, player_pos);
         }
 
-        std::vector<Ptr<Chunk>> chunks_to_upload;
-        {
-            std::shared_lock lock(chunks_mutex);
-            for (const auto& E : chunks) {
-                if (E.second.value().mesh_ready.load(std::memory_order_acquire)) {
-                    chunks_to_upload.push_back(E.second);
-                }
-            }
-        }
-
         static const int max_updates = 8;
         int updates_this_frame = 0;
 
-        for (auto& chunk_ptr : chunks_to_upload) {
-            if (updates_this_frame >= max_updates) break;
+        std::vector<Ptr<Chunk>> chunks_to_upload;
+        {
+            std::lock_guard lock(ready_chunks_queue_mutex);
+            ready_chunks_queue.swap(chunks_to_upload);
+        }
 
+        std::vector<Ptr<Chunk>> deferred_chunks;
+        for (auto& chunk_ptr : chunks_to_upload) {
+            if (updates_this_frame >= max_updates) {
+                deferred_chunks.push_back(chunk_ptr);
+                continue;
+            }
+               
             Ptr<MeshData> data = nullptr;
             {
-                std::lock_guard lock(chunk_ptr.value().mesh_mutex);
-                if (chunk_ptr.value().pending_mesh_data) {
-                    data = chunk_ptr.value().pending_mesh_data;
-					chunk_ptr.value().pending_mesh_data.clear();
-                    chunk_ptr.value().mesh_ready.store(false, std::memory_order_release);
+                auto& chunk = chunk_ptr.value();
+                std::lock_guard lock(chunk.mesh_mutex);
+                if (chunk.pending_mesh_data) {
+                    data = chunk.pending_mesh_data;
+					chunk.pending_mesh_data.clear();
+                    chunk.mesh_ready.store(false, std::memory_order_release);
                 }
             }
 
@@ -219,6 +206,11 @@ namespace craftbuild {
             updates_this_frame++;
         }
 
+        {
+            std::lock_guard lock(ready_chunks_queue_mutex);
+            for (auto& chunk_ptr : deferred_chunks) ready_chunks_queue.push_back(chunk_ptr);
+        }
+
         List<Pos3D<int>> pending_unloads;
 
         if (not should_remove_chunks.load(std::memory_order_acquire)) return;
@@ -254,6 +246,24 @@ namespace craftbuild {
 
             save_userdata();
         }
+    }
+
+    none Main::init_singleplayer() {
+        log<LogType::INFO>("Starting server...");
+        server = new TCPServer(false);
+        server.value().connect(player_name.std_str());
+
+        start_scheduler_thread();
+    }
+
+    none Main::init_multiplayer() {
+        multiplayer = true;
+
+        start_network_thread();
+        log<LogType::INFO>("Connecting to server...");
+        send_queue.store({ "Connect", { player_name.std_str() } });
+
+        start_scheduler_thread();
     }
 
     none Main::setup_voxel_material() {
@@ -353,130 +363,131 @@ void fragment() {
                     continue;
                 }
                 if (recv_state == ReceiveState::ERROR) {
-                    log<LogType::ERROR>("recv failed");
+                    log<LogType::ERROR>("Lost connect to server");
                     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                    continue;
+                    break;
                 }
 
                 Message message = ReceiveQueue::parse(buffer);
 
-				if (message.content == "Chunk data") {
-                    // Unzip
-                    if (len(buffer) < sizeof(uint32)) {
-                        log<LogType::ERROR>(format{} << "Received chunk data is too small(" << len(buffer) << "). Packet might be corrupted");
-                        continue;
-                    }
+                try {
+                    if (message.content == "Chunk data") {
+                        // Unzip
+                        if (len(buffer) < sizeof(uint32)) {
+                            log<LogType::ERROR>(format{} << "Received chunk data is too small(" << len(buffer) << "). Packet might be corrupted");
+                            continue;
+                        }
 
-                    std::string base64_payload = message.arguments[0];
-                    String godot_base64_str = base64_payload.c_str(); 
-                    PackedByteArray payload = Marshalls::get_singleton()->base64_to_raw(godot_base64_str);
+                        std::string base64_payload = message.arguments[0];
+                        String godot_base64_str = base64_payload.c_str();
+                        PackedByteArray payload = Marshalls::get_singleton()->base64_to_raw(godot_base64_str);
 
-                    if (payload.size() < sizeof(uint32)) {
-                        log<LogType::ERROR>(format{} << "Received chunk data is too small(" << payload.size() << ") to contain uncompressed size. Packet might be corrupted");
-                        continue;
-                    }
+                        if (payload.size() < sizeof(uint32)) {
+                            log<LogType::ERROR>(format{} << "Received chunk data is too small(" << payload.size() << ") to contain uncompressed size. Packet might be corrupted");
+                            continue;
+                        }
 
-                    uint32 uncompressed_size = 0;
-                    memcpy(&uncompressed_size, payload.ptr(), sizeof(uint32));
+                        uint32 uncompressed_size = 0;
+                        memcpy(&uncompressed_size, payload.ptr(), sizeof(uint32));
 
-                    size_t compressed_size = payload.size() - sizeof(uint32);
-                    PackedByteArray compressed_pba;
-                    compressed_pba.resize(compressed_size);
-                    memcpy(compressed_pba.ptrw(), payload.ptr() + sizeof(uint32), compressed_size);
+                        size_t compressed_size = payload.size() - sizeof(uint32);
+                        PackedByteArray compressed_pba;
+                        compressed_pba.resize(compressed_size);
+                        memcpy(compressed_pba.ptrw(), payload.ptr() + sizeof(uint32), compressed_size);
 
-                    PackedByteArray decompressed_pba = compressed_pba.decompress(uncompressed_size, FileAccess::COMPRESSION_ZSTD);
+                        PackedByteArray decompressed_pba = compressed_pba.decompress(uncompressed_size, FileAccess::COMPRESSION_ZSTD);
 
-                    if (decompressed_pba.is_empty() and uncompressed_size > 0) {
-                        log<LogType::ERROR>("Failed to decompress chunk data. Packet might be corrupted");
-                        continue;
-                    }
+                        if (decompressed_pba.is_empty() and uncompressed_size > 0) {
+                            log<LogType::ERROR>("Failed to decompress chunk data. Packet might be corrupted");
+                            continue;
+                        }
 
-					// Deserialize
-                    std::string world_data((const char*)decompressed_pba.ptr(), decompressed_pba.size());
-                    std::stringstream is(world_data);
+                        // Deserialize
+                        std::string world_data((const char*)decompressed_pba.ptr(), decompressed_pba.size()); 
+                        std::stringstream is(world_data, std::ios::binary | std::ios::in);
 
-                    Pos3D<int32> pos{};
-                    is.read(reinterpret_cast<byte*>(&pos.x), sizeof(int32));
-                    is.read(reinterpret_cast<byte*>(&pos.z), sizeof(int32));
+                        auto cx = std::stoi(message.arguments[1]), cz = std::stoi(message.arguments[2]);
+                        auto& chunk = get_or_create_chunk(cx, cz).value();
+                        std::unique_lock data_lock(chunk.data_mutex);
+                        chunk.clear();
 
-                    auto chunk = get_or_create_chunk(pos.x, pos.z);
-                    std::unique_lock data_lock(chunk.value().data_mutex);
+                        is.read(reinterpret_cast<byte*>(&chunk.blocks[0][0][0]), Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z * sizeof(BlockStorage));
 
-                    uint32 blocks_size = Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z * sizeof(BlockStorage);
-                    is.read(reinterpret_cast<byte*>(&chunk.value().blocks[0][0][0]), blocks_size);
+                        uint8 block_ids_size = 0;
+                        is.read(reinterpret_cast<byte*>(&block_ids_size), sizeof(uint8));
+                        for (auto j : range<uint8>(block_ids_size)) {
+                            uint8 local_id = 0;
+                            uint32 global_id = 0;
+                            is.read(reinterpret_cast<byte*>(&local_id), sizeof(uint8));
+                            is.read(reinterpret_cast<byte*>(&global_id), sizeof(uint32));
+                            chunk.block_ids[local_id] = global_id;
+                        }
 
-                    uint8 block_ids_size = 0;
-                    is.read(reinterpret_cast<byte*>(&block_ids_size), sizeof(uint8));
-                    for (auto j : range<uint8>(block_ids_size)) {
-                        uint8 local_id;
-                        uint32 global_id;
-                        is.read(reinterpret_cast<byte*>(&local_id), sizeof(uint8));
-                        is.read(reinterpret_cast<byte*>(&global_id), sizeof(uint32));
-                        chunk.value().block_ids[local_id] = global_id;
-                    }
+                        uint8 tag_ids_size = 0;
+                        is.read(reinterpret_cast<byte*>(&tag_ids_size), sizeof(uint8));
+                        for (auto j : range<uint8>(tag_ids_size)) {
+                            uint8 local_id = 0;
+                            std::pair<uint32, uint64> global_id;
+                            is.read(reinterpret_cast<byte*>(&local_id), sizeof(uint8));
+                            is.read(reinterpret_cast<byte*>(&global_id.first), sizeof(uint32));
+                            is.read(reinterpret_cast<byte*>(&global_id.second), sizeof(uint64));
+                            chunk.tag_ids[local_id] = global_id;
+                        }
 
-                    uint8 tag_ids_size = 0;
-                    is.read(reinterpret_cast<byte*>(&tag_ids_size), sizeof(uint8));
-                    for (auto j : range<uint8>(tag_ids_size)) {
-                        uint8 local_id;
-                        std::pair<uint32, size_t> global_id;
-                        is.read(reinterpret_cast<byte*>(&local_id), sizeof(uint8));
-                        is.read(reinterpret_cast<byte*>(&global_id.first), sizeof(uint32));
-                        is.read(reinterpret_cast<byte*>(&global_id.second), sizeof(size));
-                        chunk.value().tag_ids[local_id] = global_id;
-                    }
+                        uint32 complex_size = 0;
+                        is.read(reinterpret_cast<byte*>(&complex_size), sizeof(uint32));
 
-                    uint32 complex_size = 0;
-                    is.read(reinterpret_cast<byte*>(&complex_size), sizeof(uint32));
+                        auto& map = chunk.complex_blocks;
+                        for (auto j : range<uint32>(complex_size)) {
+                            uint8 x = 0, y = 0, z = 0;
+                            uint32 block_id = 0, tag = 0;
 
-                    auto& map = chunk.value().complex_blocks;
-                    for (auto j : range<uint32>(complex_size)) {
-                        uint8 x, y, z;
-                        uint32 block_id, tag;
+                            is.read(reinterpret_cast<byte*>(&x), sizeof(uint8));
+                            is.read(reinterpret_cast<byte*>(&y), sizeof(uint8));
+                            is.read(reinterpret_cast<byte*>(&z), sizeof(uint8));
 
-                        is.read(reinterpret_cast<byte*>(&x), sizeof(uint8));
-                        is.read(reinterpret_cast<byte*>(&y), sizeof(uint8));
-                        is.read(reinterpret_cast<byte*>(&z), sizeof(uint8));
+                            is.read(reinterpret_cast<byte*>(&block_id), sizeof(uint32));
+                            is.read(reinterpret_cast<byte*>(&tag), sizeof(uint32));
 
-                        is.read(reinterpret_cast<byte*>(&block_id), sizeof(uint32));
-                        is.read(reinterpret_cast<byte*>(&tag), sizeof(uint32));
+                            Pos3D<uint8> key{ x, y, z };
+                            BlockStorageFull value{ block_id, tag };
 
-                        Pos3D<uint8> key{ x, y, z };
-                        BlockStorageFull value{ block_id, tag };
+                            chunk.complex_blocks.emplace(key, value);
+                        }
 
-                        chunk.value().complex_blocks.emplace(key, value);
-                    }
+                        chunk.generated.store(true, std::memory_order_release);
+                        chunk.dirty.store(true, std::memory_order_release);
+                        chunk.mesh_ready.store(false, std::memory_order_release);
+                        chunk.collision_built.store(false, std::memory_order_release);
 
-                    chunk.value().generated.store(true, std::memory_order_release);
-                    chunk.value().dirty.store(true, std::memory_order_release);
-                    chunk.value().mesh_ready.store(false, std::memory_order_release);
-                    chunk.value().collision_built.store(false, std::memory_order_release);
-
-                    uint64 player_count = 0;
-                    is.read(reinterpret_cast<byte*>(&player_count), sizeof(uint64));
-
-                    for (auto i : range<uint32>(player_count)) {
-                        Pos3D<real> pos;
-                        uint64 name_len = 0;
-                        Str name;
-                        is.read(reinterpret_cast<byte*>(&name_len), sizeof(uint64));
-                        name.archive(name_len);
-                        is.read(reinterpret_cast<byte*>(name.c_ptr()), name_len);
-                        is.read(reinterpret_cast<byte*>(&pos), sizeof(Pos3D<real>));
-
-						if (name == player_name) break;
-                    }
-
-                    {
                         std::lock_guard lock(requested_chunks_mutex);
-                        requested_chunks.erase({ pos.x, 0, pos.z });
+                        requested_chunks.erase({ cx, 0, cz });
                     }
-				}
-                else if (message.content == "Chunk not ready") {
-                    std::lock_guard lock(requested_chunks_mutex);
-                    requested_chunks.erase({ std::stoi(message.arguments[0]), 0, std::stoi(message.arguments[1]) });
+                    else if (message.content == "Chunk not ready") {
+                        std::lock_guard lock(requested_chunks_mutex);
+                        requested_chunks.erase({ std::stoi(message.arguments[0]), 0, std::stoi(message.arguments[1]) });
+                    }
+                    else if (message.content == "Players data") {
+                        std::stringstream is(message.arguments[0]);
+
+                        uint64 player_count = 0;
+                        is.read(reinterpret_cast<byte*>(&player_count), sizeof(uint64));
+
+                        for (auto i : range<uint64>(player_count)) {
+                            Pos3D<real> pos;
+                            uint64 name_len = 0;
+                            Str name;
+                            is.read(reinterpret_cast<byte*>(&name_len), sizeof(uint64));
+                            name.archive(name_len);
+                            is.read(reinterpret_cast<byte*>(name.c_ptr()), name_len);
+                            is.read(reinterpret_cast<byte*>(&pos), sizeof(Pos3D<real>));
+                        }
+                    }
+                    else if (message.content == "Chat response") call_deferred("emit_signal", "chat_output", message.arguments[0].c_str());
                 }
-				else if (message.content == "Chat response") call_deferred("emit_signal", "chat_output", message.arguments[0].c_str());
+                catch (const std::exception& e) {
+                    log<LogType::ERROR>(format{} << "Error processing message: " << e.what());
+                }
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
@@ -519,23 +530,24 @@ void fragment() {
 
                     Pos3D<int32> chunk_pos{ px + x, 0, pz + z };
 
-                    Ptr<Chunk> chunk;
+                    Ptr<Chunk> chunk_ptr;
                     if (multiplayer) {
                         {
                             std::lock_guard lock(requested_chunks_mutex);
-                            if (requested_chunks.contains({ chunk_pos.x, 0, chunk_pos.z })) {
-                                continue;
-                            }
+                            if (requested_chunks.contains({ chunk_pos.x, 0, chunk_pos.z })) continue;
                             requested_chunks.insert({ chunk_pos.x, 0, chunk_pos.z });
                         }
                         send_queue.store({ "Get chunk data", { std::to_string(chunk_pos.x), std::to_string(chunk_pos.z) } });
-                        chunk = get_chunk(chunk_pos.x, chunk_pos.z);
+                        chunk_ptr = get_chunk(chunk_pos.x, chunk_pos.z);
                     }
-                    else chunk = server.value().get_chunk(chunk_pos.x, chunk_pos.z);
-                    if (not chunk) continue;
-					set_chunk(chunk, chunk_pos.x, chunk_pos.z);
+                    else chunk_ptr = server.value().get_chunk(chunk_pos.x, chunk_pos.z);
 
-                    if (not chunk.value().dirty.load(std::memory_order_acquire) or chunk.value().mesh_ready.load(std::memory_order_acquire)) continue;
+                    if (not chunk_ptr) continue;
+                    Chunk& chunk = chunk_ptr.value();
+
+                    set_chunk(chunk_ptr, chunk_pos.x, chunk_pos.z);
+
+                    if (not chunk.dirty.load(std::memory_order_acquire) or chunk.mesh_ready.load(std::memory_order_acquire)) continue;
                     
                     {
                         std::lock_guard lock(pending_jobs_mutex);
@@ -543,21 +555,20 @@ void fragment() {
                         pending_mesh_jobs.insert(chunk_pos);
                     }
 
-                    mesh_pool.enqueue([this, chunk, chunk_pos]() {
+                    mesh_pool.enqueue([this, chunk_ptr, chunk_pos]() {
                         if (running.load(std::memory_order_relaxed)) {
-                            auto& _chunk = chunk.value();
-                            if (_chunk.dirty.load() or _chunk.mesh_ready.load()) {
-                                Ptr<Chunk> neighbors[4] = {
-                                    get_chunk(_chunk.chunk_pos.x + 1, _chunk.chunk_pos.z),
-                                    get_chunk(_chunk.chunk_pos.x - 1, _chunk.chunk_pos.z),
-                                    get_chunk(_chunk.chunk_pos.x, _chunk.chunk_pos.z + 1),
-                                    get_chunk(_chunk.chunk_pos.x, _chunk.chunk_pos.z - 1)
-                                };
+                            Chunk& chunk = chunk_ptr.value();
+                            Ptr<Chunk> neighbors[4] = {
+                                get_chunk(chunk.chunk_pos.x + 1, chunk.chunk_pos.z),
+                                get_chunk(chunk.chunk_pos.x - 1, chunk.chunk_pos.z),
+                                get_chunk(chunk.chunk_pos.x, chunk.chunk_pos.z + 1),
+                                get_chunk(chunk.chunk_pos.x, chunk.chunk_pos.z - 1)
+                            };
 
-                                _chunk.generate_mesh(neighbors);
-                                _chunk.mesh_ready.store(true);
-                                _chunk.dirty.store(false);
-                            }
+                            chunk.generate_mesh(neighbors);
+
+                            std::lock_guard lock(ready_chunks_queue_mutex);
+                            ready_chunks_queue.push_back(chunk_ptr);
                         }
 
                         std::lock_guard lock(pending_jobs_mutex);
@@ -794,6 +805,8 @@ void fragment() {
     none Main::_bind_methods() {
         ADD_SIGNAL(MethodInfo("chat_output", PropertyInfo(Variant::STRING, "line")));
         ClassDB::bind_method(D_METHOD("init"), &Main::_ready);
+        ClassDB::bind_method(D_METHOD("singleplayer"), &Main::init_singleplayer);
+        ClassDB::bind_method(D_METHOD("multiplayer"), &Main::init_multiplayer);
         ClassDB::bind_method(D_METHOD("process"), &Main::_process);
         ClassDB::bind_method(D_METHOD("pause_game"), &Main::pause);
         ClassDB::bind_method(D_METHOD("resume_game"), &Main::resume);

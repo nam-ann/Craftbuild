@@ -69,6 +69,10 @@ export namespace craftbuild {
 
 		explicit operator bool() const { return __value__ != nullptr; }
 
+		bool operator==(const Ptr<T>& other) const {
+			return __value__ == other.__value__;
+		}
+
 		none clear() {
 			if (not __rc__) return;
 

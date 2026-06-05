@@ -49,10 +49,10 @@ export namespace craftbuild {
         List() : __value__(nullptr), __len__(0), __space__(0) {}
         List(const std::initializer_list<T>& l) : __value__(new T[l.size()]), __space__(l.size()), __len__(l.size()) { memcpy(__value__, l.data(), __len__ * sizeof(T)); }
         List(const List& s) : __value__(new T[s.__len__]), __len__(s.__len__), __space__(s.__len__) { memcpy(__value__, s.__value__, __len__ * sizeof(T)); }
-        List(List&& s) noexcept : __value__(s.__value__), __len__(std::move(s.__len__)), __space__(std::move(s.__space__)) {
-            s.__value__ = nullptr;
-            s.__len__ = 0;
-            s.__space__ = 0;
+        List(List&& s) noexcept : __value__(nullptr), __len__(0), __space__(0) {
+            std::swap(__value__, s.__value__);
+            std::swap(__len__, s.__len__);
+            std::swap(__space__, s.__space__);
         }
 
         ~List() { clear(); }
@@ -71,12 +71,9 @@ export namespace craftbuild {
         List& operator=(List&& s) noexcept {
             if (this == &s) return *this;
             clear();
-            __value__ = s.__value__;
-            __len__ = std::move(s.__len__);
-            __space__ = std::move(s.__space__);
-            s.__value__ = nullptr;
-            s.__len__ = 0;
-            s.__space__ = 0;
+            std::swap(__value__, s.__value__);
+            std::swap(__len__, s.__len__);
+            std::swap(__space__, s.__space__);
             return *this;
         }
 
@@ -186,6 +183,10 @@ export namespace craftbuild {
             __len__ = new_len;
         }
 
+        none fill(const T& fill_value) {
+            for (auto i : range<size>(__len__)) __value__[i] = fill_value;
+        }
+
         none swap(List& other) noexcept {
             if (this == &other) return;
 
@@ -214,10 +215,6 @@ export namespace craftbuild {
         Iterator end() { return Iterator(__value__ + __len__); }
         Iterator begin() const { return Iterator(__value__); }
         Iterator end() const { return Iterator(__value__ + __len__); }
-
-        friend std::ostream& operator<<(std::ostream& os, const List& s) noexcept {
-            return os << s.str();
-        }
 
         friend size len(const List& s) { return s.__len__; }
         friend List operator+(const std::initializer_list<T>& l, const List& s) { return List(l) + s; }

@@ -27,7 +27,7 @@ import game.texture.atlas_texture;
 using namespace godot;
 
 export namespace craftbuild {
-    enum class Gamemode : uint8_t { SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR };
+    enum class Gamemode : uint8 { SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR };
 
     class Player : public CharacterBody3D {
         GDCLASS(Player, CharacterBody3D)
@@ -71,6 +71,7 @@ export namespace craftbuild {
         none _physics_process(float64 delta) override;
         none _input(const Ref<InputEvent>& event) override;
 
+        bool would_collide_with_player(const Pos3D<int>& block_pos) const;
         Ref<ShaderMaterial> create_selection_box_material();
         Dictionary raycast_block(float max_distance = 5.0f);
         Face get_face(Pos3D<real> n);

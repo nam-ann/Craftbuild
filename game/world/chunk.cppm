@@ -53,29 +53,42 @@ export namespace craftbuild {
         inline static constexpr uint8 SIZE_Y = 255;
         inline static constexpr uint8 SIZE_Z = 16;
 
+        // Structure part
         Dict<uint8, uint32> block_ids;
-        Dict<uint8, std::pair<uint32, size>> tag_ids;
+        Dict<uint8, std::pair<uint32, uint64>> tag_ids;
+        Dict<uint32, uint8> id2block;
+        Dict<std::pair<uint32, uint64>, uint8> id2tag;
+
+
         Dict<Pos3D<uint8>, BlockStorageFull> complex_blocks;
         BlockStorage blocks[SIZE_X][SIZE_Y][SIZE_Z] = {};
 
-        MeshInstance3D* mesh_instance = nullptr;
         Vector3i chunk_pos;
         TrapezoidHeight height_provider{ VerticalAnchor::absolute(18), VerticalAnchor::absolute(38), 8 };
-
         std::atomic<bool> generated = false;
+        mutable std::shared_mutex data_mutex;
+
+        // Mesh part
+        MeshInstance3D* mesh_instance = nullptr;
+
         std::atomic<bool> dirty = true;
         std::atomic<bool> collision_built = false;
 
         std::atomic<bool> mesh_ready{ false };
         Ptr<MeshData> pending_mesh_data = nullptr;
         mutable std::mutex mesh_mutex;
-        mutable std::shared_mutex data_mutex;
 
         ~Chunk() {
             std::lock_guard lock(mesh_mutex);
             if (pending_mesh_data) {
                 pending_mesh_data.clear();
             }
+        }
+
+        none clear() {
+            block_ids.clear();
+            tag_ids.clear();
+            complex_blocks.clear();
         }
 
         static uint32 column_seed(int32 seed, int32 x, int32 z) {
@@ -97,11 +110,11 @@ export namespace craftbuild {
 
         static Biome lerp_biome(const Biome& a, const Biome& b, float32 t) {
             return {
-                a.base_noise    + (b.base_noise - a.base_noise)       * t,
-                a.base_height   + (b.base_height - a.base_height)     * t,
-                a.detail_noise  + (b.detail_noise - a.detail_noise)   * t,
+                a.base_noise + (b.base_noise - a.base_noise) * t,
+                a.base_height + (b.base_height - a.base_height) * t,
+                a.detail_noise + (b.detail_noise - a.detail_noise) * t,
                 a.detail_height + (b.detail_height - a.detail_height) * t,
-                a.temperature   + (b.temperature - a.temperature)     * t,
+                a.temperature + (b.temperature - a.temperature) * t,
                 static_cast<int32>(std::round(static_cast<float32>(a.min_height) + static_cast<float32>(b.min_height - a.min_height) * t))
             };
         }
@@ -145,7 +158,7 @@ export namespace craftbuild {
         }
 
         none set_block(const Pos3D<uint8>& pos, const Str& block) {
-			set_block(pos, BlockRegistry::get_id(block));
+            set_block(pos, BlockRegistry::get_id(block));
         }
         none set_block(const Pos3D<uint8>& pos, uint32 block_id) {
             std::unique_lock lock(data_mutex);
@@ -154,15 +167,14 @@ export namespace craftbuild {
                 return;
             }
 
-            auto it = std::find_if(block_ids.begin(), block_ids.end(), [block_id](const auto& pair) {
-                return pair.second == block_id;
-            });
-            if (it != block_ids.end()) {
-                blocks[pos.x][pos.y][pos.z].block_id = it->first;
+            auto it = id2block.find(block_id);
+            if (it != id2block.end()) {
+                blocks[pos.x][pos.y][pos.z].block_id = it->second;
                 return;
             }
 
             blocks[pos.x][pos.y][pos.z].block_id = block_ids.size();
+            id2block.emplace(block_id, block_ids.size());
             block_ids.emplace(block_ids.size(), block_id);
         }
 
@@ -177,20 +189,19 @@ export namespace craftbuild {
                 return;
             }
 
-            auto it = std::find_if(tag_ids.begin(), tag_ids.end(), [tag_id, tag_data](const auto& pair) {
-                return pair.second == std::make_pair(tag_id, tag_data);
-            });
-            if (it != tag_ids.end()) {
-                blocks[pos.x][pos.y][pos.z].tag = it->first;
+            auto it = id2tag.find(std::make_pair(tag_id, tag_data));
+            if (it != id2tag.end()) {
+                blocks[pos.x][pos.y][pos.z].tag = it->second;
                 return;
             }
 
             blocks[pos.x][pos.y][pos.z].tag = tag_ids.size();
+            id2tag.emplace(std::make_pair(tag_id, tag_data), tag_ids.size());
             tag_ids.emplace(tag_ids.size(), std::make_pair(tag_id, tag_data));
         }
 
         bool has_tag(const Pos3D<uint8>& pos, const Str& tag, size tag_data = 0) const {
-			return has_tag(pos, TagRegistry::get_id(tag), tag_data);
+            return has_tag(pos, TagRegistry::get_id(tag), tag_data);
         }
         bool has_tag(const Pos3D<uint8>& pos, uint32 tag_id, size tag_data = 0) const {
             std::shared_lock lock(data_mutex);
@@ -201,7 +212,7 @@ export namespace craftbuild {
             }
 
             auto& block_tag = blocks[pos.x][pos.y][pos.z].tag;
-			return tag_ids.find(block_tag) != tag_ids.end() and tag_ids.at(block_tag) == std::make_pair(tag_id, tag_data);
+            return tag_ids.find(block_tag) != tag_ids.end() and tag_ids.at(block_tag) == std::make_pair(tag_id, tag_data);
         }
 
         template <bool lock = true>
@@ -213,48 +224,52 @@ export namespace craftbuild {
         uint32 get_block<true>(const Pos3D<uint8>& pos) const {
             std::shared_lock lock(data_mutex);
             if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return 0;
-            auto it = complex_blocks.find(pos);
-            if (it != complex_blocks.end()) {
-                return it->second.block_id;
+            auto it1 = complex_blocks.find(pos);
+            if (it1 != complex_blocks.end()) {
+                return it1->second.block_id;
             }
-            return block_ids.find(blocks[pos.x][pos.y][pos.z].block_id) != block_ids.end() ? block_ids.at(blocks[pos.x][pos.y][pos.z].block_id) : 0;
+            auto it2 = block_ids.find(blocks[pos.x][pos.y][pos.z].block_id);
+            return it2 != block_ids.end() ? it2->second : 0;
         }
         template<>
         std::pair<uint32, size> get_tag<true>(const Pos3D<uint8>& pos) const {
             std::shared_lock lock(data_mutex);
             if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return std::make_pair(0, 0);
-            auto it = complex_blocks.find(pos);
-            if (it != complex_blocks.end()) {
-                return std::make_pair(it->second.tag, it->second.tag_data);
+            auto it1 = complex_blocks.find(pos);
+            if (it1 != complex_blocks.end()) {
+                return std::make_pair(it1->second.tag, it1->second.tag_data);
             }
-            return tag_ids.find(blocks[pos.x][pos.y][pos.z].tag) != tag_ids.end() ? tag_ids.at(blocks[pos.x][pos.y][pos.z].tag) : std::make_pair(0U, (size)0);
+            auto it2 = tag_ids.find(blocks[pos.x][pos.y][pos.z].tag);
+            return it2 != tag_ids.end() ? it2->second : std::make_pair(0U, (size)0);
         }
 
         template<>
         uint32 get_block<false>(const Pos3D<uint8>& pos) const {
             if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return 0;
-            auto it = complex_blocks.find(pos);
-            if (it != complex_blocks.end()) {
-                return it->second.block_id;
+            auto it1 = complex_blocks.find(pos);
+            if (it1 != complex_blocks.end()) {
+                return it1->second.block_id;
             }
-            return block_ids.find(blocks[pos.x][pos.y][pos.z].block_id) != block_ids.end() ? block_ids.at(blocks[pos.x][pos.y][pos.z].block_id) : 0;
+            auto it2 = block_ids.find(blocks[pos.x][pos.y][pos.z].block_id);
+            return it2 != block_ids.end() ? it2->second : 0;
         }
         template<>
         std::pair<uint32, size> get_tag<false>(const Pos3D<uint8>& pos) const {
             if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return std::make_pair(0, 0);
-            auto it = complex_blocks.find(pos);
-            if (it != complex_blocks.end()) {
-                return std::make_pair(it->second.tag, it->second.tag_data);
+            auto it1 = complex_blocks.find(pos);
+            if (it1 != complex_blocks.end()) {
+                return std::make_pair(it1->second.tag, it1->second.tag_data);
             }
-            return tag_ids.find(blocks[pos.x][pos.y][pos.z].tag) != tag_ids.end() ? tag_ids.at(blocks[pos.x][pos.y][pos.z].tag) : std::make_pair(0U, (size)0);
+            auto it2 = tag_ids.find(blocks[pos.x][pos.y][pos.z].tag);
+            return it2 != tag_ids.end() ? it2->second : std::make_pair(0U, (size)0);
         }
 
         none generate_terrain(int32 seed, Ref<FastNoiseLite> noise) {
-            const uint32 AIR     = BlockRegistry::get_id("Air");
-            const uint32 DIRT    = BlockRegistry::get_id("Dirt");
-            const uint32 WATER   = BlockRegistry::get_id("Air");
-            const uint32 GRASS   = BlockRegistry::get_id("Grass Block");
-            const uint32 STONE   = BlockRegistry::get_id("Stone");
+            const uint32 AIR = BlockRegistry::get_id("Air");
+            const uint32 DIRT = BlockRegistry::get_id("Dirt");
+            const uint32 WATER = BlockRegistry::get_id("Air");
+            const uint32 GRASS = BlockRegistry::get_id("Grass Block");
+            const uint32 STONE = BlockRegistry::get_id("Stone");
             const uint32 BEDROCK = BlockRegistry::get_id("Bedrock");
             const Cave CHEESE_CAVE = CaveRegistry::get_cave(CaveRegistry::get_id("Large Cavern"));
 
@@ -271,7 +286,7 @@ export namespace craftbuild {
 
                 auto it = std::find_if(new_block_ids.begin(), new_block_ids.end(), [block_id](const auto& pair) {
                     return pair.second == block_id;
-                });
+                    });
                 if (it != new_block_ids.end()) {
                     new_blocks[pos.x][pos.y][pos.z].block_id = it->first;
                     return;
@@ -280,7 +295,7 @@ export namespace craftbuild {
                 const uint8 local_id = static_cast<uint8>(new_block_ids.size());
                 new_blocks[pos.x][pos.y][pos.z].block_id = local_id;
                 new_block_ids.emplace(local_id, block_id);
-            };
+                };
 
             const size biome_count = BiomeRegistry::registry.size();
             for (auto x : range<uint8>(SIZE_X)) {
@@ -353,8 +368,8 @@ export namespace craftbuild {
                 complex_blocks = std::move(new_complex_blocks);
             }
 
-            generated.store(true, std::memory_order_release);
             dirty.store(true, std::memory_order_release);
+            generated.store(true, std::memory_order_release);
         }
 
         none generate_mesh(Ptr<Chunk> neighbors[4]) {
@@ -385,8 +400,6 @@ export namespace craftbuild {
 
             std::vector<std::unique_ptr<std::shared_lock<std::shared_mutex>>> locks;
             for (auto* m : mutexes_to_lock) locks.push_back(std::make_unique<std::shared_lock<std::shared_mutex>>(*m));
-
-            dirty.store(false, std::memory_order_release);
 
             auto transparent_or_air = [&](int bx, int by, int bz) -> bool {
                 if (by < 0 or by >= Chunk::SIZE_Y) return true;
@@ -446,6 +459,8 @@ export namespace craftbuild {
                 q[d] = 1;
 
                 for (x[d] = -1; x[d] < dims[d]; ++x[d]) {
+                    mask.fill({ -1, false });
+
                     for (x[v] = 0; x[v] < dims[v]; ++x[v]) {
                         for (x[u] = 0; x[u] < dims[u]; ++x[u]) {
                             const bool a_inside = (x[d] >= 0);
@@ -569,8 +584,8 @@ export namespace craftbuild {
                 pending_mesh_data = data;
             }
 
-            mesh_ready.store(true, std::memory_order_release);
             dirty.store(false, std::memory_order_release);
+            mesh_ready.store(true, std::memory_order_release);
         }
     };
 }

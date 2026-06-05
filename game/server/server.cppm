@@ -81,7 +81,8 @@ export namespace craftbuild {
         none start_scheduler_thread();
         none submit_jobs(const Pos3D<real>& player);
 
-		std::string serialize_chunk(int cx, int cz);
+        std::string serialize_players();
+        std::string serialize_chunk(int cx, int cz);
         Ptr<Chunk> get_chunk(int cx, int cz);
         Ptr<Chunk> get_or_create_chunk(int cx, int cz);
         uint32 get_global_block_id(int wx, int wy, int wz);
@@ -101,6 +102,7 @@ export namespace craftbuild {
 	};
 
     struct Client {
+        ReceiveQueue receive_queue;
         SendQueue send_queue;
         Str name;
     };
@@ -112,7 +114,6 @@ export namespace craftbuild {
         SOCKET server_socket;
         sockaddr_in server_addr{};
         TCPServer server;
-        ReceiveQueue receive_queue;
 		Dict<SOCKET, Client> clients;
 
     public:
@@ -160,8 +161,6 @@ export namespace craftbuild {
         }
 
         none _process(double delta) override {
-            List<char> buffer;
-
             {
                 sockaddr_in client_addr{};
                 int client_len = sizeof(client_addr);
@@ -173,18 +172,16 @@ export namespace craftbuild {
                 }
             }
 
-			std::vector<SOCKET> disconnected_clients;
+			List<SOCKET> disconnected_clients;
             for (auto& [client_socket, client] : clients) {
-                const auto recv_state = receive_queue.receive(client_socket, buffer);
+                List<char> buffer;
+                const auto recv_state = client.receive_queue.receive(client_socket, buffer);
 
-                if (recv_state == ReceiveState::WAITING) {
-                    client.send_queue.send(client_socket);
-                    continue;
-                }
+                if (recv_state == ReceiveState::WAITING) continue;
                 if (recv_state == ReceiveState::ERROR) {
-                    server.disconnect(client.name);
-                    disconnected_clients.push_back(client_socket);
                     log<LogType::WARNING>(format{} << "Lost connect to client: " << client_socket);
+                    server.disconnect(client.name);
+                    disconnected_clients.append(client_socket);
                     continue;
                 }
 
@@ -202,9 +199,18 @@ export namespace craftbuild {
                         client.send_queue.store({ "Chat response", { response.std_str() }});
                     }
                     else if (message.content == "Get chunk data") {
-                        const std::string world_data = server.serialize_chunk(std::stoi(message.arguments[0]), std::stoi(message.arguments[1]));
-                        if (not world_data.empty()) client.send_queue.store({ "Chunk data", { world_data } });
-                        else client.send_queue.store({ "Chunk not ready", { message.arguments[0], message.arguments[1]} });
+                        auto cx = std::stoi(message.arguments[0]);
+                        auto cz = std::stoi(message.arguments[1]);
+                        auto chunk_ptr = server.get_chunk(cx, cz);
+                        if (chunk_ptr and chunk_ptr.value().generated.load(std::memory_order_acquire)) {
+                            const std::string world_data = server.serialize_chunk(cx, cz);
+                            client.send_queue.store({ "Chunk data", { world_data, message.arguments[0], message.arguments[1] } });
+                        }
+                        else client.send_queue.store({ "Chunk not ready", { message.arguments[0], message.arguments[1] } });
+                    }
+                    else if (message.content == "Get players data") {
+                        const std::string players_data = server.serialize_players();
+                        client.send_queue.store({ "Players data", { players_data } });
                     }
                     else if (message.content == "Set seed and world name") {
                         int32 seed = std::stoi(message.arguments[0]);
@@ -233,7 +239,7 @@ export namespace craftbuild {
                 }
                 catch (const std::exception& e) {
                     log<LogType::ERROR>(format{} << "Error processing message: " << e.what());
-                    client.send_queue.store({ "Error" });
+                    client.send_queue.store({ "Error", { e.what() }});
                 }
 
                 client.send_queue.send(client_socket);

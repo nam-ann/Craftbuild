@@ -24,6 +24,7 @@ module;
 #include <godot_cpp/variant/dictionary.hpp>
 
 #include <includes.hpp>
+#include <algorithm>
 
 module game.player;
 
@@ -129,47 +130,69 @@ namespace craftbuild {
         const bool key_d = chatting ? false : input->is_key_pressed(KEY_D);
         const bool key_s = chatting ? false : input->is_key_pressed(KEY_S);
         const bool key_a = chatting ? false : input->is_key_pressed(KEY_A);
-         
-        // Gravity & Jump
-        is_grounded = is_on_floor();
-        if (not can_fly) {
-            const float32 dt = static_cast<float32>(delta);
 
-            if (is_grounded) {
-                if (velocity.y < 0.0f) velocity.y = -0.1f;
-                if (key_space) velocity.y = jump_velocity;
-                can_fly = false;
-            }
-            else if (gamemode == Gamemode::CREATIVE and key_space and not jump_was_pressed) {
-                can_fly = not can_fly;
-                velocity.y = 0.0f;
-            }
-            else velocity.y -= gravity * dt;
-        }
-        else {
-            velocity.y = 0;
-            if (key_space) velocity.y = speed;
-            if (key_shift) velocity.y = -speed;
-            if (is_grounded) can_fly = false;
-        }
-        jump_was_pressed = key_space;
+        is_grounded = is_on_floor();
+
+        running = key_w and (key_ctrl or running);
+        const float32 current_speed = running ? speed * 2.0f : speed;
 
         Vector3 forward = -camera->get_global_transform().basis.get_column(2);
         Vector3 right = camera->get_global_transform().basis.get_column(0);
 
         float32 forward_input = (key_w ? 1.0f : 0.0f) - (key_s ? 1.0f : 0.0f);
-        float32 strafe_input =  (key_d ? 1.0f : 0.0f) - (key_a ? 1.0f : 0.0f);
+        float32 strafe_input = (key_d ? 1.0f : 0.0f) - (key_a ? 1.0f : 0.0f);
 
-        Vector3 move_dir = (forward * forward_input) + (right * strafe_input);
-        move_dir.y = 0;
+        Vector3 wish_dir = (forward * forward_input) + (right * strafe_input);
+        wish_dir.y = 0;
+        if (wish_dir.length() > 0) wish_dir = wish_dir.normalized();
 
-        if (move_dir.length() > 0) move_dir = move_dir.normalized();
+        const float32 accel = is_grounded ? 18.0f : 6.0f;
+        const float32 decel = is_grounded ? 22.0f : 2.0f;
 
-        running = key_w and (key_ctrl or running);
-        float32 current_speed = running ? speed * 2.0f : speed;
+        // Gravity & Jump
+        if (not can_fly) {
+            const bool has_input = wish_dir.length_squared() > 0.0f;
+            const float32 blend = has_input ? accel : decel;
 
-        velocity.x = move_dir.x * current_speed;
-        velocity.z = move_dir.z * current_speed;
+            const Vector3 target_xz = wish_dir * current_speed;
+            velocity.x = velocity.x + (target_xz.x - velocity.x) * std::min(blend * delta, 1.0);
+            velocity.z = velocity.z + (target_xz.z - velocity.z) * std::min(blend * delta, 1.0);
+
+            if (is_grounded) {
+                if (velocity.y < 0.0f) velocity.y = -0.1f;
+                if (key_space) velocity.y = jump_velocity;
+                if (gamemode == Gamemode::CREATIVE and key_space and not jump_was_pressed) {
+                    can_fly = true;
+                    velocity.y = 0.0f;
+                }
+            }
+            else {
+                if (gamemode == Gamemode::CREATIVE and key_space and not jump_was_pressed) {
+                    can_fly = true;
+                    velocity.y = 0.0f;
+                }
+                else velocity.y -= gravity * delta;
+            }
+        }
+        else {
+            const bool has_h_input = wish_dir.length_squared() > 0.0f;
+            const float32 h_blend = has_h_input ? accel : decel;
+            const Vector3 target_xz = wish_dir * current_speed;
+            velocity.x = velocity.x + (target_xz.x - velocity.x) * std::min(h_blend * delta, 1.0);
+            velocity.z = velocity.z + (target_xz.z - velocity.z) * std::min(h_blend * delta, 1.0);
+
+            float32 wish_y = 0.0f;
+            if (key_space) wish_y = speed;
+            if (key_shift) wish_y = -speed;
+
+            const bool has_v_input = (wish_y != 0.0f);
+            const float32 v_blend = has_v_input ? accel : decel;
+            velocity.y = velocity.y + (wish_y - velocity.y) * std::min(v_blend * delta, 1.0);
+
+            if (is_grounded and not key_space) can_fly = false;
+        }
+
+        jump_was_pressed = key_space;
 
         set_velocity(velocity);
         move_and_slide();
@@ -229,7 +252,8 @@ namespace craftbuild {
                             case Face::FRONT:  block_pos.z += 1;  break;
                             case Face::BACK:   block_pos.z += -1; break;
                             }
-                            world->set_global_block_id(block, block_pos.x, block_pos.y, block_pos.z);
+
+                            if (not would_collide_with_player(block_pos)) world->set_global_block_id(block, block_pos.x, block_pos.y, block_pos.z);
                         }
 
                         const int cx = static_cast<int>(std::floor((float32)block_pos.x / Chunk::SIZE_X));
@@ -272,6 +296,28 @@ namespace craftbuild {
                 }
             }
         }
+    }
+
+    bool Player::would_collide_with_player(const Pos3D<int>& block_pos) const {
+        Pos3D<real> player_pos = get_position();
+
+        float min_x = player_pos.x - 0.3f;
+        float max_x = player_pos.x + 0.3f;
+        float min_y = player_pos.y;
+        float max_y = player_pos.y + 1.8f;
+        float min_z = player_pos.z - 0.3f;
+        float max_z = player_pos.z + 0.3f;
+
+        float block_min_x = block_pos.x;
+        float block_max_x = block_pos.x + 1.0f;
+        float block_min_y = block_pos.y;
+        float block_max_y = block_pos.y + 1.0f;
+        float block_min_z = block_pos.z;
+        float block_max_z = block_pos.z + 1.0f;
+
+        return (max_x > block_min_x and min_x < block_max_x and
+            max_y > block_min_y and min_y < block_max_y and
+            max_z > block_min_z and min_z < block_max_z);
     }
 
     Ref<ShaderMaterial> Player::create_selection_box_material() {

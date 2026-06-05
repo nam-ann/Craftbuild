@@ -7,6 +7,7 @@ module;
 export module misc.format;
 
 import misc.str;
+import misc.list;
 import misc.range;
 import misc.number;
 
@@ -83,6 +84,11 @@ export namespace craftbuild {
 				if (i != vt.size() - 1) result += ", ";
 			}
 			f.__buffer__ += result + "]";
+			return std::move(f);
+		}
+		template <typename T>
+		friend format&& operator<<(format&& f, const List<T>& l) {
+			f.__buffer__ += l.str();
 			return std::move(f);
 		}
 	};

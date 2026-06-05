@@ -47,6 +47,9 @@ export namespace craftbuild {
         GDCLASS(Main, Node3D)
 
     private:
+        std::vector<Ptr<Chunk>> ready_chunks_queue;
+        mutable std::mutex ready_chunks_queue_mutex;
+
         Dict<Pos3D<int32>, Ptr<Chunk>> chunks;
         mutable std::shared_mutex chunks_mutex;
 
@@ -90,7 +93,9 @@ export namespace craftbuild {
         none _ready() override;
         none _process(float64 delta) override;
         none _notification(int p_what);
-        
+
+        none init_singleplayer();
+        none init_multiplayer();
         none setup_voxel_material();
 
         none start_log_thread();

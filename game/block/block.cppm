@@ -226,6 +226,6 @@ export namespace craftbuild {
     struct BlockStorageFull {
         uint32 block_id;
         uint32 tag;
-        size tag_data;
+        uint64 tag_data;
     };
 }

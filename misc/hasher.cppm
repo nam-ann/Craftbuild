@@ -2,6 +2,7 @@ module;
 
 #include <includes.hpp>
 #include <xhash>
+#include <utility>
 
 export module misc.hasher;
 
@@ -19,6 +20,13 @@ export namespace craftbuild {
     };
 
     template <>
+    struct Hasher<uint32> {
+        size operator()(uint32 value) const {
+            return std::hash<uint32>{}(value);
+        }
+    };
+
+    template <>
     struct Hasher<unsigned __int64> {
         static unsigned __int64 splitmix64(unsigned __int64 x) {
             x += 0x9e3779b97f4a7c15;
@@ -30,6 +38,16 @@ export namespace craftbuild {
         size operator()(unsigned __int64 value) const {
             static const unsigned __int64 FIXED_RANDOM = std::chrono::steady_clock::now().time_since_epoch().count();
             return splitmix64(value + FIXED_RANDOM);
+        }
+    };
+
+    template <typename T1, typename T2>
+    struct Hasher<std::pair<T1, T2>> {
+        size operator()(const std::pair<T1, T2>& value) const {
+            auto h1 = std::hash<T1>{}(value.first);
+            auto h2 = std::hash<T2>{}(value.second);
+
+            return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
         }
     };
 
