@@ -314,6 +314,12 @@ export namespace craftbuild {
             __value__ = cache;
         }
 
+        none resize(size new_len, byte32 fill_value = U' ') {
+            if (new_len > __space__) archive(new_len);
+            if (new_len > __len__) for (auto i : range<size>(__len__, new_len)) encode(fill_value);
+            __len__ = new_len;
+        }
+
         size& sync_pos(size& pos) const {
             if (pos >= __len__) throw std::runtime_error(std::format("you accessed using index {} while the length was {}", pos, __len__));
             while (pos > 0 and (__value__[pos] & 0x80) != 0) --pos;

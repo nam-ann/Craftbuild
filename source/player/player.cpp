@@ -25,6 +25,7 @@ module;
 
 #include <includes.hpp>
 #include <algorithm>
+#include <shared_mutex>
 
 module game.player;
 
@@ -42,7 +43,7 @@ namespace craftbuild {
         log<LogType::INFO>(format{} << "Skin loaded: " << path);
 
         MeshInstance3D* player_model = player.get_node<MeshInstance3D>("Mesh");
-        if (player_model) apply_skin_to_model(player_model, skin_tex);
+        if (player_model) SkinManager::apply_skin_to_model(player_model, skin_tex);
         else log<LogType::WARNING>("Player model not found. Create a MeshInstance3D named 'Model'");
 
         return true;
@@ -209,7 +210,7 @@ namespace craftbuild {
         if (auto mm = Object::cast_to<InputEventMouseMotion>(event.ptr())) {
             Vector2 rel = mm->get_relative();
             rotate_y(-rel.x * sensitivity);
-            mouse_pitch = CLAMP(mouse_pitch - rel.y * sensitivity, -Math_PI / 2.1f, Math_PI / 2.1f);
+            mouse_pitch = std::clamp(mouse_pitch - rel.y * sensitivity, -MATH_PI / MAXIMUM_CAMERA_ANGLE, MATH_PI / MAXIMUM_CAMERA_ANGLE);
             camera->set_rotation(Vector3(mouse_pitch, 0, 0));
         }
 
@@ -301,23 +302,21 @@ namespace craftbuild {
     bool Player::would_collide_with_player(const Pos3D<int>& block_pos) const {
         Pos3D<real> player_pos = get_position();
 
-        float min_x = player_pos.x - 0.3f;
-        float max_x = player_pos.x + 0.3f;
-        float min_y = player_pos.y;
-        float max_y = player_pos.y + 1.8f;
-        float min_z = player_pos.z - 0.3f;
-        float max_z = player_pos.z + 0.3f;
+        real min_x = player_pos.x - 0.3f;
+        real max_x = player_pos.x + 0.3f;
+        real min_y = player_pos.y;
+        real max_y = player_pos.y + 1.8f;
+        real min_z = player_pos.z - 0.3f;
+        real max_z = player_pos.z + 0.3f;
 
-        float block_min_x = block_pos.x;
-        float block_max_x = block_pos.x + 1.0f;
-        float block_min_y = block_pos.y;
-        float block_max_y = block_pos.y + 1.0f;
-        float block_min_z = block_pos.z;
-        float block_max_z = block_pos.z + 1.0f;
+        real block_min_x = block_pos.x;
+        real block_max_x = block_pos.x + 1.0f;
+        real block_min_y = block_pos.y;
+        real block_max_y = block_pos.y + 1.0f;
+        real block_min_z = block_pos.z;
+        real block_max_z = block_pos.z + 1.0f;
 
-        return (max_x > block_min_x and min_x < block_max_x and
-            max_y > block_min_y and min_y < block_max_y and
-            max_z > block_min_z and min_z < block_max_z);
+        return (max_x > block_min_x and min_x < block_max_x and max_y > block_min_y and min_y < block_max_y and max_z > block_min_z and min_z < block_max_z);
     }
 
     Ref<ShaderMaterial> Player::create_selection_box_material() {
@@ -342,7 +341,7 @@ void fragment() {
         return mat;
     }
 
-    Dictionary Player::raycast_block(float max_distance) {
+    Dictionary Player::raycast_block(real max_distance) {
         if (not camera) return Dictionary();
 
         Vector2 screen_center = camera->get_viewport()->get_visible_rect().get_center();
@@ -375,6 +374,10 @@ void fragment() {
 
     none Player::select_slot(int slot) {
 
+    }
+
+    uint32 Player::get_selected_block_id() const {
+        return hotbar[selected_slot];
     }
 
     none Player::save_data(std::ostream& os) {

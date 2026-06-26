@@ -37,6 +37,7 @@ import game.environment;
 import game.world.cave;
 import game.world.chunk;
 import game.world.biome;
+import game.player.player_data;
 import game.block.normal_blocks;
 import game.texture.atlas_texture;
 
@@ -62,6 +63,7 @@ export namespace craftbuild {
         Str player_name = "Player";
 
         none* player_ptr = nullptr;
+        mutable std::shared_mutex player_mutex;
 
         std::atomic<bool> running = true;
         std::atomic<real> player_x = 0.0;
@@ -92,7 +94,7 @@ export namespace craftbuild {
     public:
         none _ready() override;
         none _process(float64 delta) override;
-        none _notification(int p_what);
+        none _exit_tree() override;
 
         none init_singleplayer();
         none init_multiplayer();
@@ -102,12 +104,12 @@ export namespace craftbuild {
         none start_network_thread();
         none start_scheduler_thread();
         none submit_jobs();
-        none create_chunk_collision(Ptr<Chunk> chunk, const PackedVector3Array& collision_faces);
-        none update_chunk_mesh(Ptr<Chunk> chunk, Ref<ArrayMesh> mesh, PackedVector3Array& collision_faces);
+        none create_chunk_collision(const Ptr<Chunk>& chunk, const PackedVector3Array& collision_faces);
+        none update_chunk_mesh(const Ptr<Chunk>& chunk, const Ref<ArrayMesh>& mesh, PackedVector3Array& collision_faces);
         none unload_distant_chunks(int p_cx, int p_cz);
 
         Ptr<Chunk> get_chunk(int cx, int cz);
-        Ptr<Chunk> get_or_create_chunk(int cx, int cz);
+        Ptr<Chunk>& get_or_create_chunk(int cx, int cz);
         uint32 get_global_block_id(int wx, int wy, int wz);
         none set_chunk(Ptr<Chunk> chunk, int cx, int cz);
         none set_global_block_id(uint32 block_id, int wx, int wy, int wz);

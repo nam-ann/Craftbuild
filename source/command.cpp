@@ -148,8 +148,8 @@ namespace craftbuild {
             return output;
         }
 
-        // args[1]: player name
-        // player->hotbar[player->selected_slot] = BlockRegistry::get_id(args[2]);
+        PlayerData& player = world->players[args[1]];
+        player.hotbar[player.selected_slot] = BlockRegistry::get_id(args[2]);
 
         output += format{} << "Gave " << args[1] << " " << amount << " " << args[2] << "(s)";
         log<LogType::INFO>(output);

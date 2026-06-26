@@ -116,7 +116,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;CRAFTBUILD_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpp23</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -155,45 +155,46 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="game\command\command.cpp" />
-    <ClCompile Include="game\command\command.cppm" />
-    <ClCompile Include="game\core.cppm" />
-    <ClCompile Include="game\network.cppm" />
-    <ClCompile Include="game\player\skin_manager.cpp" />
-    <ClCompile Include="game\server\server.cpp" />
-    <ClCompile Include="game\server\server.cppm" />
-    <ClCompile Include="game\world\cave.cppm" />
+    <ClCompile Include="source\command.cpp" />
+    <ClCompile Include="module\command.cppm" />
+    <ClCompile Include="module\core.cppm" />
+    <ClCompile Include="module\network.cppm" />
+    <ClCompile Include="module\player\player_data.cppm" />
+    <ClCompile Include="source\player\skin_manager.cpp" />
+    <ClCompile Include="source\server.cpp" />
+    <ClCompile Include="module\server.cppm" />
+    <ClCompile Include="module\world\cave.cppm" />
     <ClCompile Include="misc\list.cppm" />
     <ClCompile Include="misc\pos.cppm" />
-    <ClCompile Include="game\environment.cppm" />
-    <ClCompile Include="game\texture\atlas_texture.cppm">
+    <ClCompile Include="module\environment.cppm" />
+    <ClCompile Include="module\texture\atlas_texture.cppm">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="game\texture\asset_loader.cppm">
+    <ClCompile Include="module\texture\asset_loader.cppm">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="game\block\block.cppm">
+    <ClCompile Include="module\block\block.cppm">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="game\block\normal_blocks.cppm">
+    <ClCompile Include="module\block\normal_blocks.cppm">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="game\logger.cppm">
+    <ClCompile Include="module\logger.cppm">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="game\player\player.cppm">
+    <ClCompile Include="module\player\player.cppm">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="game\player\skin_manager.cppm">
+    <ClCompile Include="module\player\skin_manager.cppm">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="game\main\main.cppm">
+    <ClCompile Include="module\main.cppm">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="game\thread.cppm" />
-    <ClCompile Include="game\world\biome.cppm" />
-    <ClCompile Include="game\world\chunk.cppm" />
-    <ClCompile Include="game\world\terrain.cppm" />
+    <ClCompile Include="module\thread.cppm" />
+    <ClCompile Include="module\world\biome.cppm" />
+    <ClCompile Include="module\world\chunk.cppm" />
+    <ClCompile Include="module\world\terrain.cppm" />
     <ClCompile Include="misc\dict.cppm" />
     <ClCompile Include="misc\format.cppm">
       <FileType>Document</FileType>
@@ -205,12 +206,19 @@
     <ClCompile Include="misc\range.cppm" />
     <ClCompile Include="misc\str.cppm" />
     <ClCompile Include="misc\number.cppm" />
+    <ClCompile Include="source\block.cpp" />
+    <ClCompile Include="source\texture\asset_loader.cpp" />
+    <ClCompile Include="source\texture\atlas_texture.cpp" />
+    <ClCompile Include="source\world\biome.cpp" />
+    <ClCompile Include="source\world\cave.cpp" />
+    <ClCompile Include="source\world\chunk.cpp" />
+    <ClCompile Include="source\world\terrain.cpp" />
     <ClInclude Include="includes.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="game\player\player.cpp" />
-    <ClCompile Include="game\main\main.cpp" />
+    <ClCompile Include="source\player\player.cpp" />
+    <ClCompile Include="source\main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -23,34 +23,34 @@
     <ClCompile Include="dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\main\main.cpp">
+    <ClCompile Include="source\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\player\player.cpp">
+    <ClCompile Include="source\player\player.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\block\block.cppm">
+    <ClCompile Include="module\block\block.cppm">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\block\normal_blocks.cppm">
+    <ClCompile Include="module\block\normal_blocks.cppm">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\main\main.cppm">
+    <ClCompile Include="module\main.cppm">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\player\player.cppm">
+    <ClCompile Include="module\player\player.cppm">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\texture\asset_loader.cppm">
+    <ClCompile Include="module\texture\asset_loader.cppm">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\texture\atlas_texture.cppm">
+    <ClCompile Include="module\texture\atlas_texture.cppm">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\logger.cppm">
+    <ClCompile Include="module\logger.cppm">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\player\skin_manager.cppm">
+    <ClCompile Include="module\player\skin_manager.cppm">
       <Filter>Header Files</Filter>
     </ClCompile>
     <ClCompile Include="misc\format.cppm">
@@ -62,28 +62,28 @@
     <ClCompile Include="misc\pos.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\player\skin_manager.cpp">
+    <ClCompile Include="source\player\skin_manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="misc\number.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\thread.cppm">
+    <ClCompile Include="module\thread.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\core.cppm">
+    <ClCompile Include="module\core.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\world\biome.cppm">
+    <ClCompile Include="module\world\biome.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\world\chunk.cppm">
+    <ClCompile Include="module\world\chunk.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\world\terrain.cppm">
+    <ClCompile Include="module\world\terrain.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\environment.cppm">
+    <ClCompile Include="module\environment.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="misc\str.cppm">
@@ -101,22 +101,46 @@
     <ClCompile Include="misc\list.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\command\command.cppm">
+    <ClCompile Include="module\command.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\command\command.cpp">
+    <ClCompile Include="source\command.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\server\server.cppm">
+    <ClCompile Include="module\server.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\server\server.cpp">
+    <ClCompile Include="source\server.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\network.cppm">
+    <ClCompile Include="module\network.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\world\cave.cppm">
+    <ClCompile Include="module\world\cave.cppm">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="module\player\player_data.cppm">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\block.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\texture\asset_loader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\texture\atlas_texture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\world\biome.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\world\cave.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\world\chunk.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\world\terrain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
