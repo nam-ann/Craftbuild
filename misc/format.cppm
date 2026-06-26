@@ -79,7 +79,7 @@ export namespace craftbuild {
 		template <typename T>
 		friend format&& operator<<(format&& f, const std::vector<T>& vt) {
 			Str result = "[";
-			for (auto i : range<size>(vt.size())) {
+			for (auto i : range<usize>(vt.size())) {
 				result += Str(vt[i]);
 				if (i != vt.size() - 1) result += ", ";
 			}

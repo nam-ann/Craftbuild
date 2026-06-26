@@ -11,17 +11,17 @@ namespace craftbuild {
         registry.emplace_back(name, cave);
     }
 
-    Cave CaveRegistry::get_cave(size cave_id) {
+    Cave CaveRegistry::get_cave(uint64 cave_id) {
         if (registry.size() <= cave_id) return Cave{};
         return registry[cave_id].cave;
     }
 
-    Str CaveRegistry::get_name(size cave_id) {
+    Str CaveRegistry::get_name(uint64 cave_id) {
         if (registry.size() <= cave_id) return "";
         return registry[cave_id].name;
     }
 
-    size CaveRegistry::get_id(const Str& cave_name) {
+    uint64 CaveRegistry::get_id(const Str& cave_name) {
         if (name2id.find(cave_name) == name2id.end()) return 0;
         return name2id[cave_name];
     }

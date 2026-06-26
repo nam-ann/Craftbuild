@@ -44,7 +44,7 @@ inline std::u32string ptr_to_hex(const none* ptr) noexcept {
 
 inline std::u32string to_u32(const std::string& s) {
     std::u32string out;
-    size i = 0;
+    usize i = 0;
 
     while (i < s.size()) {
         uint32 cp = 0;
@@ -111,8 +111,8 @@ inline none append_utf8(std::string& out, uint32 cp) {
 export namespace craftbuild {
     class Str {
         uint8* __value__;
-        size __len__;
-        size __space__;
+        usize __len__;
+        usize __space__;
 
         struct Iterator {
             uint8* __ptr__;
@@ -242,14 +242,14 @@ export namespace craftbuild {
             return *this;
         }
 
-        Str& operator*=(size n) {
+        Str& operator*=(usize n) {
             if (n == 0) {
                 clear();
                 return *this;
             }
             Str original(*this);
             expect(__len__ * (n - 1));
-            for (auto i : range<size>(n - 1)) {
+            for (auto i : range<usize>(n - 1)) {
                 memcpy(&__value__[__len__], original.__value__, original.__len__);
                 __len__ += original.__len__;
             }
@@ -263,10 +263,10 @@ export namespace craftbuild {
         Str operator+(const Str& s) const { Str cache(*this); cache += s; return cache; }
         Str operator+(Str&& s) const noexcept { Str cache(*this); cache += s; return cache; }
 
-        Str operator*(size n) const { Str cache(*this); return cache *= n; }
+        Str operator*(usize n) const { Str cache(*this); return cache *= n; }
 
-        uint8& operator[](size pos) { return __value__[pos]; }
-        const uint8& operator[](size pos) const { return __value__[pos]; }
+        uint8& operator[](usize pos) { return __value__[pos]; }
+        const uint8& operator[](usize pos) const { return __value__[pos]; }
 
         operator bool() const {
             return *this != U"";
@@ -295,13 +295,13 @@ export namespace craftbuild {
             __len__ = __space__ = 0;
         }
 
-        void expect(size extra) {
-            size needed = __len__ + extra;
+        void expect(usize extra) {
+            usize needed = __len__ + extra;
             if (not needed) needed = 8;
             archive(needed);
         }
 
-        void archive(size extra) {
+        void archive(usize extra) {
             if (__space__ >= extra) return;
 
             uint8* cache = new uint8[extra];
@@ -314,34 +314,34 @@ export namespace craftbuild {
             __value__ = cache;
         }
 
-        none resize(size new_len, byte32 fill_value = U' ') {
+        none resize(usize new_len, byte32 fill_value = U' ') {
             if (new_len > __space__) archive(new_len);
-            if (new_len > __len__) for (auto i : range<size>(__len__, new_len)) encode(fill_value);
+            if (new_len > __len__) for (auto i : range<usize>(__len__, new_len)) encode(fill_value);
             __len__ = new_len;
         }
 
-        size& sync_pos(size& pos) const {
+        usize& sync_pos(usize& pos) const {
             if (pos >= __len__) throw std::runtime_error(std::format("you accessed using index {} while the length was {}", pos, __len__));
             while (pos > 0 and (__value__[pos] & 0x80) != 0) --pos;
             return ++pos;
         }
-        size get_sync_pos(size pos) const {
+        usize get_sync_pos(usize pos) const {
             return sync_pos(pos);
         }
 
-        size& next_pos(size& pos) const {
+        usize& next_pos(usize& pos) const {
             if (pos >= __len__) throw std::runtime_error(std::format("you accessed using index {} while the length was {}", pos, __len__));
             while (pos < __len__ and (__value__[pos] & 0x80) != 0) ++pos;
             return ++pos;
         }
-        size get_next_pos(size pos) const {
+        usize get_next_pos(usize pos) const {
             return next_pos(pos);
         }
 
-        uint32 sync(size& pos) const {
+        uint32 sync(usize& pos) const {
             return decode_one(sync_pos(pos));
         }
-        uint32 get_sync(size pos) const {
+        uint32 get_sync(usize pos) const {
             return sync(pos);
         }
 
@@ -370,7 +370,7 @@ export namespace craftbuild {
             return os << s.std_str();
         }
 
-        friend size len(const Str& s) { return s.__len__; }
+        friend usize len(const Str& s) { return s.__len__; }
 
         friend Str operator+(const byte32* c, const Str& s) { return Str(c) + s; }
         friend Str operator+(const char* c, const Str& s) { return Str(c) + s; }
@@ -382,13 +382,13 @@ export namespace craftbuild {
 
     template <>
     struct Hasher<Str> {
-        size operator()(const Str& str) const {
-            constexpr size FNV_OFFSET = 14695981039346656037ULL;
-            constexpr size FNV_PRIME = 1099511628211ULL;
+        usize operator()(const Str& str) const {
+            constexpr usize FNV_OFFSET = 14695981039346656037ULL;
+            constexpr usize FNV_PRIME = 1099511628211ULL;
 
-            size hash = FNV_OFFSET;
+            usize hash = FNV_OFFSET;
 
-            for (auto i : range<size>(str.__len__)) {
+            for (auto i : range<usize>(str.__len__)) {
                 hash ^= str.__value__[i];
                 hash *= FNV_PRIME;
             }

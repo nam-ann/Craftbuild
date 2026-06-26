@@ -75,7 +75,7 @@ export namespace craftbuild {
         List<char> buffer;
 
         ReceiveState receive(SOCKET socket, List<char>& out_data) {
-            for (size i : range<size>(len(buffer))) {
+            for (usize i : range<usize>(len(buffer))) {
                 if (buffer.c_ptr()[i] == '\0') {
                     out_data.resize(i);
                     memcpy(out_data.c_ptr(), buffer.c_ptr(), i);
@@ -98,7 +98,7 @@ export namespace craftbuild {
             if (r > 0) {
                 buffer.resize(old_len + r);
 
-                for (size i : range<size>(old_len, len(buffer))) {
+                for (usize i : range<usize>(old_len, len(buffer))) {
                     if (buffer.c_ptr()[i] == '\0') {
                         out_data.resize(i);
                         memcpy(out_data.c_ptr(), buffer.c_ptr(), i);
@@ -126,17 +126,17 @@ export namespace craftbuild {
         static Message parse(List<char> buffer) {
             std::string str(buffer.c_ptr(), len(buffer));
 
-            size pos = str.find('\2');
+            usize pos = str.find('\2');
             if (pos == std::string::npos) return { Str(str), {} };
 
             Message message;
             message.content = Str(str.substr(0, pos));
 
             std::string args_str = str.substr(pos + 1);
-            size start = 0;
+            usize start = 0;
 
             while (true) {
-                size end = args_str.find('\1', start);
+                usize end = args_str.find('\1', start);
                 if (end == std::string::npos) {
                     std::string last_arg = args_str.substr(start);
                     if (not last_arg.empty()) message.arguments.push_back(last_arg);

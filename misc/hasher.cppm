@@ -14,14 +14,14 @@ export namespace craftbuild {
 
     template <>
     struct Hasher<uint8> {
-        size operator()(uint8 value) const {
+        usize operator()(uint8 value) const {
             return std::hash<uint8>{}(value);
         }
     };
 
     template <>
     struct Hasher<uint32> {
-        size operator()(uint32 value) const {
+        usize operator()(uint32 value) const {
             return std::hash<uint32>{}(value);
         }
     };
@@ -35,7 +35,7 @@ export namespace craftbuild {
             return x ^ (x >> 31);
         }
 
-        size operator()(unsigned __int64 value) const {
+        usize operator()(unsigned __int64 value) const {
             static const unsigned __int64 FIXED_RANDOM = std::chrono::steady_clock::now().time_since_epoch().count();
             return splitmix64(value + FIXED_RANDOM);
         }
@@ -43,7 +43,7 @@ export namespace craftbuild {
 
     template <typename T1, typename T2>
     struct Hasher<std::pair<T1, T2>> {
-        size operator()(const std::pair<T1, T2>& value) const {
+        usize operator()(const std::pair<T1, T2>& value) const {
             auto h1 = std::hash<T1>{}(value.first);
             auto h2 = std::hash<T2>{}(value.second);
 

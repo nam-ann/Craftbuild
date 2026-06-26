@@ -1,7 +1,6 @@
 module;
 
 #include <includes.hpp>
-#include <unordered_map>
 
 export module game.world.cave;
 
@@ -25,11 +24,11 @@ export namespace craftbuild {
 
     struct CaveRegistry {
         inline static std::vector<CaveEntry> registry;
-        inline static Dict<Str, size> name2id;
+        inline static Dict<Str, uint64> name2id;
 
         static none register_cave(const Str& name, Cave cave);
-        static Cave get_cave(size cave_id);
-        static Str get_name(size cave_id);
-        static size get_id(const Str& cave_name);
+        static Cave get_cave(uint64 cave_id);
+        static Str get_name(uint64 cave_id);
+        static uint64 get_id(const Str& cave_name);
     };
 }

@@ -25,8 +25,8 @@ export namespace craftbuild {
     requires std::is_trivially_copyable_v<T>
     class List {
         T* __value__;
-        size __len__;
-        size __space__;
+        usize __len__;
+        usize __space__;
 
         struct Iterator {
             T* __ptr__;
@@ -104,14 +104,14 @@ export namespace craftbuild {
             return *this;
         }
 
-        List& operator*=(size n) {
+        List& operator*=(usize n) {
             if (n == 0) {
                 clear();
                 return *this;
             }
             const List original(*this);
             expect(__len__ * (n - 1));
-            for (auto i : range<size>(n - 1)) {
+            for (auto i : range<usize>(n - 1)) {
                 memcpy(&__value__[__len__], original.__value__, original.__len__ * sizeof(T));
                 __len__ += original.__len__;
             }
@@ -122,9 +122,9 @@ export namespace craftbuild {
         List operator+(const List& s) const { List cache(*this); cache += s; return cache; }
         List operator+(List&& s) const noexcept { List cache(*this); cache += s; return cache; }
 
-        List operator*(size n) const { List cache(*this); return cache *= n; }
+        List operator*(usize n) const { List cache(*this); return cache *= n; }
 
-        T& operator[](size pos) {
+        T& operator[](usize pos) {
             if (pos >= __len__) throw std::out_of_range("List index out of range");
             return __value__[pos];
         }
@@ -146,7 +146,7 @@ export namespace craftbuild {
         List& append(const T& t) {
             return *this += t;
         }
-        List& insert(size index, const T& t) {
+        List& insert(usize index, const T& t) {
             if (index < __len__) __value__[index] = t;
             return *this;
         }
@@ -157,13 +157,13 @@ export namespace craftbuild {
             __len__ = __space__ = 0;
         }
 
-        none expect(size extra) {
-            size needed = __len__ + extra;
+        none expect(usize extra) {
+            usize needed = __len__ + extra;
             if (not needed) needed = 8;
             archive(needed);
         }
 
-        none archive(size extra) {
+        none archive(usize extra) {
             if (__space__ >= extra) return;
             __space__ = extra;
 
@@ -177,14 +177,14 @@ export namespace craftbuild {
             cache = nullptr;
         }
 
-        none resize(size new_len, const T& fill_value = T{}) {
+        none resize(usize new_len, const T& fill_value = T{}) {
             if (new_len > __space__) archive(new_len);
-            if (new_len > __len__) for (auto i : range<size>(__len__, new_len)) __value__[i] = fill_value;
+            if (new_len > __len__) for (auto i : range<usize>(__len__, new_len)) __value__[i] = fill_value;
             __len__ = new_len;
         }
 
         none fill(const T& fill_value) {
-            for (auto i : range<size>(__len__)) __value__[i] = fill_value;
+            for (auto i : range<usize>(__len__)) __value__[i] = fill_value;
         }
 
         none swap(List& other) noexcept {
@@ -197,7 +197,7 @@ export namespace craftbuild {
 
         Str str() const {
             Str result = "[";
-            for (auto i : range<size>(__len__)) {
+            for (auto i : range<usize>(__len__)) {
                 result += Str(__value__[i]);
                 if (i != __len__ - 1) result += ", ";
             }
@@ -216,7 +216,7 @@ export namespace craftbuild {
         Iterator begin() const { return Iterator(__value__); }
         Iterator end() const { return Iterator(__value__ + __len__); }
 
-        friend size len(const List& s) { return s.__len__; }
+        friend usize len(const List& s) { return s.__len__; }
         friend List operator+(const std::initializer_list<T>& l, const List& s) { return List(l) + s; }
     };
 }

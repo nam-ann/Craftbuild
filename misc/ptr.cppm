@@ -12,11 +12,11 @@ export namespace craftbuild {
 	template <typename T>
 	class Ptr {
 		T* __value__;
-		std::atomic<size>* __rc__ = nullptr;
+		std::atomic<usize>* __rc__ = nullptr;
 
 		inline none init() {
 			if (__value__ == nullptr) return;
-			__rc__ = new std::atomic<size>(1);
+			__rc__ = new std::atomic<usize>(1);
 		}
 
 		inline none retain() noexcept {

@@ -79,17 +79,17 @@ export namespace craftbuild {
         static uint32 column_seed(int32 seed, int32 x, int32 z);
         static float32 smoothstep(float32 value);
         static Biome lerp_biome(const Biome& a, const Biome& b, float32 t);
-        static Biome select_biome_at(int32 wx, int32 wz, Ref<FastNoiseLite> noise, size biome_count);
-        static Biome get_blended_biome(int32 wx, int32 wz, Ref<FastNoiseLite> noise, size biome_count);
+        static Biome select_biome_at(int32 wx, int32 wz, Ref<FastNoiseLite> noise, usize biome_count);
+        static Biome get_blended_biome(int32 wx, int32 wz, Ref<FastNoiseLite> noise, usize biome_count);
 
         none set_block(const Pos3D<uint8>& pos, const Str& block);
         none set_block(const Pos3D<uint8>& pos, uint32 block_id);
 
-        none tag_block(const Pos3D<uint8>& pos, const Str& tag, size tag_data = 0);
-        none tag_block(const Pos3D<uint8>& pos, uint32 tag_id, size tag_data = 0);
+        none tag_block(const Pos3D<uint8>& pos, const Str& tag, usize tag_data = 0);
+        none tag_block(const Pos3D<uint8>& pos, uint32 tag_id, usize tag_data = 0);
 
-        bool has_tag(const Pos3D<uint8>& pos, const Str& tag, size tag_data = 0) const;
-        bool has_tag(const Pos3D<uint8>& pos, uint32 tag_id, size tag_data = 0) const;
+        bool has_tag(const Pos3D<uint8>& pos, const Str& tag, usize tag_data = 0) const;
+        bool has_tag(const Pos3D<uint8>& pos, uint32 tag_id, usize tag_data = 0) const;
 
         uint32 get_block(const Pos3D<uint8>& pos) const;
         std::pair<uint32, uint64> get_tag(const Pos3D<uint8>& pos) const;

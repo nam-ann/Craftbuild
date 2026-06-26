@@ -18,6 +18,6 @@ export namespace craftbuild {
 
     struct AssetLoader {
         inline static Str base_path = "res://assets/textures/block/";
-        static Ref<Texture2D> load_block_texture(size id, const char* path_suffix, const FaceCount face_count);
+        static Ref<Texture2D> load_block_texture(usize id, const char* path_suffix, const FaceCount face_count);
     };
 }

@@ -58,7 +58,7 @@ namespace craftbuild {
         };
     }
 
-    Biome Chunk::select_biome_at(int32 wx, int32 wz, Ref<FastNoiseLite> noise, size biome_count) {
+    Biome Chunk::select_biome_at(int32 wx, int32 wz, Ref<FastNoiseLite> noise, usize biome_count) {
         if (biome_count == 0) return { 0.01f, 40.0f, 0.4f, 4.0f, 60.0f, 0 };
 
         const float32 biome_noise_val = noise->get_noise_2d(
@@ -66,11 +66,11 @@ namespace craftbuild {
             static_cast<real_t>(wz + 10000) * 0.005f
         );
         const float32 normalized = (biome_noise_val + 1.0f) * 0.5f;
-        const size biome_idx = std::clamp(static_cast<size>(normalized * biome_count), static_cast<size>(0), biome_count - 1);
+        const usize biome_idx = std::clamp(static_cast<usize>(normalized * biome_count), static_cast<usize>(0), biome_count - 1);
         return BiomeRegistry::get_biome(biome_idx);
     }
 
-    Biome Chunk::get_blended_biome(int32 wx, int32 wz, Ref<FastNoiseLite> noise, size biome_count) {
+    Biome Chunk::get_blended_biome(int32 wx, int32 wz, Ref<FastNoiseLite> noise, usize biome_count) {
         if (biome_count <= 1) return select_biome_at(wx, wz, noise, biome_count);
 
         static constexpr int32 BLEND_CELL_SIZE = 96;
@@ -119,10 +119,10 @@ namespace craftbuild {
         for (const auto& tag : default_tags) tag_block(pos, TagRegistry::get_id(tag.first), tag.second);
     }
 
-    none Chunk::tag_block(const Pos3D<uint8>& pos, const Str& tag, size tag_data) {
+    none Chunk::tag_block(const Pos3D<uint8>& pos, const Str& tag, usize tag_data) {
         tag_block(pos, TagRegistry::get_id(tag), tag_data);
     }
-    none Chunk::tag_block(const Pos3D<uint8>& pos, uint32 tag_id, size tag_data) {
+    none Chunk::tag_block(const Pos3D<uint8>& pos, uint32 tag_id, usize tag_data) {
         std::unique_lock lock(data_mutex);
         if (tag_ids_size >= 256) {
             complex_blocks[pos].tag = tag_id;
@@ -141,10 +141,10 @@ namespace craftbuild {
         tag_ids[tag_ids_size++] = tag_pair;
     }
 
-    bool Chunk::has_tag(const Pos3D<uint8>& pos, const Str& tag, size tag_data) const {
+    bool Chunk::has_tag(const Pos3D<uint8>& pos, const Str& tag, usize tag_data) const {
         return has_tag(pos, TagRegistry::get_id(tag), tag_data);
     }
-    bool Chunk::has_tag(const Pos3D<uint8>& pos, uint32 tag_id, size tag_data) const {
+    bool Chunk::has_tag(const Pos3D<uint8>& pos, uint32 tag_id, usize tag_data) const {
         std::shared_lock lock(data_mutex);
         if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return false;
 
@@ -205,7 +205,7 @@ namespace craftbuild {
             new_block_ids[new_block_ids_size++] = block_id;
             };
 
-        const size biome_count = BiomeRegistry::registry.size();
+        const usize biome_count = BiomeRegistry::registry.size();
         for (auto x : range<uint8>(SIZE_X)) {
             for (auto z : range<uint8>(SIZE_Z)) {
                 int32 global_x = chunk_pos.x * SIZE_X + x;
@@ -325,7 +325,7 @@ namespace craftbuild {
             if (by < 0 or by >= Chunk::SIZE_Y) return true;
 
             uint32 id = AIR;
-            std::pair<uint32, size> tag = { TRANSPARENT, true };
+            std::pair<uint32, usize> tag = { TRANSPARENT, true };
 
             if (bx >= Chunk::SIZE_X or bx < 0 or bz >= Chunk::SIZE_Z or bz < 0) {
                 uint8 nid = 0;

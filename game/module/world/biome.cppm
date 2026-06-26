@@ -25,11 +25,11 @@ export namespace craftbuild {
 
 	struct BiomeRegistry {
 		inline static std::vector<BiomeEntry> registry;
-		inline static Dict<Str, size> name2id;
+		inline static Dict<Str, uint64> name2id;
 
 		static none register_biome(const Str& name, const Biome& biome);
-		static Biome get_biome(size biome_id);
-		static Str get_name(size biome_id);
-		static size get_id(const Str& biome_name);
+		static Biome get_biome(uint64 biome_id);
+		static Str get_name(uint64 biome_id);
+		static uint64 get_id(const Str& biome_name);
 	};
 }

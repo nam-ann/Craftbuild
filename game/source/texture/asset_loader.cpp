@@ -10,7 +10,7 @@ module;
 module game.texture.asset_loader;
 
 namespace craftbuild {
-    Ref<Texture2D> AssetLoader::load_block_texture(size id, const char* path_suffix, const FaceCount face_count) {
+    Ref<Texture2D> AssetLoader::load_block_texture(usize id, const char* path_suffix, const FaceCount face_count) {
         if (path_suffix == nullptr or not Str(path_suffix)) {
             return Ref<Texture2D>();
         }

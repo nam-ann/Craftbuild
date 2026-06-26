@@ -119,7 +119,7 @@ export namespace craftbuild {
     template <typename T>
     requires std::is_arithmetic_v<T>
     struct Hasher<Pos3D<T>> {
-        size operator()(const Pos3D<T>& pos) const {
+        usize operator()(const Pos3D<T>& pos) const {
             return std::hash<T>{}(pos.x) ^ (std::hash<T>{}(pos.y) << 16) ^ (std::hash<T>{}(pos.z) << 8);
         }
     };
@@ -127,7 +127,7 @@ export namespace craftbuild {
     template <typename T>
     requires std::is_arithmetic_v<T>
     struct Hasher<Pos2D<T>> {
-        size operator()(const Pos2D<T>& pos) const {
+        usize operator()(const Pos2D<T>& pos) const {
             return std::hash<T>{}(pos.x) ^ (std::hash<T>{}(pos.y) << 16);
         }
     };

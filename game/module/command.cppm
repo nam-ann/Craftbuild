@@ -22,9 +22,9 @@ import game.player;
 namespace craftbuild {
     inline Str trim(const Str& str) {
         std::string _str = str.std_str();
-        size first = _str.find_first_not_of(" \t\n\r");
+        usize first = _str.find_first_not_of(" \t\n\r");
         if (first == std::string::npos) return "";
-        size last = _str.find_last_not_of(" \t\n\r");
+        usize last = _str.find_last_not_of(" \t\n\r");
         return _str.substr(first, last - first + 1);
     }
 
@@ -33,7 +33,7 @@ namespace craftbuild {
         Str current_token;
         bool in_quotes = false;
 
-        for (auto i : range<size>(len(input))) {
+        for (auto i : range<usize>(len(input))) {
             char c = input[i];
 
             if (c == '"') {

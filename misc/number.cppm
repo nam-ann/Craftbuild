@@ -20,5 +20,5 @@ export using byte32 = char32_t;
 export using float32 = float;
 export using float64 = double;
 export using real = godot::real_t;
-export using size = size_t;
+export using usize = size_t;
 export using none = void;

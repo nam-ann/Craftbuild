@@ -10,17 +10,17 @@ namespace craftbuild {
 		registry.emplace_back(BiomeEntry(name, biome));
 	}
 
-	Biome BiomeRegistry::get_biome(size biome_id) {
+	Biome BiomeRegistry::get_biome(uint64 biome_id) {
 		if (registry.size() <= biome_id) return Biome{};
 		return registry[biome_id].biome;
 	}
 
-	Str BiomeRegistry::get_name(size biome_id) {
+	Str BiomeRegistry::get_name(uint64 biome_id) {
 		if (registry.size() <= biome_id) return "";
 		return registry[biome_id].name;
 	}
 
-	size BiomeRegistry::get_id(const Str& biome_name) {
+	uint64 BiomeRegistry::get_id(const Str& biome_name) {
 		if (name2id.find(biome_name) == name2id.end()) return 0;
 		return name2id[biome_name];
 	}

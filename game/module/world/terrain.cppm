@@ -4,7 +4,6 @@ module;
 
 #include <algorithm>
 #include <random>
-#include <stdexcept>
 
 export module game.world.terrain;
 
