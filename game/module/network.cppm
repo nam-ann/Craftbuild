@@ -1,11 +1,13 @@
 module;
 
+#pragma warning(push, 0)
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
 
 #pragma comment(lib, "ws2_32.lib")
 #undef ERROR
+#pragma warning(pop)
 
 #include <includes.hpp>
 #include <mutex>
@@ -48,9 +50,9 @@ export namespace craftbuild {
                 for (const auto& E : message.arguments) arg += E + '\1';
                 arg += '\0';
 
-                int total_payload_sent = 0;
+                int32 total_payload_sent = 0;
                 while (total_payload_sent < arg.size()) {
-                    int sent = ::send(socket, arg.data() + total_payload_sent, arg.size() - total_payload_sent, 0);
+                    int32 sent = ::send(socket, arg.data() + total_payload_sent, (int32)(arg.size() - total_payload_sent), 0);
                     if (sent == SOCKET_ERROR) {
                         if (WSAGetLastError() == WSAEWOULDBLOCK) {
                             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -93,7 +95,7 @@ export namespace craftbuild {
             size_t old_len = len(buffer);
             buffer.resize(old_len + 1024);
 
-            int r = recv(socket, buffer.c_ptr() + old_len, 1024, 0);
+            int32 r = recv(socket, buffer.c_ptr() + old_len, 1024, 0);
 
             if (r > 0) {
                 buffer.resize(old_len + r);
@@ -117,7 +119,7 @@ export namespace craftbuild {
             else if (r == 0) return ReceiveState::ERROR;
             else {
                 buffer.resize(old_len);
-                int err = WSAGetLastError();
+                int32 err = WSAGetLastError();
                 if (err == WSAEWOULDBLOCK) return ReceiveState::WAITING;
                 return ReceiveState::ERROR;
             }

@@ -1,14 +1,18 @@
 module;
 
+#pragma warning(push, 0)
 #include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/fast_noise_lite.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
+#include <godot_cpp/classes/rendering_server.hpp>
+#pragma warning(pop)
 
 #include <includes.hpp>
 #include <mutex>
-#include <shared_mutex>
-#include <algorithm>
 #include <cmath>
+#include <algorithm>
+#include <shared_mutex>
+#include <unordered_set>
 
 module game.world.chunk;
 
@@ -16,6 +20,8 @@ namespace craftbuild {
     bool FaceMask::operator==(const FaceMask& other) const {
         return layer == other.layer and back_face == other.back_face;
     }
+
+    none Chunk::_get_refs(std::unordered_set<GCObject*>& refs) const { refs.insert(pending_mesh_data.object()); }
 
     Chunk::~Chunk() {
         std::lock_guard lock(mesh_mutex);
@@ -27,6 +33,8 @@ namespace craftbuild {
     none Chunk::clear() {
         memset(block_ids, 0, sizeof(uint32) * 256);
         memset(tag_ids, 0, sizeof(uint32) * 256);
+        id2block.clear();
+        id2tag.clear();
         complex_blocks.clear();
     }
 
@@ -222,7 +230,7 @@ namespace craftbuild {
                 }
                 float32 terrain_base_y = current_biome.min_height + base_elevation + detail_elevation;
 
-                int solid_depth = -1;
+                int32 solid_depth = -1;
 
                 for (auto y : range<int16>(SIZE_Y - 1, -1)) {
                     if (y == 0) {
@@ -284,7 +292,7 @@ namespace craftbuild {
     }
 
     none Chunk::generate_mesh(Ptr<Chunk> neighbors[4]) {
-        Ptr<MeshData> data_ptr = new MeshData();
+        Ptr<MeshData> data_ptr = new Obj<MeshData>();
         auto& data = data_ptr.value();
 
         auto& vertices = data.vertices;
@@ -306,7 +314,7 @@ namespace craftbuild {
 
         std::vector<std::shared_mutex*> mutexes_to_lock;
         mutexes_to_lock.push_back(&data_mutex);
-        for (auto i : range<int>(4)) if (neighbors[i]) mutexes_to_lock.push_back(&neighbors[i].value().data_mutex);
+        for (auto i : range<int32>(4)) if (neighbors[i]) mutexes_to_lock.push_back(&neighbors[i].value().data_mutex);
 
         std::sort(mutexes_to_lock.begin(), mutexes_to_lock.end());
         mutexes_to_lock.erase(std::unique(mutexes_to_lock.begin(), mutexes_to_lock.end()), mutexes_to_lock.end());
@@ -321,7 +329,7 @@ namespace craftbuild {
             neighbors[3].c_ptr()
         };
 
-        auto transparent_or_air = [this, raw_neighbors, AIR, TRANSPARENT](int bx, int by, int bz) -> bool {
+        auto transparent_or_air = [this, raw_neighbors, AIR, TRANSPARENT](int32 bx, int32 by, int32 bz) -> bool {
             if (by < 0 or by >= Chunk::SIZE_Y) return true;
 
             uint32 id = AIR;
@@ -349,15 +357,15 @@ namespace craftbuild {
             }
 
             return id == AIR or (tag.first == TRANSPARENT and TagRegistry::get_value(TRANSPARENT, tag.second));
-            };
+        };
 
-        auto get_block_layer = [this, AIR](int bx, int by, int bz, Face face) -> int {
+        auto get_block_layer = [this, AIR](int32 bx, int32 by, int32 bz, Face face) -> int32 {
             uint32 id = get_block({ (uint8)bx, (uint8)by, (uint8)bz });
             if (id == AIR) return -1;
             auto& block = BlockRegistry::get_block(id);
             if (not block) return -1;
             return block.value().get_texture_layer(face);
-            };
+        };
 
         const int64 dims[3] = { Chunk::SIZE_X, Chunk::SIZE_Y, Chunk::SIZE_Z };
         const Face front_faces[3] = { Face::RIGHT, Face::TOP,    Face::FRONT };
@@ -366,13 +374,13 @@ namespace craftbuild {
         List<FaceMask> mask;
         mask.resize(Chunk::SIZE_Y * std::max(Chunk::SIZE_X, Chunk::SIZE_Z));
 
-        uint64 vertex_offset = 0;
-        for (auto d : range<int>(3)) {
-            const int u = (d + 1) % 3;
-            const int v = (d + 2) % 3;
+        uint32 vertex_offset = 0;
+        for (auto d : range<int32>(3)) {
+            const int32 u = (d + 1) % 3;
+            const int32 v = (d + 2) % 3;
 
-            int64 x[3] = { 0, 0, 0 };
-            int64 q[3] = { 0, 0, 0 };
+            int32 x[3] = { 0, 0, 0 };
+            int32 q[3] = { 0, 0, 0 };
             q[d] = 1;
 
             for (x[d] = -1; x[d] < dims[d]; ++x[d]) {
@@ -387,11 +395,11 @@ namespace craftbuild {
                         const bool b_trans = transparent_or_air(x[0] + q[0], x[1] + q[1], x[2] + q[2]);
 
                         if (a_inside and (not a_trans) and b_trans) {
-                            int layer = get_block_layer(x[0], x[1], x[2], front_faces[d]);
+                            int32 layer = get_block_layer(x[0], x[1], x[2], front_faces[d]);
                             if (layer >= 0) mask[x[u] + x[v] * dims[u]] = { layer, false };
                         }
                         else if (b_inside and a_trans and (not b_trans)) {
-                            int layer = get_block_layer(x[0] + q[0], x[1] + q[1], x[2] + q[2], back_faces[d]);
+                            int32 layer = get_block_layer(x[0] + q[0], x[1] + q[1], x[2] + q[2], back_faces[d]);
                             if (layer >= 0) mask[x[u] + x[v] * dims[u]] = { layer, true };
                         }
                     }
@@ -406,13 +414,13 @@ namespace craftbuild {
                             continue;
                         }
 
-                        int width = 1;
+                        int32 width = 1;
                         while (i + width < dims[u] and mask[(i + width) + j * dims[u]] == current_face) width++;
 
-                        int height = 1;
+                        int32 height = 1;
                         bool can_grow = true;
                         while (j + height < dims[v]) {
-                            for (int k = 0; k < width; ++k) {
+                            for (int32 k = 0; k < width; ++k) {
                                 if (not (mask[(i + k) + (j + height) * dims[u]] == current_face)) {
                                     can_grow = false;
                                     break;
@@ -469,10 +477,10 @@ namespace craftbuild {
                         else if (d == 1) normal.y = current_face.back_face ? -1.0f : 1.0f;
                         else if (d == 2) normal.z = current_face.back_face ? -1.0f : 1.0f;
 
-                        for (auto n : range<int>(4)) normals.append(normal);
+                        for (auto n : range<int32>(4)) normals.append(normal);
 
                         Vector2 layer_uv(static_cast<float>(current_face.layer), 0.0f);
-                        for (auto n : range<int>(4)) uvs_layer.append(layer_uv);
+                        for (auto n : range<int32>(4)) uvs_layer.append(layer_uv);
 
                         indices.append(vertex_offset + 0); indices.append(vertex_offset + 2); indices.append(vertex_offset + 1);
                         indices.append(vertex_offset + 0); indices.append(vertex_offset + 3); indices.append(vertex_offset + 2);
@@ -486,8 +494,8 @@ namespace craftbuild {
 
                         vertex_offset += 4;
 
-                        for (auto v_idx : range<int>(height))
-                            for (auto u_idx : range<int>(width))
+                        for (auto v_idx : range<int32>(height))
+                            for (auto u_idx : range<int32>(width))
                                 mask[(i + u_idx) + (j + v_idx) * dims[u]] = { -1, false };
 
                         i += width;

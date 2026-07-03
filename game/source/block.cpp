@@ -1,8 +1,10 @@
 module;
 
+#pragma warning(push, 0)
 #include <godot_cpp/variant/vector2.hpp>
 #include <godot_cpp/variant/vector3.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
+#pragma warning(pop)
 
 #include <includes.hpp>
 #include <functional>
@@ -87,17 +89,17 @@ namespace craftbuild {
         }
     }
 
-    int Block1F::get_texture_layer(Face face) const {
+    int32 Block1F::get_texture_layer(Face face) const {
         return base_texture_layer;
     }
 
-    int Block3F::get_texture_layer(Face face) const {
+    int32 Block3F::get_texture_layer(Face face) const {
         if (face == Face::TOP)    return base_texture_layer;
         if (face == Face::BOTTOM) return base_texture_layer + 1;
         return base_texture_layer + 2;
     }
 
-    int Block6F::get_texture_layer(Face face) const {
+    int32 Block6F::get_texture_layer(Face face) const {
         switch (face) {
         case Face::TOP:    return base_texture_layer;
         case Face::BOTTOM: return base_texture_layer + 1;

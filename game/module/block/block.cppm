@@ -1,8 +1,10 @@
 module;
 
+#pragma warning(push, 0)
 #include <godot_cpp/variant/vector2.hpp>
 #include <godot_cpp/variant/vector3.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
+#pragma warning(pop)
 
 #include <includes.hpp>
 
@@ -46,20 +48,20 @@ export namespace craftbuild {
 
     class Block {
     protected:
-        int base_texture_layer = 0;
+        int32 base_texture_layer = 0;
 
     public:
         virtual ~Block();
-        virtual int get_texture_layer(Face face) const = 0;
+        virtual int32 get_texture_layer(Face face) const = 0;
         virtual std::vector<std::pair<Str, uint64>> init_tags();
 
         static none create_face(Face face, const Vector3& pos, List<Pos3D<real>>& vertices);
         friend class AtlasTexture;
     };
 
-    struct Block1F : Block { int get_texture_layer(Face face) const override final; };
-    struct Block3F : Block { int get_texture_layer(Face face) const override final; };
-    struct Block6F : Block { int get_texture_layer(Face face) const override final; };
+    struct Block1F : Block { int32 get_texture_layer(Face face) const override final; };
+    struct Block3F : Block { int32 get_texture_layer(Face face) const override final; };
+    struct Block6F : Block { int32 get_texture_layer(Face face) const override final; };
 
     struct BlockEntry {
         Ref<Texture2D> texture = nullptr;
@@ -76,7 +78,7 @@ export namespace craftbuild {
         template <typename T>
         requires std::derived_from<T, Block>
         static none register_block(const Str& name, const char* path) {
-            Ptr<Block> block = new T();
+            Ptr<Block> block = new Obj<T>();
             Ref<Texture2D> texture;
 
             if constexpr (std::derived_from<T, Block1F>) {
@@ -90,7 +92,7 @@ export namespace craftbuild {
             }
 
             registry.emplace_back(std::move(block), name, texture);
-            name2id[name] = registry.size() - 1;
+            name2id[name] = (uint32)(registry.size() - 1);
         }
 
         static Ptr<Block>& get_block(uint32 block_id);

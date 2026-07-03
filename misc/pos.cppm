@@ -1,9 +1,11 @@
 module;
 
+#pragma warning(push, 0)
 #include <godot_cpp/variant/vector3.hpp>
 #include <godot_cpp/variant/vector3i.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 #include <godot_cpp/variant/vector2i.hpp>
+#pragma warning(pop)
 
 #include <includes.hpp>
 #include <xhash>
@@ -43,6 +45,7 @@ export namespace craftbuild {
         def_operator(/);
         def_operator(%);
 
+#undef def_operator
 #define def_operator(op) Pos3D operator##op(const Pos3D& other) const { Pos3D result; result.x op##= other.x, result.y op##= other.y, result.z op##= other.z; return result;}
 
         def_operator(+);
@@ -57,7 +60,7 @@ export namespace craftbuild {
             return godot::Vector3(static_cast<float32>(x), static_cast<float32>(y), static_cast<float32>(z));
         }
         operator godot::Vector3i() const {
-            return godot::Vector3i(static_cast<int>(x), static_cast<int>(y), static_cast<int>(z));
+            return godot::Vector3i(static_cast<int32>(x), static_cast<int32>(y), static_cast<int32>(z));
         }
 
         bool operator==(const Pos3D& other) const {
@@ -90,6 +93,7 @@ export namespace craftbuild {
         def_operator(/);
         def_operator(%);
 
+#undef def_operator
 #define def_operator(op) Pos2D operator##op(const Pos2D& other) const { Pos2D result; result.x op##= other.x, result.y op##= other.y; return result;}
 
         def_operator(+);
@@ -104,7 +108,7 @@ export namespace craftbuild {
             return godot::Vector2(static_cast<float32>(x), static_cast<float32>(y));
         }
         operator godot::Vector2i() const {
-            return godot::Vector2i(static_cast<int>(x), static_cast<int>(y));
+            return godot::Vector2i(static_cast<int32>(x), static_cast<int32>(y));
         }
 
         bool operator==(const Pos2D& other) const {

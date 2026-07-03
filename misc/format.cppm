@@ -48,7 +48,7 @@ export namespace craftbuild {
 			f.__buffer__ += Str(i);
 			return std::move(f);
 		}
-		friend format&& operator<<(format&& f, int i) {
+		friend format&& operator<<(format&& f, int32 i) {
 			f.__buffer__ += Str(i);
 			return std::move(f);
 		}
@@ -56,7 +56,7 @@ export namespace craftbuild {
 			f.__buffer__ += Str(i);
 			return std::move(f);
 		}
-		friend format&& operator<<(format&& f, unsigned int i) {
+		friend format&& operator<<(format&& f, uint32 i) {
 			f.__buffer__ += Str(i);
 			return std::move(f);
 		}

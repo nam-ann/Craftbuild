@@ -160,10 +160,12 @@
     <ClCompile Include="game\module\core.cppm" />
     <ClCompile Include="game\module\network.cppm" />
     <ClCompile Include="game\module\player\player_data.cppm" />
+    <ClCompile Include="game\source\environment.cpp" />
     <ClCompile Include="game\source\player\skin_manager.cpp" />
     <ClCompile Include="game\source\server.cpp" />
     <ClCompile Include="game\module\server.cppm" />
     <ClCompile Include="game\module\world\cave.cppm" />
+    <ClCompile Include="misc\gc.cppm" />
     <ClCompile Include="misc\list.cppm" />
     <ClCompile Include="misc\pos.cppm" />
     <ClCompile Include="game\module\environment.cppm" />
@@ -204,6 +206,7 @@
       <FileType>Document</FileType>
     </ClCompile>
     <ClCompile Include="misc\range.cppm" />
+    <ClCompile Include="misc\set.cppm" />
     <ClCompile Include="misc\str.cppm" />
     <ClCompile Include="misc\number.cppm" />
     <ClCompile Include="game\source\block.cpp" />

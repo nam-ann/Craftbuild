@@ -1,6 +1,8 @@
+#pragma warning(push, 0)
 #include <windows.h>
-
 #include <godot_cpp/classes/engine.hpp>
+#pragma warning(pop)
+
 #include <includes.hpp>
 
 import misc.pos;
@@ -9,7 +11,7 @@ import misc.format;
 import game.core;
 import game.environment;
 import game.main;
-import game.server;
+import game.server_ptr;
 import game.player;
 import game.logger;
 import game.thread;

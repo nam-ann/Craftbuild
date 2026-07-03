@@ -1,7 +1,9 @@
 module;
 
+#pragma warning(push, 0)
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
+#pragma warning(pop)
 
 #include <includes.hpp>
 #include <mutex>

@@ -41,14 +41,14 @@ namespace craftbuild {
 
     ConstantHeight::ConstantHeight(VerticalAnchor value) : value(value) {}
 
-    HeightProviderPtr ConstantHeight::of(VerticalAnchor value) { return new ConstantHeight(value); }
+    HeightProviderPtr ConstantHeight::of(VerticalAnchor value) { return new Obj<ConstantHeight>(value); }
     const VerticalAnchor& ConstantHeight::get_value() const { return value; }
     int32 ConstantHeight::sample(RandomSource&, const WorldGenerationContext& context) const { return value.resolve_y(context); }
     HeightProviderType ConstantHeight::get_type() const { return HeightProviderType::CONSTANT; }
 
     UniformHeight::UniformHeight(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive) : min_inclusive(min_inclusive), max_inclusive(max_inclusive) {}
 
-    HeightProviderPtr UniformHeight::of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive) { return new UniformHeight(min_inclusive, max_inclusive); }
+    HeightProviderPtr UniformHeight::of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive) { return new Obj<UniformHeight>(min_inclusive, max_inclusive); }
     
     int32 UniformHeight::sample(RandomSource& random, const WorldGenerationContext& context) const {
         const int32 min_y = min_inclusive.resolve_y(context);
@@ -61,7 +61,7 @@ namespace craftbuild {
 
     BiasedToBottomHeight::BiasedToBottomHeight(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 inner) : min_inclusive(min_inclusive), max_inclusive(max_inclusive), inner(std::max<int32>(1, inner)) {}
 
-    HeightProviderPtr BiasedToBottomHeight::of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 inner) { return new BiasedToBottomHeight(min_inclusive, max_inclusive, inner); }
+    HeightProviderPtr BiasedToBottomHeight::of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 inner) { return new Obj<BiasedToBottomHeight>(min_inclusive, max_inclusive, inner); }
 
     int32 BiasedToBottomHeight::sample(RandomSource& random, const WorldGenerationContext& context) const {
         const int32 min_y = min_inclusive.resolve_y(context);
@@ -77,7 +77,7 @@ namespace craftbuild {
 
     VeryBiasedToBottomHeight::VeryBiasedToBottomHeight(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 inner) : min_inclusive(min_inclusive), max_inclusive(max_inclusive), inner(std::max<int32>(1, inner)) {}
     
-    HeightProviderPtr VeryBiasedToBottomHeight::of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 inner) { return new VeryBiasedToBottomHeight(min_inclusive, max_inclusive, inner); }
+    HeightProviderPtr VeryBiasedToBottomHeight::of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 inner) { return new Obj<VeryBiasedToBottomHeight>(min_inclusive, max_inclusive, inner); }
     
     int32 VeryBiasedToBottomHeight::sample(RandomSource& random, const WorldGenerationContext& context) const {
         const int32 min_y = min_inclusive.resolve_y(context);
@@ -93,7 +93,7 @@ namespace craftbuild {
 
     TrapezoidHeight::TrapezoidHeight(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 plateau) : min_inclusive(min_inclusive), max_inclusive(max_inclusive), plateau(plateau) {}
 
-    HeightProviderPtr TrapezoidHeight::of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 plateau) { return new TrapezoidHeight(min_inclusive, max_inclusive, plateau); }
+    HeightProviderPtr TrapezoidHeight::of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 plateau) { return new Obj<TrapezoidHeight>(min_inclusive, max_inclusive, plateau); }
 
     int32 TrapezoidHeight::sample(RandomSource& random, const WorldGenerationContext& context) const {
         const int32 min_y = min_inclusive.resolve_y(context);
@@ -116,7 +116,7 @@ namespace craftbuild {
         }
     }
 
-    HeightProviderPtr WeightedListHeight::of(std::vector<Entry> distribution) { return new WeightedListHeight(std::move(distribution)); }
+    HeightProviderPtr WeightedListHeight::of(std::vector<Entry> distribution) { return new Obj<WeightedListHeight>(std::move(distribution)); }
 
     int32 WeightedListHeight::sample(RandomSource& random, const WorldGenerationContext& context) const {
         if (total_weight <= 0) return 0;

@@ -1,8 +1,10 @@
 module;
 
+#pragma warning(push, 0)
 #include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/classes/standard_material3d.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
+#pragma warning(pop)
 
 #include <includes.hpp>
 

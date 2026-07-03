@@ -1,11 +1,13 @@
 module;
 
+#pragma warning(push, 0)
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/classes/wrapped.hpp>
+#pragma warning(pop)
 
 #include <includes.hpp>
 #include <concepts>
-#define VERSION "26.4"
+#define VERSION "26.8"
 
 export module game.core;
 
@@ -23,6 +25,6 @@ export namespace craftbuild {
     inline int32 render_distance = 32;
     inline int32 sleep_time_cpu = 180;
 
-    inline constexpr real MATH_PI = Math_PI;
-    inline constexpr real MAXIMUM_CAMERA_ANGLE = 2.0000002384185791015625f;
+    inline constexpr real MATH_PI = (real)Math_PI;
+    inline constexpr real MAXIMUM_CAMERA_ANGLE = (real)2.0000002384185791015625f;
 }

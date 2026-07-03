@@ -14,7 +14,7 @@ export namespace craftbuild {
         inline static constexpr uint8 HOTBAR_SIZE = 9;
         uint32 hotbar[HOTBAR_SIZE] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         uint8 selected_slot = 0;
-        Dict<Str, int> inventory;
+        Dict<Str, int32> inventory;
         int8 hp = 20;
     };
 }

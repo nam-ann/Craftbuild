@@ -1,11 +1,12 @@
 module;
 
-#include <godot_cpp/classes/input.hpp>
+#pragma warning(push, 0)
 #include <godot_cpp/classes/camera3d.hpp>
 #include <godot_cpp/classes/input_event.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
 #include <godot_cpp/classes/character_body3d.hpp>
+#pragma warning(pop)
 
 #include <includes.hpp>
 #include <shared_mutex>
@@ -53,7 +54,7 @@ export namespace craftbuild {
         inline static constexpr uint8 HOTBAR_SIZE = 9;
         uint32 hotbar[HOTBAR_SIZE] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         uint8 selected_slot = 0;
-        Dict<Str, int> inventory;
+        Dict<Str, int32> inventory;
         int8 hp = 20;
 
         // World
@@ -70,13 +71,13 @@ export namespace craftbuild {
         none _physics_process(float64 delta) override;
         none _input(const Ref<InputEvent>& event) override;
 
-        bool would_collide_with_player(const Pos3D<int>& block_pos) const;
+        bool would_collide_with_player(const Pos3D<int32>& block_pos) const;
         Ref<ShaderMaterial> create_selection_box_material();
         Dictionary raycast_block(real max_distance = 5.0f);
         Face get_face(Pos3D<real> n);
 
-        none cycle_hotbar(int dir);
-        none select_slot(int slot);
+        none cycle_hotbar(int32 dir);
+        none select_slot(int32 slot);
         uint32 get_selected_block_id() const;
 
         none save_data(std::ostream& os);

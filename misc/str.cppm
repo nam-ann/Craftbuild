@@ -26,7 +26,7 @@ inline std::u32string ptr_to_hex(const none* ptr) noexcept {
     if (value == 0) return U"0x0";
 
     byte32 buffer[2 + sizeof(uintptr_t) * 2 + 1]; // "0x" + hex + null
-    int i = sizeof(buffer) - 1;
+    int32 i = sizeof(buffer) - 1;
     buffer[i--] = U'\0';
 
     const byte32* hex = U"0123456789ABCDEF";
@@ -152,7 +152,7 @@ export namespace craftbuild {
             }
 
             // MSB-first
-            for (auto i : range<int>(n - 1, 0)) {
+            for (auto i : range<int32>(n - 1, 0)) {
                 append(chunks[i] | 0x80); // continuation
             }
             append(chunks[0]); // last byte
@@ -183,9 +183,9 @@ export namespace craftbuild {
     public:
         Str() : __value__(nullptr), __len__(0), __space__(0) {}
         explicit Str(int64 i) : __value__(nullptr), __len__(0), __space__(0) { encode(to_u32(std::to_string(i))); }
-        explicit Str(int i) : __value__(nullptr), __len__(0), __space__(0) { encode(to_u32(std::to_string(i))); }
+        explicit Str(int32 i) : __value__(nullptr), __len__(0), __space__(0) { encode(to_u32(std::to_string(i))); }
         explicit Str(uint64 i) : __value__(nullptr), __len__(0), __space__(0) { encode(to_u32(std::to_string(i))); }
-        explicit Str(unsigned int i) : __value__(nullptr), __len__(0), __space__(0) { encode(to_u32(std::to_string(i))); }
+        explicit Str(uint32 i) : __value__(nullptr), __len__(0), __space__(0) { encode(to_u32(std::to_string(i))); }
         explicit Str(float64 i) : __value__(nullptr), __len__(0), __space__(0) { encode(to_u32(std::to_string(i))); }
         explicit Str(const void* v) : __value__(nullptr), __len__(0), __space__(0) { encode(ptr_to_hex(v)); }
         Str(const byte32* c) : __value__(nullptr), __len__(0), __space__(0) { encode(c); }

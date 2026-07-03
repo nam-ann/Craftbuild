@@ -1,16 +1,20 @@
 module;
 
+#pragma warning(push, 0)
 #include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/fast_noise_lite.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
+#pragma warning(pop)
 
 #include <includes.hpp>
 #include <mutex>
-#include <shared_mutex>
 #include <algorithm>
+#include <shared_mutex>
+#include <unordered_set>
 
 export module game.world.chunk;
 
+import misc.gc;
 import misc.ptr;
 import misc.str;
 import misc.dict;
@@ -37,7 +41,7 @@ export namespace craftbuild {
     };
 
     struct FaceMask {
-        int layer = -1;
+        int32 layer = -1;
         bool back_face = false;
 
         bool operator==(const FaceMask& other) const;
@@ -60,7 +64,7 @@ export namespace craftbuild {
         Dict<Pos3D<uint8>, BlockStorageFull> complex_blocks;
         BlockStorage blocks[SIZE_X][SIZE_Y][SIZE_Z] = {};
 
-        Pos3D<int> chunk_pos;
+        Pos3D<int32> chunk_pos;
         TrapezoidHeight height_provider{ VerticalAnchor::absolute(18), VerticalAnchor::absolute(38), 8 };
         std::atomic<bool> generated = false;
         std::atomic<bool> dirty = true;
@@ -72,6 +76,8 @@ export namespace craftbuild {
         mutable std::mutex mesh_mutex;
 
         uint8 chunk_version = 0;
+
+        none _get_refs(std::unordered_set<GCObject*>& refs) const;
 
         ~Chunk();
         none clear();

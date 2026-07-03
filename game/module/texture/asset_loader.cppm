@@ -1,6 +1,9 @@
 module;
 
+#pragma warning(push, 0)
 #include <godot_cpp/classes/texture2d.hpp>
+#pragma warning(pop)
+
 #include <includes.hpp>
 
 export module game.texture.asset_loader;

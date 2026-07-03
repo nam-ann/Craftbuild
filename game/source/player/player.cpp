@@ -1,5 +1,6 @@
 module;
 
+#pragma warning(push, 0)
 #include <godot_cpp/classes/input.hpp>
 #include <godot_cpp/classes/shader.hpp>
 #include <godot_cpp/classes/window.hpp>
@@ -7,6 +8,7 @@ module;
 #include <godot_cpp/classes/box_mesh.hpp>
 #include <godot_cpp/classes/camera3d.hpp>
 #include <godot_cpp/classes/scene_tree.hpp>
+#include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/input_event.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
 #include <godot_cpp/classes/capsule_shape3d.hpp>
@@ -22,6 +24,7 @@ module;
 #include <godot_cpp/variant/vector3.hpp>
 #include <godot_cpp/variant/vector3i.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
+#pragma warning(pop)
 
 #include <includes.hpp>
 #include <algorithm>
@@ -108,7 +111,7 @@ namespace craftbuild {
         const Vector3 normal = hit["normal"];
 
         const Vector3 pos_float = hit_pos - (normal * 0.001f);
-        Pos3D<int> block_pos = pos_float.floor();
+        Pos3D<real> block_pos = pos_float.floor();
 
         selection_box->set_position(Vector3(block_pos.x, block_pos.y, block_pos.z) + Vector3(0.5, 0.5, 0.5));
     }
@@ -156,8 +159,8 @@ namespace craftbuild {
             const float32 blend = has_input ? accel : decel;
 
             const Vector3 target_xz = wish_dir * current_speed;
-            velocity.x = velocity.x + (target_xz.x - velocity.x) * std::min(blend * delta, 1.0);
-            velocity.z = velocity.z + (target_xz.z - velocity.z) * std::min(blend * delta, 1.0);
+            velocity.x = velocity.x + (target_xz.x - velocity.x) * (real)std::min(blend * delta, 1.0);
+            velocity.z = velocity.z + (target_xz.z - velocity.z) * (real)std::min(blend * delta, 1.0);
 
             if (is_grounded) {
                 if (velocity.y < 0.0f) velocity.y = -0.1f;
@@ -257,13 +260,13 @@ namespace craftbuild {
                             if (not would_collide_with_player(block_pos)) world->set_global_block_id(block, block_pos.x, block_pos.y, block_pos.z);
                         }
 
-                        const int cx = static_cast<int>(std::floor((float32)block_pos.x / Chunk::SIZE_X));
-                        const int cz = static_cast<int>(std::floor((float32)block_pos.z / Chunk::SIZE_Z));
+                        const int32 cx = static_cast<int32>(std::floor((float32)block_pos.x / Chunk::SIZE_X));
+                        const int32 cz = static_cast<int32>(std::floor((float32)block_pos.z / Chunk::SIZE_Z));
                         if (auto chunk = world->get_chunk(cx, cz)) {
                             chunk.value().dirty.store(true, std::memory_order_release);
 
                             if (block_pos.x >= 0 or block_pos.z >= 0 or block_pos.x < Chunk::SIZE_X or block_pos.z < Chunk::SIZE_Z) {
-                                Pos3D<int> neighbor_offsets[4] = { {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1} };
+                                Pos3D<int32> neighbor_offsets[4] = { {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1} };
                                 for (const auto& offset : neighbor_offsets) {
                                     if (auto neighbor = world->get_chunk(cx + offset.x, cz + offset.z)) neighbor.value().dirty.store(true, std::memory_order_release);
                                 }
@@ -280,7 +283,7 @@ namespace craftbuild {
             if (input->is_pressed() and input->get_keycode() == KEY_F4 and is_f3_held) {
                 if (not gamemode_toggled) {
                     gamemode = (Gamemode)(((uint8_t)gamemode + 1) % 4);
-                    log<LogType::INFO>(format{} << "Changed gamemode to " << (int)gamemode);
+                    log<LogType::INFO>(format{} << "Changed gamemode to " << (int32)gamemode);
                     can_fly = false;
                     gamemode_toggled = true;
                 }
@@ -289,7 +292,7 @@ namespace craftbuild {
             if (gamemode == Gamemode::SPECTATOR) can_fly = true;
         }
 
-        for (auto i : range<int>(9)) {
+        for (auto i : range<int32>(9)) {
             Key key = (Key)(KEY_1 + i);
             if (Input::get_singleton()->is_key_pressed(key)) {
                 if (event->is_pressed() and not event->is_echo()) {
@@ -299,7 +302,7 @@ namespace craftbuild {
         }
     }
 
-    bool Player::would_collide_with_player(const Pos3D<int>& block_pos) const {
+    bool Player::would_collide_with_player(const Pos3D<int32>& block_pos) const {
         Pos3D<real> player_pos = get_position();
 
         real min_x = player_pos.x - 0.3f;
@@ -323,19 +326,20 @@ namespace craftbuild {
         Ref<ShaderMaterial> mat;
         mat.instantiate();
 
+        String shader_path = "res://assets/shaders/selection_box.cbshader";
+
         Ref<Shader> shader;
         shader.instantiate();
-        shader->set_code(R"(
-shader_type spatial;
 
-render_mode unshaded, cull_disabled;
-
-void fragment() {
-    ALBEDO = vec3(1.0, 1.0, 1.0);
-    EMISSION = vec3(4.0, 4.0, 4.0);
-    ALPHA = 0.05;
-}
-        )");
+        if (FileAccess::file_exists(shader_path)) {
+            Ref<FileAccess> file = FileAccess::open(shader_path, FileAccess::READ);
+            if (file.is_valid()) {
+                String shader_code = file->get_as_text();
+                shader->set_code(shader_code);
+            }
+            else log<LogType::ERROR>(format{} << "Failed to open shader file at: " << shader_path.utf8());
+        }
+        else log<LogType::ERROR>(format{} << "Shader file not found at: " << shader_path.utf8());
 
         mat->set_shader(shader);
         return mat;
@@ -367,12 +371,12 @@ void fragment() {
         return Face::TOP;
     }
 
-    none Player::cycle_hotbar(int dir) {
+    none Player::cycle_hotbar(int32 dir) {
         selected_slot = (selected_slot + dir + HOTBAR_SIZE) % HOTBAR_SIZE;
         log<LogType::INFO>(format{} << "Selected slot: " << selected_slot + 1);
     }
 
-    none Player::select_slot(int slot) {
+    none Player::select_slot(int32 slot) {
 
     }
 

@@ -4,7 +4,7 @@ module;
 
 module game.command;
 
-import game.server;
+import game.server_ptr;
 import game.world.chunk;
 
 namespace craftbuild {
@@ -24,9 +24,9 @@ namespace craftbuild {
         }
 
         try {
-            int64 x = std::stoi(args[1].std_str());
-            int64 y = std::stoi(args[2].std_str());
-            int64 z = std::stoi(args[3].std_str());
+            int32 x = std::stoi(args[1].std_str());
+            int32 y = std::stoi(args[2].std_str());
+            int32 z = std::stoi(args[3].std_str());
             Str block_type = args[4];
 
             if (not is_valid_coordinate(x, y, z)) {
@@ -45,7 +45,7 @@ namespace craftbuild {
             output = format{} << "Set block " << block_type << " at (" << x << "," << y << "," << z << ")";
             log<LogType::INFO>(output);
         }
-        catch (const std::exception& e) {
+        catch (const std::exception&) {
             output = "Invalid command arguments";
             log<LogType::ERROR>(output);
         }
@@ -64,12 +64,12 @@ namespace craftbuild {
         }
 
         try {
-            int64 x1 = std::stoi(args[1].std_str());
-            int64 y1 = std::stoi(args[2].std_str());
-            int64 z1 = std::stoi(args[3].std_str());
-            int64 x2 = std::stoi(args[4].std_str());
-            int64 y2 = std::stoi(args[5].std_str());
-            int64 z2 = std::stoi(args[6].std_str());
+            int32 x1 = std::stoi(args[1].std_str());
+            int32 y1 = std::stoi(args[2].std_str());
+            int32 z1 = std::stoi(args[3].std_str());
+            int32 x2 = std::stoi(args[4].std_str());
+            int32 y2 = std::stoi(args[5].std_str());
+            int32 z2 = std::stoi(args[6].std_str());
             Str block_type = args[7];
 
             if (not is_valid_block_type(block_type)) {
@@ -78,12 +78,12 @@ namespace craftbuild {
                 return output;
             }
 
-            int64 min_x = std::min(x1, x2);
-            int64 max_x = std::max(x1, x2);
-            int64 min_y = std::min(y1, y2);
-            int64 max_y = std::max(y1, y2);
-            int64 min_z = std::min(z1, z2);
-            int64 max_z = std::max(z1, z2);
+            int32 min_x = std::min(x1, x2);
+            int32 max_x = std::max(x1, x2);
+            int32 min_y = std::min(y1, y2);
+            int32 max_y = std::max(y1, y2);
+            int32 min_z = std::min(z1, z2);
+            int32 max_z = std::max(z1, z2);
 
             if (not is_valid_coordinate(min_x, min_y, min_z) or not is_valid_coordinate(max_x, max_y, max_z)) {
                 output = format{} << "(" << min_x << "," << min_x << "," << min_z << ") or (" << max_x << ", " << max_y << ", " << max_z << ") outs of bounds";
@@ -91,10 +91,10 @@ namespace craftbuild {
                 return output;
             }
 
-            int block_count = 0;
-            for (int x = min_x; x <= max_x; ++x) {
-                for (int y = min_y; y <= max_y; ++y) {
-                    for (int z = min_z; z <= max_z; ++z) {
+            int32 block_count = 0;
+            for (int32 x = min_x; x <= max_x; ++x) {
+                for (int32 y = min_y; y <= max_y; ++y) {
+                    for (int32 z = min_z; z <= max_z; ++z) {
                         world->set_global_block_id(BlockRegistry::get_id(block_type), x, y, z);
                         block_count++;
                     }
@@ -103,7 +103,7 @@ namespace craftbuild {
             output = format{} << "Filled " << block_count << " block " << block_type << " from (" << min_x << "," << min_y << "," << min_z << ") to (" << max_x << "," << max_y << "," << max_z << ")";
             log<LogType::INFO>(output);
         }
-        catch (const std::exception& e) {
+        catch (const std::exception&) {
             output = "Invalid command arguments";
             log<LogType::ERROR>(output);
         }
@@ -135,7 +135,7 @@ namespace craftbuild {
                     log<LogType::WARNING>(output);
                 }
             }
-            catch (const std::exception& e) {
+            catch (const std::exception&) {
                 output = "Invalid command arguments";
                 log<LogType::ERROR>(output);
                 return output;

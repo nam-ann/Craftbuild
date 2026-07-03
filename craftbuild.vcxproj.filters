@@ -143,5 +143,14 @@
     <ClCompile Include="game\source\world\terrain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="misc\gc.cppm">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game\source\environment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="misc\set.cppm">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

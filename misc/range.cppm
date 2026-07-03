@@ -22,7 +22,7 @@ public:
         T step;
 
         bool operator!=(Sentinel s) const {
-            return step > 0 ? value < s.stop : value != s.stop;
+            return step > 0 ? value < s.stop : value > s.stop;
         }
 
         T operator*() const { return value; }
