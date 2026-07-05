@@ -66,9 +66,6 @@ export namespace craftbuild {
         Set<Pos3D<int32>> pending_terrain_jobs;
         mutable std::mutex pending_jobs_mutex;
 
-        List<Pos3D<int32>> chunks_to_remove;
-        std::mutex chunks_to_remove_mutex;
-        std::atomic<bool> should_remove_chunks = false;
         std::atomic<bool> pausing = true;
         std::atomic<bool> chatting = false;
         std::condition_variable loop_cv;

@@ -236,78 +236,6 @@ namespace craftbuild {
             std::lock_guard lock(ready_chunks_queue_mutex);
             for (auto& chunk_ptr : deferred_chunks) ready_chunks_queue.emplace_back(std::move(chunk_ptr));
         }
-
-        if (should_remove_chunks.load(std::memory_order_acquire)) {
-            List<Pos3D<int32>> pending_unloads;
-
-            {
-                std::lock_guard lock(chunks_to_remove_mutex);
-                if (not chunks_to_remove) {
-                    should_remove_chunks.store(false, std::memory_order_release);
-                    return;
-                }
-                pending_unloads.swap(chunks_to_remove);
-                should_remove_chunks.store(false, std::memory_order_release);
-            }
-
-            std::unique_lock lock(chunks_mutex);
-            for (const auto& pos : pending_unloads) {
-                if (not chunks.contains(pos)) continue;
-
-                auto chunk_ptr = chunks[pos];
-                if (not chunk_ptr) continue;
-                auto& chunk = chunk_ptr.value();
-
-                if (chunk.mesh_instance) {
-                    chunk.mesh_instance->queue_free();
-                    chunk.mesh_instance = nullptr;
-                }
-                chunks.erase(pos);
-            }
-        }
-
-        if (server_ptr) {
-            auto& server = server_ptr.value();
-            if (server.should_remove_chunks.load(std::memory_order_acquire)) {
-                List<Pos3D<int32>> pending_unloads;
-
-                {
-                    std::lock_guard lock(server.chunks_to_remove_mutex);
-                    if (not server.chunks_to_remove) {
-                        server.should_remove_chunks.store(false, std::memory_order_release);
-                        return;
-                    }
-                    pending_unloads.swap(server.chunks_to_remove);
-                    server.should_remove_chunks.store(false, std::memory_order_release);
-                }
-
-                Set<Pos3D<int32>> regions_to_save;
-                for (const auto& pos : pending_unloads) {
-                    int32 rx = (pos.x >= 0) ? (pos.x / 16) : ((pos.x - 15) / 16);
-                    int32 rz = (pos.z >= 0) ? (pos.z / 16) : ((pos.z - 15) / 16);
-                    regions_to_save.insert({ rx, 0, rz });
-                }
-
-                for (const auto& [rx, _, rz] : regions_to_save) {
-                    server.save_region(format{} << "user://game/saves/" << server.world_name, rx, rz);
-                }
-
-                std::unique_lock lock(server.chunks_mutex);
-                for (const auto& pos : pending_unloads) {
-                    if (not server.chunks.contains(pos)) continue;
-
-                    auto chunk_ptr = server.chunks[pos];
-					if (not chunk_ptr) continue;
-					auto& chunk = chunk_ptr.value();
-
-                    if (chunk.mesh_instance) {
-                        chunk.mesh_instance->queue_free();
-                        chunk.mesh_instance = nullptr;
-                    }
-                    server.chunks.erase(pos);
-                }
-            }
-        }
     }
 
     none Main::_exit_tree() {
@@ -324,7 +252,7 @@ namespace craftbuild {
     }
 
     none Main::init_singleplayer() {
-        log<LogType::INFO>("Starting local server_ptr...");
+        log<LogType::INFO>("Starting local server...");
         server_ptr = new Obj<TCPServer>();
         server_ptr.value().connect(player_name);
 
@@ -774,26 +702,26 @@ namespace craftbuild {
 
     none Main::unload_distant_chunks(int32 p_cx, int32 p_cz) {
         const int32 unload_dist = render_distance + 4;
-        List<Pos3D<int32>> chunks_to_remove;
+        int32 removed = 0;
 
         {
-            std::shared_lock lock(chunks_mutex);
-            for (const auto& E : chunks) {
-                int32 dx = std::abs(E.first.x - p_cx);
-                int32 dz = std::abs(E.first.z - p_cz);
+            std::unique_lock lock(chunks_mutex);
+            for (const auto& [chunk_pos, chunk_ptr] : chunks) {
+                int32 dx = std::abs(chunk_pos.x - p_cx);
+                int32 dz = std::abs(chunk_pos.z - p_cz);
                 if (dx > unload_dist or dz > unload_dist) {
-                    chunks_to_remove.append(E.first);
+                    auto& chunk = chunk_ptr.value();
+                    if (chunk.mesh_instance) {
+                        chunk.mesh_instance->queue_free();
+                        chunk.mesh_instance = nullptr;
+                    }
+                    chunks.erase(chunk_pos);
+                    ++removed;
                 }
             }
         }
 
-        {
-            std::lock_guard lock(chunks_to_remove_mutex);
-            this->chunks_to_remove += chunks_to_remove;
-        }
-        should_remove_chunks.store(true, std::memory_order_release);
-
-        if (chunks_to_remove) log<LogType::VERBOSE>(format{} << "Queued unload for " << len(chunks_to_remove) << " chunks");
+        if (removed) log<LogType::VERBOSE>(format{} << "Queued unload for " << removed << " chunks");
     }
 
     Ptr<Chunk> Main::get_chunk(int32 cx, int32 cz) {

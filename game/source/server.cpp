@@ -152,22 +152,41 @@ namespace craftbuild {
                         }
                     }
 
-                    List<Pos3D<int32>> chunks_to_remove;
+                    Set<Pos3D<int32>> regions_to_save;
+                    List<Pos3D<int32>> pending_unloads;
+
                     {
                         std::shared_lock lock(chunks_mutex);
-                        for (auto& chunk : chunks) {
-                            if (still_viewing_chunks.find(chunk.first) == still_viewing_chunks.end()) {
-                                chunks_to_remove.append(chunk.first);
+                        for (const auto& [chunk_pos, chunk] : chunks) {
+                            if (still_viewing_chunks.find(chunk_pos) == still_viewing_chunks.end()) {
+                                int32 rx = (chunk_pos.x >= 0) ? (chunk_pos.x / 16) : ((chunk_pos.x - 15) / 16);
+                                int32 rz = (chunk_pos.z >= 0) ? (chunk_pos.z / 16) : ((chunk_pos.z - 15) / 16);
+
+                                regions_to_save.insert({ rx, 0, rz });
+                                pending_unloads.append(chunk_pos);
                             }
                         }
                     }
 
                     {
-                        std::lock_guard lock(chunks_to_remove_mutex);
-                        this->chunks_to_remove += chunks_to_remove;
+                        std::unique_lock lock(chunks_mutex);
+                        for (const auto& pos : pending_unloads) {
+                            auto chunk_ptr = chunks[pos];
+                            if (not chunk_ptr) continue;
+                            auto& chunk = chunk_ptr.value();
+
+                            if (chunk.mesh_instance) {
+                                chunk.mesh_instance->queue_free();
+                                chunk.mesh_instance = nullptr;
+                            }
+                            chunks.erase(pos);
+                        }
                     }
 
-                    should_remove_chunks.store(true, std::memory_order_release);
+                    for (const auto& [rx, _, rz] : regions_to_save) {
+                        save_region(format{} << "user://game/saves/" << world_name, rx, rz);
+                    }
+
                     last_unload_time = now;
                 }
                     
@@ -889,46 +908,6 @@ namespace craftbuild {
         for (const auto& client : disconnected_clients) {
             closesocket(client);
             clients.erase(client);
-        }
-
-        if (server_ptr.should_remove_chunks.load(std::memory_order_acquire)) {
-            List<Pos3D<int32>> pending_unloads;
-
-            {
-                std::lock_guard lock(server_ptr.chunks_to_remove_mutex);
-                if (not server_ptr.chunks_to_remove) {
-                    server_ptr.should_remove_chunks.store(false, std::memory_order_release);
-                    return;
-                }
-                pending_unloads.swap(server_ptr.chunks_to_remove);
-                server_ptr.should_remove_chunks.store(false, std::memory_order_release);
-            }
-
-            Set<Pos3D<int32>> regions_to_save;
-            for (const auto& pos : pending_unloads) {
-                int32 rx = (pos.x >= 0) ? (pos.x / 16) : ((pos.x - 15) / 16);
-                int32 rz = (pos.z >= 0) ? (pos.z / 16) : ((pos.z - 15) / 16);
-                regions_to_save.insert({ rx, 0, rz });
-            }
-
-            for (const auto& [rx, _, rz] : regions_to_save) {
-                server_ptr.save_region(format{} << "user://game/saves/" << server_ptr.world_name, rx, rz);
-            }
-
-            std::unique_lock lock(server_ptr.chunks_mutex);
-            for (const auto& pos : pending_unloads) {
-                if (not server_ptr.chunks.contains(pos)) continue;
-
-                auto chunk_ptr = server_ptr.chunks[pos];
-                if (not chunk_ptr) continue;
-				auto& chunk = chunk_ptr.value();
-
-                if (chunk.mesh_instance) {
-					chunk.mesh_instance->queue_free();
-					chunk.mesh_instance = nullptr;
-                }
-                server_ptr.chunks.erase(pos);
-            }
         }
 
         LogQueue::flush();
