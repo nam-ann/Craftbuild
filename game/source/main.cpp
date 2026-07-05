@@ -158,7 +158,7 @@ namespace craftbuild {
             }
         }
 
-        static const int32 max_updates = 8;
+        static constexpr int32 max_updates = 8;
         int32 updates_this_frame = 0;
 
         std::vector<Ptr<Chunk>> chunks_to_upload;
@@ -225,6 +225,7 @@ namespace craftbuild {
 
                 mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
                 update_chunk_mesh(chunk_ptr, mesh, collision_faces);
+                create_chunk_collision(chunk_ptr, collision_faces);
             }
 
             chunk.collision_built.store(false, std::memory_order_release);
@@ -369,7 +370,7 @@ namespace craftbuild {
         if (gc_thread.joinable()) return;
 
         auto worker = [this]() {
-            ThreadRegistry::register_thread("GC Thread");
+            ThreadRegistry::register_thread("GC");
             log<LogType::INFO>("GC thread started");
 
             while (running.load(std::memory_order_relaxed)) {
@@ -387,7 +388,7 @@ namespace craftbuild {
         if (log_thread.joinable()) return;
 
         auto worker = [this]() {
-            ThreadRegistry::register_thread("Log Thread");
+            ThreadRegistry::register_thread("Log");
             log<LogType::INFO>("Log thread started");
 
             while (running.load(std::memory_order_relaxed)) {
@@ -405,7 +406,7 @@ namespace craftbuild {
         if (network_thread.joinable()) return;
 
         auto worker = [this]() {
-            ThreadRegistry::register_thread("Network Thread");
+            ThreadRegistry::register_thread("Network");
             log<LogType::INFO>("Network thread started");
 
             WSADATA wsa;
@@ -637,8 +638,8 @@ namespace craftbuild {
 
     none Main::start_scheduler_thread() {
         scheduler_thread = std::thread([this]() {
-            ThreadRegistry::register_thread("Scheduler Thread");
-            log<LogType::INFO>("Scheduler thread started");
+            ThreadRegistry::register_thread("Mesh");
+            log<LogType::INFO>("Mesh thread started");
 
             auto last_unload_time = std::chrono::high_resolution_clock::now();
             while (running.load(std::memory_order_relaxed)) {
@@ -769,7 +770,6 @@ namespace craftbuild {
         }
 
         chunk.mesh_instance->set_mesh(mesh);
-        create_chunk_collision(chunk_ptr, collision_faces);
     }
 
     none Main::unload_distant_chunks(int32 p_cx, int32 p_cz) {

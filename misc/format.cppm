@@ -40,6 +40,10 @@ export namespace craftbuild {
 			f.__buffer__ += s;
 			return std::move(f);
 		}
+		friend format&& operator<<(format&& f, std::string_view s) {
+			f.__buffer__ += (std::string)s;
+			return std::move(f);
+		}
 		friend format&& operator<<(format&& f, const byte* s) {
 			f.__buffer__ += s;
 			return std::move(f);

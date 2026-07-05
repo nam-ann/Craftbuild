@@ -28,9 +28,10 @@ using byte = char;
 import game.command;
 
 namespace craftbuild {
-    none TCPServer::_get_refs(std::unordered_set<GCObject*>&refs) {
+    none TCPServer::_get_refs(std::vector<GCObject*>&refs) {
+		std::shared_lock lock(chunks_mutex);
 		for (auto const& [_, chunk_ptr] : chunks) {
-			if (chunk_ptr) refs.insert(chunk_ptr.object());
+			if (chunk_ptr) refs.push_back(chunk_ptr.object());
 		}
     }
 
@@ -107,7 +108,7 @@ namespace craftbuild {
         if (redstone_thread.joinable()) return;
 
         auto worker = [this]() {
-            ThreadRegistry::register_thread("Redstone Thread");
+            ThreadRegistry::register_thread("Redstone");
             log<LogType::INFO>("Redstone thread started");
 
             while (running.load(std::memory_order_relaxed)) {
@@ -120,57 +121,67 @@ namespace craftbuild {
 
     none TCPServer::start_scheduler_thread() {
         scheduler_thread = std::thread([this]() {
-            ThreadRegistry::register_thread("Server Scheduler Thread");
-            log<LogType::INFO>("Server scheduler thread started");
+            ThreadRegistry::register_thread("Terrain");
+            log<LogType::INFO>("Terrain thread started");
 
             auto last_unload_time = std::chrono::high_resolution_clock::now();
             current_player = online_players.begin();
             while (running.load(std::memory_order_relaxed)) {
                 {
-                    std::shared_lock lock1(player_mutex);
+                    std::shared_lock lock(player_mutex);
                     if (online_players.empty()) {
                         std::this_thread::sleep_for(std::chrono::milliseconds(500));
                         continue;
                     }
+                }
 
-                    auto now = std::chrono::high_resolution_clock::now();
-                    if (std::chrono::duration_cast<std::chrono::seconds>(now - last_unload_time).count() >= 5) {
-                        const int32 unload_dist = render_distance + 4;
-                        Set<Pos3D<int32>> still_viewing_chunks;
+                if (auto now = std::chrono::high_resolution_clock::now(); std::chrono::duration_cast<std::chrono::seconds>(now - last_unload_time).count() >= 5) {
+                    const int32 unload_dist = render_distance + 4;
+                    Set<Pos3D<int32>> still_viewing_chunks;
 
-                        {
-                            std::shared_lock lock(chunks_mutex);
-                            for (auto& chunk : chunks) {
-                                for (auto [player_name, _] : online_players) {
-                                    auto& player_pos = players[player_name].pos;
-                                    int32 dx = std::abs(chunk.first.x - (int32)std::floor(player_pos.x / Chunk::SIZE_X));
-                                    int32 dz = std::abs(chunk.first.z - (int32)std::floor(player_pos.z / Chunk::SIZE_Z));
-                                    if (dx <= unload_dist and dz <= unload_dist) still_viewing_chunks.insert(chunk.first);
-                                }
+                    {
+                        std::shared_lock lock(chunks_mutex);
+                        for (auto& chunk : chunks) {
+                            std::shared_lock lock(player_mutex);
+                            for (auto [player_name, _] : online_players) {
+                                auto& player_pos = players[player_name].pos;
+                                int32 dx = std::abs(chunk.first.x - (int32)std::floor(player_pos.x / Chunk::SIZE_X));
+                                int32 dz = std::abs(chunk.first.z - (int32)std::floor(player_pos.z / Chunk::SIZE_Z));
+                                if (dx <= unload_dist and dz <= unload_dist) still_viewing_chunks.insert(chunk.first);
                             }
                         }
-
-                        List<Pos3D<int32>> chunks_to_remove;
-                        {
-                            std::shared_lock lock(chunks_mutex);
-                            for (auto& chunk : chunks) {
-                                if (still_viewing_chunks.find(chunk.first) == still_viewing_chunks.end()) {
-                                    chunks_to_remove.append(chunk.first);
-                                }
-                            }
-                        }
-
-                        {
-                            std::lock_guard lock(chunks_to_remove_mutex);
-                            this->chunks_to_remove += chunks_to_remove;
-                        }
-
-                        should_remove_chunks.store(true, std::memory_order_release);
-                        last_unload_time = now;
                     }
+
+                    List<Pos3D<int32>> chunks_to_remove;
+                    {
+                        std::shared_lock lock(chunks_mutex);
+                        for (auto& chunk : chunks) {
+                            if (still_viewing_chunks.find(chunk.first) == still_viewing_chunks.end()) {
+                                chunks_to_remove.append(chunk.first);
+                            }
+                        }
+                    }
+
+                    {
+                        std::lock_guard lock(chunks_to_remove_mutex);
+                        this->chunks_to_remove += chunks_to_remove;
+                    }
+
+                    should_remove_chunks.store(true, std::memory_order_release);
+                    last_unload_time = now;
+                }
                     
-                    std::lock_guard lock2(current_player_mutex);
-                    submit_jobs(players[current_player->first].pos);
+                {
+                    std::lock_guard lock1(current_player_mutex);
+                    Pos3D<real> pos;
+                    {
+                        std::shared_lock lock(player_mutex);
+                        pos = players[current_player->first].pos;
+                    }
+
+                    submit_jobs(pos);
+
+                    std::shared_lock lock2(player_mutex);
                     if (++current_player == online_players.end()) current_player = online_players.begin();
                 }
 
@@ -183,16 +194,21 @@ namespace craftbuild {
     none TCPServer::submit_jobs(const Pos3D<real>& player) {
         int32 px = static_cast<int32>(std::floor(player.x / Chunk::SIZE_X));
         int32 pz = static_cast<int32>(std::floor(player.z / Chunk::SIZE_Z));
+
+        auto get_or_load_or_create_chunk = [this](int32 cx, int32 cz) -> Ptr<Chunk> {
+			if (auto chunk_ptr = get_or_load_chunk(cx, cz)) return chunk_ptr;
+            return get_or_create_chunk(cx, cz);
+        };
+
         for (auto r : range<int32>(render_distance + 1)) {
             for (auto x : range<int32>(-r, r + 1)) {
                 for (auto z : range<int32>(-r, r + 1)) {
                     if (std::abs(x) != r and std::abs(z) != r) continue;
 
                     Pos3D<int32> chunk_pos{ px + x, 0, pz + z };
-                    auto chunk_ptr = get_or_create_chunk(chunk_pos.x, chunk_pos.z);
-                    auto& chunk = chunk_ptr.value();
+                    auto chunk_ptr = get_or_load_or_create_chunk(chunk_pos.x, chunk_pos.z);
 
-                    if (chunk.generated.load(std::memory_order_acquire)) continue;
+                    if (chunk_ptr.value().generated.load(std::memory_order_acquire)) continue;
 
                     {
                         std::lock_guard lock(pending_jobs_mutex);
@@ -204,30 +220,6 @@ namespace craftbuild {
                         if (running.load(std::memory_order_relaxed)) {
                             auto& chunk = chunk_ptr.value();
                             chunk.generate_terrain(world_seed.load(), noise);
-
-                            auto get_or_load_chunk = [this](int32 cx, int32 cz) -> Ptr<Chunk> {
-                                auto chunk_ptr = get_chunk(cx, cz);
-                                if (chunk_ptr) return chunk_ptr;
-
-                                const int32 rx = (cx >= 0) ? (cx / 16) : ((cx - 15) / 16);
-                                const int32 rz = (cz >= 0) ? (cz / 16) : ((cz - 15) / 16);
-
-                                Str path = format{} << "user://game/saves/" << world_name;
-                                String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(rz) + ".cbregion").std_str().c_str());
-                                std::string std_path = (std::string)real_path.utf8();
-
-                                auto chunk_pos = Pos3D<int32>{ cx, 0, cz };
-
-                                if (std::filesystem::exists(std_path)) {
-                                    load_region(path, rx, rz);
-
-                                    std::shared_lock lock(chunks_mutex);
-                                    auto it_loaded = chunks.find(chunk_pos);
-                                    if (it_loaded != chunks.end()) return it_loaded->second;
-                                }
-
-                                return nullptr;
-                            };
 
                             Pos3D<int32> offsets[4] = { {1,0,0}, {-1,0,0}, {0,0,1}, {0,0,-1} };
                             for (auto& o : offsets) {
@@ -283,8 +275,7 @@ namespace craftbuild {
 
         std::shared_lock data_lock(chunk.data_mutex);
 
-        const auto* data = &chunk.blocks[0][0][0];
-        os.write(reinterpret_cast<const byte*>(data), (uint64)Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z * sizeof(BlockStorage));
+        os.write(reinterpret_cast<const byte*>(&chunk.blocks[0][0][0]), (uint64)Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z * sizeof(BlockStorage));
         
         os.write(reinterpret_cast<const byte*>(&chunk.block_ids_size), sizeof(uint8));
         os.write(reinterpret_cast<const byte*>(&chunk.block_ids[0]), sizeof(uint32) * 256);
@@ -350,6 +341,29 @@ namespace craftbuild {
         if (it == chunks.end()) return nullptr;
         return it->second;
     }
+
+    Ptr<Chunk> TCPServer::get_or_load_chunk(int32 cx, int32 cz) {
+        if (auto chunk_ptr = get_chunk(cx, cz)) return chunk_ptr;
+
+        const int32 rx = (cx >= 0) ? (cx / 16) : ((cx - 15) / 16);
+        const int32 rz = (cz >= 0) ? (cz / 16) : ((cz - 15) / 16);
+
+        const Str path = format{} << "user://game/saves/" << world_name;
+        const String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(rz) + ".cbregion").std_str().c_str());
+        const std::string std_path = (std::string)real_path.utf8();
+
+        const auto chunk_pos = Pos3D<int32>{ cx, 0, cz };
+
+        if (std::filesystem::exists(std_path)) {
+            load_region(path, rx, rz);
+
+            std::shared_lock lock(chunks_mutex);
+            auto it_loaded = chunks.find(chunk_pos);
+            if (it_loaded != chunks.end()) return it_loaded->second;
+        }
+
+        return nullptr;
+    };
 
     Ptr<Chunk> TCPServer::get_or_create_chunk(int32 cx, int32 cz) {
         Pos3D<int32> chunk_pos{ cx, 0, cz };
@@ -458,6 +472,8 @@ namespace craftbuild {
                 ofs.write(reinterpret_cast<const byte*>(&player_data.hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);
             }
         }
+
+        ofs.close();
 
         Set<Pos3D<int32>> regions_to_save;
 
@@ -616,10 +632,8 @@ namespace craftbuild {
                 ifs.read(reinterpret_cast<byte*>(&id2block_size), sizeof(uint8));
                 for (auto j : range<uint8>(id2block_size)) {
                     uint32 global_id = 0;
-                    uint8 local_id = 0;
                     ifs.read(reinterpret_cast<byte*>(&global_id), sizeof(uint32));
-                    ifs.read(reinterpret_cast<byte*>(&local_id), sizeof(uint8));
-                    chunk.id2block[global_id] = local_id;
+                    ifs.read(reinterpret_cast<byte*>(&chunk.id2block[global_id]), sizeof(uint8));
                 }
 
                 ifs.read(reinterpret_cast<byte*>(&chunk.tag_ids_size), sizeof(uint8));
@@ -629,29 +643,24 @@ namespace craftbuild {
                 ifs.read(reinterpret_cast<byte*>(&id2tag_size), sizeof(uint8));
                 for (auto j : range<uint8>(id2tag_size)) {
                     std::pair<uint32, uint64> global_id;
-                    uint8 local_id = 0;
                     ifs.read(reinterpret_cast<byte*>(&global_id.first), sizeof(uint32));
                     ifs.read(reinterpret_cast<byte*>(&global_id.second), sizeof(uint64));
-                    ifs.read(reinterpret_cast<byte*>(&local_id), sizeof(uint8));
-                    chunk.id2tag[global_id] = local_id;
+                    ifs.read(reinterpret_cast<byte*>(&chunk.id2tag[global_id]), sizeof(uint8));
                 }
 
                 uint32 complex_size = 0;
                 ifs.read(reinterpret_cast<byte*>(&complex_size), sizeof(uint32));
 
                 for (auto j : range<uint32>(complex_size)) {
-                    uint8 x, y, z;
-                    uint32 block_id, tag;
+                    Pos3D<uint8> key{};
+                    BlockStorageFull value;
 
-                    ifs.read(reinterpret_cast<byte*>(&x), sizeof(uint8));
-                    ifs.read(reinterpret_cast<byte*>(&y), sizeof(uint8));
-                    ifs.read(reinterpret_cast<byte*>(&z), sizeof(uint8));
+                    ifs.read(reinterpret_cast<byte*>(&key.x), sizeof(uint8));
+                    ifs.read(reinterpret_cast<byte*>(&key.y), sizeof(uint8));
+                    ifs.read(reinterpret_cast<byte*>(&key.z), sizeof(uint8));
 
-                    ifs.read(reinterpret_cast<byte*>(&block_id), sizeof(uint32));
-                    ifs.read(reinterpret_cast<byte*>(&tag), sizeof(uint32));
-
-                    Pos3D<uint8> key{ x, y, z };
-                    BlockStorageFull value{ block_id, tag };
+                    ifs.read(reinterpret_cast<byte*>(&value.block_id), sizeof(uint32));
+                    ifs.read(reinterpret_cast<byte*>(&value.tag), sizeof(uint32));
 
                     chunk.complex_blocks.emplace(key, value);
                 }
@@ -939,7 +948,7 @@ namespace craftbuild {
         if (gc_thread.joinable()) return;
 
         auto worker = [this]() {
-            ThreadRegistry::register_thread("GC Thread");
+            ThreadRegistry::register_thread("GC");
             log<LogType::INFO>("GC thread started");
 
             while (running.load(std::memory_order_relaxed)) {
@@ -957,7 +966,7 @@ namespace craftbuild {
         if (log_thread.joinable()) return;
 
         auto worker = [this]() {
-            ThreadRegistry::register_thread("Log Thread");
+            ThreadRegistry::register_thread("Log");
             log<LogType::INFO>("Log thread started");
 
             while (running.load(std::memory_order_relaxed)) {

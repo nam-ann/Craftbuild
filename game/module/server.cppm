@@ -78,7 +78,7 @@ export namespace craftbuild {
         inline static int32 SIZE_X = render_distance * 16;
         inline static int32 SIZE_Z = render_distance * 16;
 
-        none _get_refs(std::unordered_set<GCObject*>& refs);
+        none _get_refs(std::vector<GCObject*>& refs);
 
         TCPServer();
         ~TCPServer();
@@ -93,6 +93,7 @@ export namespace craftbuild {
         std::string serialize_players();
         std::string serialize_chunk(int32 cx, int32 cz);
         Ptr<Chunk> get_chunk(int32 cx, int32 cz);
+        Ptr<Chunk> get_or_load_chunk(int32 cx, int32 cz);
         Ptr<Chunk> get_or_create_chunk(int32 cx, int32 cz);
         uint32 get_global_block_id(int32 wx, int32 wy, int32 wz);
         none set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz);

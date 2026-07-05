@@ -25,7 +25,7 @@ export namespace craftbuild {
 		static Str get_name(const std::thread::id& thread_id) {
 			std::lock_guard lock(threads_mutex);
 			auto it = threads.find(thread_id);
-			if (it == threads.end()) return "Main Thread";
+			if (it == threads.end()) return "Main";
 			return it->second;
 		}
 	};

@@ -77,7 +77,7 @@ export namespace craftbuild {
 
         uint8 chunk_version = 0;
 
-        none _get_refs(std::unordered_set<GCObject*>& refs) const;
+        none _get_refs(std::vector<GCObject*>& refs) const;
 
         ~Chunk();
         none clear();

@@ -315,7 +315,7 @@ namespace craftbuild {
         real block_min_x = block_pos.x;
         real block_max_x = block_pos.x + 1.0f;
         real block_min_y = block_pos.y;
-        real block_max_y = block_pos.y + 1.0f;
+        real block_max_y = block_pos.y + 0.8f;
         real block_min_z = block_pos.z;
         real block_max_z = block_pos.z + 1.0f;
 

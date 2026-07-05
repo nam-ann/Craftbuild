@@ -27,10 +27,10 @@ namespace craftbuild {
 
         Ref<Texture2D> tex = ResourceLoader::get_singleton()->load(full_path);
         if (tex.is_valid()) {
-            log<LogType::VERBOSE>(format{} << "Loaded texture: " << full_path.ascii());
+            log<LogType::VERBOSE>(format{} << "Loaded: \"" << full_path.ascii() << "\"");
             return tex;
         }
-        else log<LogType::ERROR>(format{} << "Failed to load texture: " << full_path.ascii());
+        else log<LogType::ERROR>(format{} << "Failed to load: \"" << full_path.ascii() << "\"");
         return Ref<Texture2D>();
     }
 }

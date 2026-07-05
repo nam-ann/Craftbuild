@@ -50,7 +50,7 @@ none uninitialize_server(ModuleInitializationLevel p_level) {
 
 extern "C" {
     GDExtensionBool __declspec(dllexport) craftbuild_init(GDExtensionInterfaceGetProcAddress p_get_proc_address, const GDExtensionClassLibraryPtr p_library, GDExtensionInitialization* r_initialization) {
-        ThreadRegistry::register_thread("Main Thread");
+        ThreadRegistry::register_thread("Main");
 
         GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
 
@@ -61,7 +61,7 @@ extern "C" {
         return init_obj.init();
     }
     GDExtensionBool __declspec(dllexport) craftbuild_server(GDExtensionInterfaceGetProcAddress p_get_proc_address, const GDExtensionClassLibraryPtr p_library, GDExtensionInitialization* r_initialization) {
-        ThreadRegistry::register_thread("Main Thread");
+        ThreadRegistry::register_thread("Main");
 
         GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
 

@@ -11,6 +11,9 @@ module;
 #include <string>
 #include <fstream>
 #include <filesystem>
+#include <source_location>
+
+#define LOC_PARAM std::source_location __loc__
 
 export module game.logger;
 
@@ -23,7 +26,18 @@ import game.thread;
 using namespace godot;
 
 namespace craftbuild {
-    auto get_time = []() {
+    constexpr std::string_view get_file_name(std::string_view path) {
+        auto last_slash = path.find_last_of("\\/");
+        auto start_pos = (last_slash == std::string_view::npos) ? 0 : last_slash + 1;
+
+        std::string_view filename_with_ext = path.substr(start_pos);
+        auto last_dot = filename_with_ext.find_last_of('.');
+
+        if (last_dot != std::string_view::npos and last_dot != 0) return filename_with_ext.substr(0, last_dot);
+        return filename_with_ext;
+    }
+
+    auto get_tm_time = []() {
         auto now = std::chrono::system_clock::now();
         std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
         std::tm now_tm;
@@ -35,8 +49,12 @@ namespace craftbuild {
         return now_tm;
     };
 
-    auto get_info = []() -> Str {
-        return format{} << "[" << get_time() << "] [" << ThreadRegistry::get_name(std::this_thread::get_id()) << "] ";
+    auto get_time = [] -> Str {
+        return format{} << "[" << get_tm_time() << "] ";
+    };
+
+    auto get_info = [](LOC_PARAM) -> Str {
+        return format{} << "(" << ThreadRegistry::get_name(std::this_thread::get_id()) << " | " << get_file_name(__loc__.file_name()) << ":" << __loc__.line() << ") ";
     };
 }
 
@@ -63,7 +81,7 @@ export namespace craftbuild {
             if (not file_dump) return;
 
             static auto log_file = []() {
-                const auto time = get_time();
+                const auto time = get_tm_time();
                 const String real_path = ProjectSettings::get_singleton()->globalize_path(("user://game/logs/" + time2file_name(time) + ".txt").std_str().c_str());
                 const std::string std_path = real_path.utf8().get_data();
                 std::filesystem::create_directories(std::filesystem::path(std_path).parent_path());
@@ -83,65 +101,75 @@ export namespace craftbuild {
     };
 
     template <LogType LOG_TYPE>
-    none log(const Str& message) {}
+    none log(const Str& message, std::source_location __loc__ = std::source_location::current()) {}
 
     template <>
-    none log<LogType::NORMAL>(const Str& message) {
-        const Str info = get_info();
-        const Str current_log = format{} << info << message;
+    none log<LogType::NORMAL>(const Str& message, LOC_PARAM) {
+        const Str time = get_time();
+        const Str info = get_info(__loc__);
+
+        const Str current_log = format{} << time << info << message;
         Str log;
 
-        if (colored_log) log += format{} << "\033[97m" << info << "\033[37m" << message << "\033[0m";
+        if (colored_log) log += format{} << "\033[97m" << time << info << "\033[37m" << message << "\033[0m";
         else log = current_log;
 
         LogQueue::store(log, current_log);
     }
 
     template <>
-    none log<LogType::VERBOSE>(const Str& message) {
+    none log<LogType::VERBOSE>(const Str& message, LOC_PARAM) {
         if (not log_verbose) return;
 
-        const Str info = get_info();
-        const Str current_log = format{} << info << "Verbose: " << message;
+        const Str time = get_time();
+        const Str info = get_info(__loc__);
+
+        const Str current_log = format{} << time << "Verbose: " << info << message;
         Str log;
 
-        if (colored_log) log += format{} << "\033[90m" << info << "Verbose: " << message << "\033[0m";
+        if (colored_log) log += format{} << "\033[90m" << time << "Verbose: " << info << message << "\033[0m";
         else log = current_log;
 
         LogQueue::store(log, current_log);
     }
 
     template <>
-    none log<LogType::INFO>(const Str& message) {
-        const Str info = get_info();
-        const Str current_log = format{} << info << "Info: " << message;
+    none log<LogType::INFO>(const Str& message, LOC_PARAM) {
+        const Str time = get_time();
+        const Str info = get_info(__loc__);
+
+        const Str current_log = format{} << time << "Info:    " << info << message;
         Str log;
 
-        if (colored_log) log += format{} << "\033[96m" << info << "Info: \033[36m" << message << "\033[0m";
+        if (colored_log) log += format{} << "\033[96m" << time << "Info:    " << info << "\033[36m" << message << "\033[0m";
         else log = current_log;
 
         LogQueue::store(log, current_log);
     }
 
     template <>
-    none log<LogType::WARNING>(const Str& message) {
-        const Str info = get_info();
-        const Str current_log = format{} << info << "Warning: " << message;
+    none log<LogType::WARNING>(const Str& message, LOC_PARAM) {
+        const Str time = get_time();
+        const Str info = get_info(__loc__);
+
+        const Str current_log = format{} << time << "Warning: " << info << message;
         Str log;
 
-        if (colored_log) log += format{} << "\033[93m" << info << "Warning: \033[33m" << message << "\033[0m";
+        if (colored_log) log += format{} << "\033[93m" << time << "Warning: " << info << "\033[33m" << message << "\033[0m";
         else log = current_log;
 
         LogQueue::store(log, current_log);
     }
 
     template <>
-    none log<LogType::ERROR>(const Str& message) {
-        const Str info = get_info();
-        const Str current_log = format{} << info << "Error: " << message;
+    none log<LogType::ERROR>(const Str& message, LOC_PARAM) {
+        const Str time = get_time();
+        const Str info = get_info(__loc__);
+
+        const Str current_log = format{} << time << "Error:   " << info << message;
         Str log;
 
-        if (colored_log) log += format{} << "\033[91m" << info << "Error: \033[31m" << message << "\033[0m";
+        if (colored_log) log += format{} << "\033[91m" << time << "Error:   " << info << "\033[31m" << message << "\033[0m";
         else log = current_log;
 
         LogQueue::store(log, current_log);

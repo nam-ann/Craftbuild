@@ -21,7 +21,7 @@ namespace craftbuild {
             if (original_img.is_null()) continue;
 
             block.block.value().base_texture_layer = current_layer;
-            log<LogType::VERBOSE>(format{} << "Block: " << block.name.std_str().c_str() << " assigned layer: " << current_layer);
+            log<LogType::VERBOSE>(format{} << block.name.std_str().c_str() << " assigned layer: " << current_layer);
 
             int32 width = original_img->get_width();
             int32 face_count = width / IMAGE_SIZE;

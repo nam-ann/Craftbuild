@@ -21,7 +21,7 @@ namespace craftbuild {
         return layer == other.layer and back_face == other.back_face;
     }
 
-    none Chunk::_get_refs(std::unordered_set<GCObject*>& refs) const { refs.insert(pending_mesh_data.object()); }
+    none Chunk::_get_refs(std::vector<GCObject*>& refs) const { refs.push_back(pending_mesh_data.object()); }
 
     Chunk::~Chunk() {
         std::lock_guard lock(mesh_mutex);

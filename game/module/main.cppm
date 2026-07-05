@@ -78,7 +78,7 @@ export namespace craftbuild {
         std::thread network_thread;
         std::thread scheduler_thread;
         ThreadPool mesh_pool{ 4 };
-        std::unordered_set<Pos3D<int32>, Hasher<Pos3D<int32>>> pending_mesh_jobs;
+        Set<Pos3D<int32>> pending_mesh_jobs;
         std::mutex pending_jobs_mutex;
 
         List<Pos3D<int32>> chunks_to_remove;

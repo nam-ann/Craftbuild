@@ -5,7 +5,6 @@ module;
 #include <atomic>
 #include <thread>
 #include <algorithm>
-#include <unordered_set>
 #include <unordered_map>
 
 export module misc.gc;
@@ -16,7 +15,7 @@ export namespace craftbuild {
     struct GCObject {
         none* __data__ = nullptr;
         none(*__deleter__)(none*) = nullptr;
-        none(*__get_refs__)(none*, std::unordered_set<GCObject*>&) = nullptr;
+        none(*__get_refs__)(none*, std::vector<GCObject*>&) = nullptr;
 
         bool __marked__ = false;
 
@@ -26,7 +25,7 @@ export namespace craftbuild {
     class NewQueue {
     public:
         struct Data {
-            std::unordered_set<GCObject*> obj_queue;
+            std::vector<GCObject*> obj_queue;
             std::unordered_map<GCObject*, int64> root_queue;
         };
 
@@ -38,7 +37,7 @@ export namespace craftbuild {
         none register_object(GCObject* obj) {
             if (not obj) [[unlikely]] return;
             std::lock_guard<std::mutex> lock(__mtx__);
-            __data__.obj_queue.insert(obj);
+            __data__.obj_queue.push_back(obj);
         }
 
         none add_root(GCObject* obj) {
@@ -66,7 +65,7 @@ export namespace craftbuild {
     class GarbageCollector {
 		inline static NewQueue registration_queue;
 
-        inline static std::unordered_set<GCObject*> all_objects;
+        inline static std::vector<GCObject*> all_objects;
         inline static std::unordered_map<GCObject*, usize> root_objects;
 
     public:
@@ -76,19 +75,23 @@ export namespace craftbuild {
         static none remove_root(GCObject* obj) { registration_queue.remove_root(obj); }
 
         static none collect() {
-            NewQueue::Data new_objects = registration_queue.flush();
-            all_objects.insert(new_objects.obj_queue.begin(), new_objects.obj_queue.end());
+            const NewQueue::Data new_objects = registration_queue.flush();
+            all_objects.insert(all_objects.end(), new_objects.obj_queue.begin(), new_objects.obj_queue.end());
 
             for (auto const& [root, delta] : new_objects.root_queue) {
-                int64 current_count = root_objects[root] + delta;
+                const int64 current_count = root_objects[root] + delta;
                 if (current_count <= 0) root_objects.erase(root);
                 else root_objects[root] = (usize)current_count;
             }
 
             std::vector<GCObject*> gray_stack;
+			gray_stack.reserve(root_objects.size());
+
             for (auto const& [root, count] : root_objects) {
                 if (root and not root->__marked__) gray_stack.push_back(root);
             }
+
+            std::vector<GCObject*> refs;
 
             while (not gray_stack.empty()) {
                 GCObject* obj = gray_stack.back();
@@ -98,7 +101,7 @@ export namespace craftbuild {
                 obj->__marked__ = true;
 
                 if (obj->__get_refs__) {
-                    std::unordered_set<GCObject*> refs;
+                    refs.clear();
                     obj->__get_refs__(obj->__data__, refs);
                     for (GCObject* ref : refs) {
                         if (ref and not ref->__marked__) gray_stack.push_back(ref);
@@ -107,14 +110,12 @@ export namespace craftbuild {
             }
 
             auto it = all_objects.begin();
-			usize count = 0;
             while (it != all_objects.end()) {
                 GCObject* obj = *it;
                 if (not obj->__marked__) {
                     it = all_objects.erase(it);
                     if (obj->__deleter__ and obj->__data__) obj->__deleter__(obj->__data__);
                     delete obj; obj = nullptr;
-                    ++count;
                 }
                 else {
                     obj->__marked__ = false;
