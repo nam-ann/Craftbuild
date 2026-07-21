@@ -14,7 +14,7 @@ namespace craftbuild {
         Array images;
         int32 current_layer = 0;
 
-        for (const auto& block : BlockRegistry::registry) {
+        for (auto const& block : BlockRegistry::registry) {
             if (block.texture.is_null()) continue;
 
             Ref<Image> original_img = block.texture->get_image();

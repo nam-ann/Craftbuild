@@ -32,7 +32,7 @@ export namespace craftbuild {
         std::vector<Message> msg;
         mutable std::mutex msg_mutex;
 
-        none store(const Message& message) {
+        none store(Message const& message) {
             std::lock_guard lock(msg_mutex);
             msg.push_back(message);
         }
@@ -45,9 +45,9 @@ export namespace craftbuild {
                 msg.swap(send_msg);
             }
 
-            for (const auto& message : send_msg) {
+            for (auto const& message : send_msg) {
                 std::string arg = message.content.std_str() + '\2';
-                for (const auto& E : message.arguments) arg += E + '\1';
+                for (auto const& E : message.arguments) arg += E + '\1';
                 arg += '\0';
 
                 int32 total_payload_sent = 0;

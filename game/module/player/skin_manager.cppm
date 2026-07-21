@@ -21,7 +21,7 @@ export namespace craftbuild {
     class Player;
     class SkinManager {
     public:
-        static bool load_skin(Player& player, const char* path);
+        static bool load_skin(Player& player, char const* path);
         static Ref<StandardMaterial3D> create_skin_material(Ref<Texture2D> texture);
         static none apply_skin_to_model(MeshInstance3D* model, Ref<Texture2D> texture);
     };

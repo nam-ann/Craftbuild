@@ -13,7 +13,7 @@ export namespace craftbuild {
     using Set = std::unordered_set<T, Hasher<T>>;
 
     template<class T, class H, class E, class A>
-    bool operator==(const std::unordered_set<T, H, E, A>& a, const std::unordered_set<T, H, E, A>& b) {
+    bool operator==(std::unordered_set<T, H, E, A>& a, const std::unordered_set<T, H, E, A> const& b) {
         if (a.size() != b.size()) return false;
 
         for (auto const& k : a) if (b.find(k) == b.end()) return false;

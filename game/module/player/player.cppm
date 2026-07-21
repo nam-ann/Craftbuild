@@ -69,9 +69,9 @@ export namespace craftbuild {
         none _ready() override;
         none _process(float64 delta) override;
         none _physics_process(float64 delta) override;
-        none _input(const Ref<InputEvent>& event) override;
+        none _input(Ref<InputEvent> const& event) override;
 
-        bool would_collide_with_player(const Pos3D<int32>& block_pos) const;
+        bool would_collide_with_player(Pos3D<int32> const& block_pos) const;
         Ref<ShaderMaterial> create_selection_box_material();
         Dictionary raycast_block(real max_distance = 5.0f);
         Face get_face(Pos3D<real> n);

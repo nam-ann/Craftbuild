@@ -13,7 +13,7 @@ export namespace craftbuild {
     using Dict = std::unordered_map<T, T2, Hasher<T>>;
 
     template<class K, class V, class H, class E, class A>
-    bool operator==(const std::unordered_map<K, V, H, E, A>& a, const std::unordered_map<K, V, H, E, A>& b) {
+    bool operator==(std::unordered_map<K, V, H, E, A>& a, const std::unordered_map<K, V, H, E, A> const& b) {
         if (a.size() != b.size()) return false;
 
         for (auto const& [k, v] : a) {

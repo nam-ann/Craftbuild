@@ -36,7 +36,7 @@ import game.main;
 import game.player.skin_manager;
 
 namespace craftbuild {
-    bool SkinManager::load_skin(Player& player, const char* path) {
+    bool SkinManager::load_skin(Player& player, char const* path) {
         Ref<Texture2D> skin_tex = ResourceLoader::get_singleton()->load(path);
         if (skin_tex.is_null()) {
             log<LogType::ERROR>(format{} << "Failed to load skin: " << path);
@@ -202,7 +202,7 @@ namespace craftbuild {
         move_and_slide();
     }
 
-    none Player::_input(const Ref<InputEvent>& event) {
+    none Player::_input(Ref<InputEvent> const& event) {
         if (not camera or not world_ptr) return;
         Main* world = static_cast<Main*>(world_ptr);
         if (world->pausing.load(std::memory_order_relaxed) or world->chatting.load(std::memory_order_relaxed)) return;
@@ -267,7 +267,7 @@ namespace craftbuild {
 
                             if (block_pos.x >= 0 or block_pos.z >= 0 or block_pos.x < Chunk::SIZE_X or block_pos.z < Chunk::SIZE_Z) {
                                 Pos3D<int32> neighbor_offsets[4] = { {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1} };
-                                for (const auto& offset : neighbor_offsets) {
+                                for (auto const& offset : neighbor_offsets) {
                                     if (auto neighbor = world->get_chunk(cx + offset.x, cz + offset.z)) neighbor.value().dirty.store(true, std::memory_order_release);
                                 }
                             }
@@ -302,7 +302,7 @@ namespace craftbuild {
         }
     }
 
-    bool Player::would_collide_with_player(const Pos3D<int32>& block_pos) const {
+    bool Player::would_collide_with_player(Pos3D<int32> const& block_pos) const {
         Pos3D<real> player_pos = get_position();
 
         real min_x = player_pos.x - 0.3f;
@@ -385,15 +385,15 @@ namespace craftbuild {
     }
 
     none Player::save_data(std::ostream& os) {
-        os.write(reinterpret_cast<const byte*>(&speed), sizeof(float32));
-        os.write(reinterpret_cast<const byte*>(&gravity), sizeof(float32));
-        os.write(reinterpret_cast<const byte*>(&jump_velocity), sizeof(float32));
-        os.write(reinterpret_cast<const byte*>(&is_grounded), sizeof(bool));
-        os.write(reinterpret_cast<const byte*>(&can_fly), sizeof(bool));
-        os.write(reinterpret_cast<const byte*>(&running), sizeof(bool));
-        os.write(reinterpret_cast<const byte*>(&gamemode), sizeof(Gamemode));
-        os.write(reinterpret_cast<const byte*>(&hotbar), sizeof(uint32) * HOTBAR_SIZE);
-        os.write(reinterpret_cast<const byte*>(&selected_slot), sizeof(uint8));
+        os.write(reinterpret_cast<byte const*>(&speed), sizeof(float32));
+        os.write(reinterpret_cast<byte const*>(&gravity), sizeof(float32));
+        os.write(reinterpret_cast<byte const*>(&jump_velocity), sizeof(float32));
+        os.write(reinterpret_cast<byte const*>(&is_grounded), sizeof(bool));
+        os.write(reinterpret_cast<byte const*>(&can_fly), sizeof(bool));
+        os.write(reinterpret_cast<byte const*>(&running), sizeof(bool));
+        os.write(reinterpret_cast<byte const*>(&gamemode), sizeof(Gamemode));
+        os.write(reinterpret_cast<byte const*>(&hotbar), sizeof(uint32) * HOTBAR_SIZE);
+        os.write(reinterpret_cast<byte const*>(&selected_slot), sizeof(uint8));
     }
 
     none Player::load_data(std::istream& is) {

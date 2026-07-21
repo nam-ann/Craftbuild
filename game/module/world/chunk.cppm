@@ -2,8 +2,11 @@ module;
 
 #pragma warning(push, 0)
 #include <godot_cpp/classes/array_mesh.hpp>
+#include <godot_cpp/classes/static_body3d.hpp>
 #include <godot_cpp/classes/fast_noise_lite.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
+#include <godot_cpp/classes/collision_shape3d.hpp>
+#include <godot_cpp/classes/multi_mesh_instance3d.hpp>
 #pragma warning(pop)
 
 #include <includes.hpp>
@@ -31,6 +34,12 @@ import game.world.terrain;
 using namespace godot;
 
 export namespace craftbuild {
+    struct DynBlockInstance {
+        uint32 block_id;
+        uint64 tag_data;
+        Pos3D<uint8> local_pos;
+    };
+
     struct MeshData {
         List<Pos3D<real>> vertices;
         List<Pos3D<real>> normals;
@@ -38,13 +47,14 @@ export namespace craftbuild {
         List<Pos2D<real>> uvs;
         List<Pos2D<real>> uvs_layer;
         List<Pos3D<real>> collision_faces;
+        List<DynBlockInstance> dyn_instances;
     };
 
     struct FaceMask {
         int32 layer = -1;
         bool back_face = false;
 
-        bool operator==(const FaceMask& other) const;
+        bool operator==(FaceMask const& other) const;
     };
 
     class Chunk {
@@ -68,12 +78,17 @@ export namespace craftbuild {
         TrapezoidHeight height_provider{ VerticalAnchor::absolute(18), VerticalAnchor::absolute(38), 8 };
         std::atomic<bool> generated = false;
         std::atomic<bool> dirty = true;
-        std::atomic<bool> collision_built = false;
         mutable std::shared_mutex data_mutex;
 
         MeshInstance3D* mesh_instance = nullptr;
+        StaticBody3D* collision_body = nullptr;
+        CollisionShape3D* collision_shape = nullptr;
+
+        MultiMeshInstance3D* multi_mesh_instance = nullptr;
+        StaticBody3D* dynamic_body = nullptr;
+
         Ptr<MeshData> pending_mesh_data = nullptr;
-        mutable std::mutex mesh_mutex;
+        mutable std::shared_mutex mesh_mutex;
 
         uint8 chunk_version = 0;
 
@@ -81,24 +96,25 @@ export namespace craftbuild {
 
         ~Chunk();
         none clear();
+        none unload_mesh();
 
         static uint32 column_seed(int32 seed, int32 x, int32 z);
         static float32 smoothstep(float32 value);
-        static Biome lerp_biome(const Biome& a, const Biome& b, float32 t);
+        static Biome lerp_biome(Biome const& a, Biome const& b, float32 t);
         static Biome select_biome_at(int32 wx, int32 wz, Ref<FastNoiseLite> noise, usize biome_count);
         static Biome get_blended_biome(int32 wx, int32 wz, Ref<FastNoiseLite> noise, usize biome_count);
 
-        none set_block(const Pos3D<uint8>& pos, const Str& block);
-        none set_block(const Pos3D<uint8>& pos, uint32 block_id);
+        none set_block(Pos3D<uint8>& pos, Str const& block);
+        none set_block(Pos3D<uint8> const& pos, uint32 block_id);
 
-        none tag_block(const Pos3D<uint8>& pos, const Str& tag, usize tag_data = 0);
-        none tag_block(const Pos3D<uint8>& pos, uint32 tag_id, usize tag_data = 0);
+        none tag_block(Pos3D<uint8>& pos, Str const& tag, usize tag_data = 0);
+        none tag_block(Pos3D<uint8> const& pos, uint32 tag_id, usize tag_data = 0);
 
-        bool has_tag(const Pos3D<uint8>& pos, const Str& tag, usize tag_data = 0) const;
-        bool has_tag(const Pos3D<uint8>& pos, uint32 tag_id, usize tag_data = 0) const;
+        bool has_tag(Pos3D<uint8>& pos, Str const& tag, usize tag_data = 0) const;
+        bool has_tag(Pos3D<uint8> const& pos, uint32 tag_id, usize tag_data = 0) const;
 
-        uint32 get_block(const Pos3D<uint8>& pos) const;
-        std::pair<uint32, uint64> get_tag(const Pos3D<uint8>& pos) const;
+        uint32 get_block(Pos3D<uint8> const& pos) const;
+        std::pair<uint32, uint64> get_tag(Pos3D<uint8> const& pos) const;
 
         none generate_terrain(int32 seed, Ref<FastNoiseLite> noise);
         none generate_mesh(Ptr<Chunk> neighbors[4]);

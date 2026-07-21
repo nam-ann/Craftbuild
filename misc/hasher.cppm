@@ -43,7 +43,7 @@ export namespace craftbuild {
 
     template <typename T1, typename T2>
     struct Hasher<std::pair<T1, T2>> {
-        usize operator()(const std::pair<T1, T2>& value) const {
+        usize operator()(std::pair<T1, T2> const& value) const {
             auto h1 = std::hash<T1>{}(value.first);
             auto h2 = std::hash<T2>{}(value.second);
 

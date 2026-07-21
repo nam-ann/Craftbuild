@@ -20,7 +20,7 @@ import game.logger;
 import game.player;
 
 namespace craftbuild {
-    inline Str trim(const Str& str) {
+    inline Str trim(Str const& str) {
         std::string _str = str.std_str();
         usize first = _str.find_first_not_of(" \t\n\r");
         if (first == std::string::npos) return "";
@@ -28,7 +28,7 @@ namespace craftbuild {
         return _str.substr(first, last - first + 1);
     }
 
-    inline std::vector<Str> tokenize_with_quotes(const Str& input) {
+    inline std::vector<Str> tokenize_with_quotes(Str const& input) {
         std::vector<Str> tokens;
         Str current_token;
         bool in_quotes = false;
@@ -73,14 +73,14 @@ export namespace craftbuild {
         none* world_ptr = nullptr;
 
         bool is_valid_coordinate(int64 x, int64 y, int64 z);
-        bool is_valid_block_type(const Str& block_type) {
+        bool is_valid_block_type(Str const& block_type) {
             return BlockRegistry::has_block(block_type);
         }
 
     public:
         CommandInterpreter(none* world) : world_ptr(world) {}
 
-        Str execute_command(const Str& command_line) {
+        Str execute_command(Str const& command_line) {
             Str cmd = trim(command_line);
             if (not cmd) return "";
 
@@ -97,8 +97,8 @@ export namespace craftbuild {
             }
         }
 
-        Str execute_set_block(const std::vector<Str>& args);
-        Str execute_fill(const std::vector<Str>& args);
-        Str execute_give(const std::vector<Str>& args);
+        Str execute_set_block(std::vector<Str> const& args);
+        Str execute_fill(std::vector<Str> const& args);
+        Str execute_give(std::vector<Str> const& args);
     };
 }

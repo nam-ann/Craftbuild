@@ -6,7 +6,7 @@ module;
 module game.world.cave;
 
 namespace craftbuild {
-    none CaveRegistry::register_cave(const Str& name, Cave cave) {
+    none CaveRegistry::register_cave(Str const& name, Cave cave) {
         name2id[name] = registry.size();
         registry.emplace_back(name, cave);
     }
@@ -21,7 +21,7 @@ namespace craftbuild {
         return registry[cave_id].name;
     }
 
-    uint64 CaveRegistry::get_id(const Str& cave_name) {
+    uint64 CaveRegistry::get_id(Str const& cave_name) {
         if (name2id.find(cave_name) == name2id.end()) return 0;
         return name2id[cave_name];
     }

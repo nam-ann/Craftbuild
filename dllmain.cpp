@@ -1,5 +1,4 @@
 #pragma warning(push, 0)
-#include <windows.h>
 #include <godot_cpp/classes/engine.hpp>
 #pragma warning(pop)
 
@@ -11,7 +10,7 @@ import misc.format;
 import game.core;
 import game.environment;
 import game.main;
-import game.server_ptr;
+import game.server;
 import game.player;
 import game.logger;
 import game.thread;
@@ -22,7 +21,7 @@ using namespace craftbuild;
 none initialize_module(ModuleInitializationLevel p_level) {
     if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
 
-    log<LogType::VERBOSE>(format{} << "Hello from the DLL! Process ID: " << (uint32)GetCurrentProcessId() << ", Thread ID: " << (uint32)GetCurrentThreadId());
+    log<LogType::VERBOSE>("Hello from the DLL!");
     log<LogType::VERBOSE>(format{} << "Game version: " << full_version);
 
     ClassDB::register_class<Main>();
@@ -34,7 +33,7 @@ none initialize_module(ModuleInitializationLevel p_level) {
 none initialize_server(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
 
-	log<LogType::VERBOSE>(format{} << "Hello from the Server DLL! Process ID: " << (uint32)GetCurrentProcessId() << ", Thread ID: " << (uint32)GetCurrentThreadId());
+	log<LogType::VERBOSE>("Hello from the Server DLL!");
 	log<LogType::VERBOSE>(format{} << "Game version: " << full_version);
 
 	ClassDB::register_class<Server>();

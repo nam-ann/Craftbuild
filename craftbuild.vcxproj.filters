@@ -122,7 +122,7 @@
     <ClCompile Include="game\module\player\player_data.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\source\block.cpp">
+    <ClCompile Include="game\source\block\block.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="game\source\texture\asset_loader.cpp">
@@ -150,6 +150,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="misc\set.cppm">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game\module\block\redstone.cppm">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game\source\block\restone.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

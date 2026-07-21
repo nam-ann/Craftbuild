@@ -49,8 +49,8 @@ export namespace craftbuild {
 
 		template <typename _T>
 		requires std::derived_from<_T, T>
-		Ptr(const Ptr<_T>& x) : __value__((Obj<T>*)x.__value__) { init(); }
-		Ptr(const Ptr<T>& x) : __value__(x.__value__) { init(); }
+		Ptr(Ptr<_T> const& x) : __value__((Obj<T>*)x.__value__) { init(); }
+		Ptr(Ptr<T> const& x) : __value__(x.__value__) { init(); }
 
 		template <typename _T>
 		requires std::derived_from<_T, T>
@@ -75,14 +75,14 @@ export namespace craftbuild {
 
 		template <typename _T>
 		requires std::derived_from<_T, T>
-		Ptr<T>& operator=(const Ptr<_T>& x) {
+		Ptr<T>& operator=(Ptr<_T> const& x) {
 			if (__value__ == (Obj<T>*)x.__value__) [[unlikely]] return *this;
 			clear();
 			__value__ = (Obj<T>*)x.__value__;
 			init();
 			return *this;
 		}
-		Ptr<T>& operator=(const Ptr<T>& x) {
+		Ptr<T>& operator=(Ptr<T> const& x) {
 			if (__value__ == x.__value__) [[unlikely]] return *this;
 			clear();
 			__value__ = x.__value__;
@@ -110,12 +110,19 @@ export namespace craftbuild {
 
 		explicit operator bool() const { return __value__ != nullptr; }
 
-		bool operator==(const Ptr<T>& other) const { return __value__ == other.__value__; }
+		bool operator==(Ptr<T> const& other) const { return __value__ == other.__value__; }
 
 		none clear() {
 			if (not __value__) [[unlikely]] return;
 			GarbageCollector::remove_root(__value__);
 			__value__ = nullptr;
+		}
+
+		none swap(Ptr& other) noexcept {
+			auto* cache = __value__;
+
+			__value__ = other.__value__;
+			other.__value__ = __value__;
 		}
 
 		inline Obj<T>* object() const noexcept { return __value__; }
@@ -137,7 +144,7 @@ export namespace craftbuild {
 			return __value__ ? static_cast<T*>(__value__->__data__) : nullptr;
 		}
 
-		friend format&& operator<<(format&& fm, const Ptr<T>& d) {
+		friend format&& operator<<(format&& fm, Ptr<T> const& d) {
 			std::move(fm) << d.value();
 			return fm;
 		}

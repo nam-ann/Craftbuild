@@ -18,7 +18,7 @@ module;
 #include <unordered_set>
 #include <unordered_map>
 
-export module game.server_ptr;
+export module game.server;
 
 import misc.gc;
 import misc.ptr;
@@ -38,6 +38,7 @@ import game.network;
 import game.world.cave;
 import game.world.chunk;
 import game.world.biome;
+import game.block.redstone;
 import game.player.player_data;
 import game.block.normal_blocks;
 
@@ -79,13 +80,13 @@ export namespace craftbuild {
 
         TCPServer();
         ~TCPServer();
-        none connect(const Str& player_name);
-        none disconnect(const Str& player_name);
-        none update(const Str& player_name, const Pos3D<real>& new_pos);
+        none connect(Str const& player_name);
+        none disconnect(Str const& player_name);
+        none update(Str const& player_name, Pos3D<real> const& new_pos);
 
         none start_redstone_thread();
         none start_scheduler_thread();
-        none submit_jobs(const Pos3D<real>& player);
+        none submit_jobs(Pos3D<real> const& player);
 
         std::string serialize_players();
         std::string serialize_chunk(int32 cx, int32 cz);
@@ -94,17 +95,18 @@ export namespace craftbuild {
         Ptr<Chunk> get_or_create_chunk(int32 cx, int32 cz);
         uint32 get_global_block_id(int32 wx, int32 wy, int32 wz);
         none set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz);
+        none unload_distant_chunks();
 
-        none set_seed_and_world_name(int32 seed, const Str& name);
+        none set_seed_and_world_name(int32 seed, Str const& name);
         none set_render_distance(int32 rd);
-        none set_sleep_time_cpu(int32 stc);
+        none set_cpu_sleep_time(int32 stc);
 
-        Str chat(const Str& message);
+        Str chat(Str const& message);
 
-        none save_world(const Str& path);
-        bool load_world(const Str& path);
-        none save_region(const Str& path, int32 rx, int32 rz);
-        bool load_region(const Str& path, int32 rx, int32 rz);
+        none save_world(Str const& path);
+        bool load_world(Str const& path);
+        none save_region(Str const& path, int32 rx, int32 rz);
+        bool load_region(Str const& path, int32 rx, int32 rz);
 
         friend class Main;
         friend class Server;

@@ -2,6 +2,7 @@ module;
 
 #pragma warning(push, 0)
 #include <godot_cpp/classes/texture2d.hpp>
+#include <godot_cpp/classes/packed_scene.hpp>
 #pragma warning(pop)
 
 #include <includes.hpp>
@@ -21,6 +22,7 @@ export namespace craftbuild {
 
     struct AssetLoader {
         inline static Str base_path = "res://assets/textures/block/";
-        static Ref<Texture2D> load_block_texture(usize id, const char* path_suffix, const FaceCount face_count);
+        static Ref<Texture2D> load_block_texture(char const* path_suffix, const FaceCount face_count);
+        static Ref<PackedScene> load_block_model(char const* path_suffix);
     };
 }

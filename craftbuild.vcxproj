@@ -155,6 +155,8 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="game\module\block\redstone.cppm" />
+    <ClCompile Include="game\source\block\restone.cpp" />
     <ClCompile Include="game\source\command.cpp" />
     <ClCompile Include="game\module\command.cppm" />
     <ClCompile Include="game\module\core.cppm" />
@@ -209,7 +211,7 @@
     <ClCompile Include="misc\set.cppm" />
     <ClCompile Include="misc\str.cppm" />
     <ClCompile Include="misc\number.cppm" />
-    <ClCompile Include="game\source\block.cpp" />
+    <ClCompile Include="game\source\block\block.cpp" />
     <ClCompile Include="game\source\texture\asset_loader.cpp" />
     <ClCompile Include="game\source\texture\atlas_texture.cpp" />
     <ClCompile Include="game\source\world\biome.cpp" />

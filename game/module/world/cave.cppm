@@ -26,9 +26,9 @@ export namespace craftbuild {
         inline static std::vector<CaveEntry> registry;
         inline static Dict<Str, uint64> name2id;
 
-        static none register_cave(const Str& name, Cave cave);
+        static none register_cave(Str const& name, Cave cave);
         static Cave get_cave(uint64 cave_id);
         static Str get_name(uint64 cave_id);
-        static uint64 get_id(const Str& cave_name);
+        static uint64 get_id(Str const& cave_name);
     };
 }

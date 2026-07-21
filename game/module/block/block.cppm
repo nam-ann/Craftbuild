@@ -1,9 +1,13 @@
 module;
 
 #pragma warning(push, 0)
+#include <godot_cpp/classes/mesh.hpp>
+#include <godot_cpp/classes/texture2d.hpp>
+#include <godot_cpp/classes/packed_scene.hpp>
+#include <godot_cpp/classes/resource_loader.hpp>
+#include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 #include <godot_cpp/variant/vector3.hpp>
-#include <godot_cpp/classes/texture2d.hpp>
 #pragma warning(pop)
 
 #include <includes.hpp>
@@ -17,6 +21,7 @@ import misc.list;
 import misc.number;
 import misc.pos;
 import game.core;
+import game.logger;
 import game.texture.asset_loader;
 
 using namespace godot;
@@ -30,20 +35,20 @@ export namespace craftbuild {
         List<uint64> value;
 
         TagEntry();
-        TagEntry(const Str& n);
+        TagEntry(Str const& n);
     };
 
     struct TagRegistry {
         inline static std::vector<TagEntry> tag;
         inline static Dict<Str, uint32> tag2id;
 
-        static uint32 register_tag(const Str& name);
+        static uint32 register_tag(Str const& name);
         static uint64 add_value(uint32 tag_id, uint64 value);
         static none set_value(uint32 tag_id, uint64 index, uint64 value);
         static List<uint64>& get_value(uint32 tag_id);
         static uint64& get_value(uint32 tag_id, uint64 index);
         static Str get_name(uint32 tag_id);
-        static uint32 get_id(const Str& tag_name);
+        static uint32 get_id(Str const& tag_name);
     };
 
     class Block {
@@ -55,20 +60,23 @@ export namespace craftbuild {
         virtual int32 get_texture_layer(Face face) const = 0;
         virtual std::vector<std::pair<Str, uint64>> init_tags();
 
-        static none create_face(Face face, const Vector3& pos, List<Pos3D<real>>& vertices);
         friend class AtlasTexture;
     };
 
     struct Block1F : Block { int32 get_texture_layer(Face face) const override final; };
     struct Block3F : Block { int32 get_texture_layer(Face face) const override final; };
     struct Block6F : Block { int32 get_texture_layer(Face face) const override final; };
+    class DynBlock : public Block {
+        int32 get_texture_layer(Face face) const override final;
+    };
 
     struct BlockEntry {
         Ref<Texture2D> texture = nullptr;
         Ptr<Block> block = nullptr;
+        Ref<Mesh> mesh;
         Str name;
 
-        BlockEntry(Ptr<Block>&& b, const Str& n, Ref<Texture2D> t);
+        BlockEntry(Ptr<Block>&& b, Str const& n, Ref<Texture2D> const& t, Ref<Mesh> const& m);
     };
 
     struct BlockRegistry {
@@ -77,28 +85,38 @@ export namespace craftbuild {
 
         template <typename T>
         requires std::derived_from<T, Block>
-        static none register_block(const Str& name, const char* path) {
+        static none register_block(Str const& name, char const* path) {
             Ptr<Block> block = new Obj<T>();
-            Ref<Texture2D> texture;
+            Ref<Texture2D> texture = nullptr;
+            Ref<Mesh> mesh = nullptr;
 
             if constexpr (std::derived_from<T, Block1F>) {
-                texture = AssetLoader::load_block_texture(registry.size(), path, FaceCount::ONE);
+                texture = AssetLoader::load_block_texture(path, FaceCount::ONE);
             }
             else if constexpr (std::derived_from<T, Block3F>) {
-                texture = AssetLoader::load_block_texture(registry.size(), path, FaceCount::THREE);
+                texture = AssetLoader::load_block_texture(path, FaceCount::THREE);
             }
             else if constexpr (std::derived_from<T, Block6F>) {
-                texture = AssetLoader::load_block_texture(registry.size(), path, FaceCount::SIX);
+                texture = AssetLoader::load_block_texture(path, FaceCount::SIX);
+            }
+            else if constexpr (std::derived_from<T, DynBlock>) {
+                Ref<PackedScene> glb_model = AssetLoader::load_block_model(path);
+
+                Node* root = glb_model->instantiate();
+                TypedArray<Node> mesh_children = root->find_children("*", "MeshInstance3D", true, false);
+                MeshInstance3D* mesh_inst = mesh_children.is_empty() ? nullptr : Object::cast_to<MeshInstance3D>(mesh_children[0]);
+
+                mesh = mesh_inst->get_mesh();
             }
 
-            registry.emplace_back(std::move(block), name, texture);
+            registry.emplace_back(std::move(block), name, texture, mesh);
             name2id[name] = (uint32)(registry.size() - 1);
         }
 
         static Ptr<Block>& get_block(uint32 block_id);
         static Str get_name(uint32 block_id);
-        static uint32 get_id(const Str& block_name);
-        static bool has_block(const Str& block_name);
+        static uint32 get_id(Str const& block_name);
+        static bool has_block(Str const& block_name);
     };
 
     struct BlockStorage {

@@ -12,9 +12,12 @@ module;
 #include <godot_cpp/classes/node3d.hpp>
 #include <godot_cpp/classes/world3d.hpp>
 #include <godot_cpp/classes/marshalls.hpp>
+#include <godot_cpp/classes/multi_mesh.hpp>
 #include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/input_event.hpp>
+#include <godot_cpp/classes/box_shape3d.hpp>
 #include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/classes/packed_scene.hpp>
 #include <godot_cpp/classes/static_body3d.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
@@ -23,6 +26,7 @@ module;
 #include <godot_cpp/variant/packed_byte_array.hpp>
 #include <godot_cpp/classes/collision_shape3d.hpp>
 #include <godot_cpp/classes/standard_material3d.hpp>
+#include <godot_cpp/classes/multi_mesh_instance3d.hpp>
 #include <godot_cpp/classes/concave_polygon_shape3d.hpp>
 #include <godot_cpp/variant/node_path.hpp>
 #pragma warning(pop)
@@ -54,19 +58,27 @@ namespace craftbuild {
         
         TagRegistry::register_tag("face");
         TagRegistry::register_tag("transparent");
+        TagRegistry::register_tag("collision_size");
+        TagRegistry::register_tag("collision_offset");
+
         TagRegistry::set_value(TagRegistry::get_id("transparent"), 1, true);
+        TagRegistry::set_value(TagRegistry::get_id("has_collision"), 1, true);
+        TagRegistry::set_value(TagRegistry::get_id("collision_size"), 1, pack_vec3_mm(Pos3D<real>(0.2f, 0.6f, 0.2f)));
+        TagRegistry::set_value(TagRegistry::get_id("collision_offset"), 1, pack_vec3_mm(Pos3D<real>(0.5f, 0.3f, 0.5f)));
         
-        BlockRegistry::register_block<Air>         ("Air"          , "");
-        BlockRegistry::register_block<Grass>       ("Grass Block"  , "grass_block.png");
-        BlockRegistry::register_block<Dirt>        ("Dirt"         , "dirt.png");
-        BlockRegistry::register_block<Stone>       ("Stone"        , "stone.png");
-        BlockRegistry::register_block<Pebble>      ("Pebble"       , "pebble.png");
-        BlockRegistry::register_block<OakLog>      ("Oak Log"      , "oak_log.png");
-        BlockRegistry::register_block<OakPlanks>   ("Oak Planks"   , "oak_planks.png");
-        BlockRegistry::register_block<OakLeaves>   ("Oak Leaves"   , "oak_leaves.png");
-        BlockRegistry::register_block<DiamondBlock>("Diamond Block", "diamond_block.png");
-        BlockRegistry::register_block<DiamondOre>  ("Diamond Ore"  , "diamond_ore.png");
-        BlockRegistry::register_block<Bedrock>     ("Bedrock"      , "bedrock.png");
+        BlockRegistry::register_block<Air>          ("Air"           , "");
+        BlockRegistry::register_block<Grass>        ("Grass Block"   , "grass_block.png");
+        BlockRegistry::register_block<Dirt>         ("Dirt"          , "dirt.png");
+        BlockRegistry::register_block<Stone>        ("Stone"         , "stone.png");
+        BlockRegistry::register_block<Pebble>       ("Pebble"        , "pebble.png");
+        BlockRegistry::register_block<OakLog>       ("Oak Log"       , "oak_log.png");
+        BlockRegistry::register_block<OakPlanks>    ("Oak Planks"    , "oak_planks.png");
+        BlockRegistry::register_block<OakLeaves>    ("Oak Leaves"    , "oak_leaves.png");
+        BlockRegistry::register_block<DiamondBlock> ("Diamond Block" , "diamond_block.png");
+        BlockRegistry::register_block<DiamondOre>   ("Diamond Ore"   , "diamond_ore.png");
+        BlockRegistry::register_block<Bedrock>      ("Bedrock"       , "bedrock.png");
+        BlockRegistry::register_block<RedstoneBlock>("Redstone Block", "redstone_block.png");
+        BlockRegistry::register_block<RedstoneDust> ("Redstone Dust" , "redstone_dust.glb");
 
         Biome plains;
         plains.base_height = 5.0f;
@@ -158,7 +170,7 @@ namespace craftbuild {
             }
         }
 
-        static constexpr int32 max_updates = 8;
+        constexpr int32 max_updates = 8;
         int32 updates_this_frame = 0;
 
         std::vector<Ptr<Chunk>> chunks_to_upload;
@@ -180,7 +192,7 @@ namespace craftbuild {
             Ptr<MeshData> data_ptr = nullptr;
             {
                 std::lock_guard lock(chunk.mesh_mutex);
-                if (chunk.pending_mesh_data) data_ptr = std::move(chunk.pending_mesh_data);
+                if (chunk.pending_mesh_data) data_ptr.swap(chunk.pending_mesh_data);
             }
 
             if (not data_ptr) continue;
@@ -224,11 +236,64 @@ namespace craftbuild {
                 arrays[Mesh::ARRAY_TEX_UV2] = uvs_layer;
 
                 mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
-                update_chunk_mesh(chunk_ptr, mesh, collision_faces);
+                update_chunk_mesh(chunk_ptr, mesh);
                 create_chunk_collision(chunk_ptr, collision_faces);
             }
 
-            chunk.collision_built.store(false, std::memory_order_release);
+            if (not data.dyn_instances) {
+                ++updates_this_frame;
+                continue;
+            }
+
+            if (not chunk.mesh_instance) update_chunk_mesh(chunk_ptr, nullptr);
+            if (not chunk.dynamic_body) {
+                chunk.dynamic_body = memnew(StaticBody3D);
+                chunk.mesh_instance->add_child(chunk.dynamic_body);
+            }
+            else while (chunk.dynamic_body->get_child_count() > 0) {
+                Node* child = chunk.dynamic_body->get_child(0);
+                chunk.dynamic_body->remove_child(child);
+                child->queue_free();
+            }
+
+            Dict<uint32, std::vector<DynBlockInstance>> grouped_instances;
+            for (auto&& inst : data.dyn_instances) {
+                CollisionShape3D* col_shape = memnew(CollisionShape3D);
+                Ref<BoxShape3D> box;
+                box.instantiate();
+                box->set_size(Vector3(1.0f, 0.1f, 1.0f));
+
+                col_shape->set_shape(box);
+                col_shape->set_position(Vector3(inst.local_pos.x + 0.5f, inst.local_pos.y + 0.5f, inst.local_pos.z + 0.5f));
+
+                chunk.dynamic_body->add_child(col_shape);
+                grouped_instances[inst.block_id].emplace_back(std::move(inst));
+            }
+
+            for (auto const& [id, instances] : grouped_instances) {
+                if (id >= BlockRegistry::registry.size()) continue;
+
+                Ref<MultiMesh> multimesh;
+                multimesh.instantiate();
+                multimesh->set_transform_format(MultiMesh::TRANSFORM_3D);
+                multimesh->set_mesh(BlockRegistry::registry[id].mesh);
+                multimesh->set_instance_count((int32)instances.size());
+
+                for (usize i : range<usize>(instances.size())) {
+                    auto const& inst = instances[i];
+                    Transform3D transform;
+                    transform.origin = Vector3(inst.local_pos.x, inst.local_pos.y + 0.01f, inst.local_pos.z);
+                    multimesh->set_instance_transform((int32)i, transform);
+                }
+
+                if (not chunk.multi_mesh_instance) {
+                    chunk.multi_mesh_instance = memnew(MultiMeshInstance3D);
+                    chunk.mesh_instance->add_child(chunk.multi_mesh_instance);
+                }
+
+                chunk.multi_mesh_instance->set_multimesh(multimesh);
+            }
+
             ++updates_this_frame;
         }
 
@@ -448,7 +513,7 @@ namespace craftbuild {
                         }
 
                         // Deserialize
-                        std::string world_data(reinterpret_cast<const byte*>(decompressed_pba.ptr()), decompressed_pba.size());
+                        std::string world_data(reinterpret_cast<byte const*>(decompressed_pba.ptr()), decompressed_pba.size());
                         std::stringstream is(world_data, std::ios::binary | std::ios::in);
 
                         auto cx = std::stoi(message.arguments[1]), cz = std::stoi(message.arguments[2]);
@@ -505,7 +570,6 @@ namespace craftbuild {
 
                         chunk.generated.store(true, std::memory_order_release);
                         chunk.dirty.store(true, std::memory_order_release);
-                        chunk.collision_built.store(false, std::memory_order_release);
 
                         Pos3D<int32> offsets[4] = { {1,0,0}, {-1,0,0}, {0,0,1}, {0,0,-1} };
                         for (auto& o : offsets) {
@@ -550,7 +614,7 @@ namespace craftbuild {
                     }
                     else if (message.content == "Chat response") call_deferred("emit_signal", "chat_output", message.arguments[0].c_str());
                 }
-                catch (const std::exception& e) {
+                catch (std::exception const& e) {
                     log<LogType::ERROR>(format{} << "Error processing message: " << e.what());
                 }
 
@@ -573,14 +637,13 @@ namespace craftbuild {
             while (running.load(std::memory_order_relaxed)) {
                 submit_jobs();
 
-                auto now = std::chrono::high_resolution_clock::now();
-                if (std::chrono::duration_cast<std::chrono::seconds>(now - last_unload_time).count() >= 5) {
-                    unload_distant_chunks((int32)(player_x.load() / Chunk::SIZE_X), (int32)(player_z.load() / Chunk::SIZE_Z));
+                if (auto now = std::chrono::high_resolution_clock::now(); std::chrono::duration_cast<std::chrono::seconds>(now - last_unload_time).count() >= 5) {
+                    unload_distant_chunks();
                     last_unload_time = now;
                 }
 
                 std::unique_lock<std::mutex> lock(loop_mutex);
-                loop_cv.wait_for(lock, std::chrono::milliseconds(sleep_time_cpu));
+                loop_cv.wait_for(lock, std::chrono::milliseconds(cpu_sleep_time));
             }
         });
     }
@@ -589,7 +652,7 @@ namespace craftbuild {
         const int32 px = (int32)std::floor(player_x.load() / Chunk::SIZE_X);
         const int32 pz = (int32)std::floor(player_z.load() / Chunk::SIZE_Z);
 
-        Ptr<Chunk>(*get_chunk_server_or_not)(Main&, Pos3D<int32>) = +[](Main& self, Pos3D<int32> chunk_pos) { return self.server_ptr.value().get_chunk(chunk_pos.x, chunk_pos.z); };
+        auto get_chunk_server_or_not = +[](Main& self, Pos3D<int32> chunk_pos) { return self.server_ptr.value().get_chunk(chunk_pos.x, chunk_pos.z); };
 
         if (not server_ptr) {
             get_chunk_server_or_not = +[](Main& self, Pos3D<int32> chunk_pos) {
@@ -602,66 +665,66 @@ namespace craftbuild {
             };
         }
 
-        for (auto r : range<int32>(render_distance + 1)) {
-            for (auto x : range<int32>(-r, r + 1)) {
-                for (auto z : range<int32>(-r, r + 1)) {
-                    if (std::abs(x) != r and std::abs(z) != r) continue;
-                    Pos3D<int32> chunk_pos{ px + x, 0, pz + z };
-					Ptr<Chunk> chunk_ptr = get_chunk_server_or_not(*this, chunk_pos);
+        auto process_cell = [&](int32 x, int32 z) {
+            Pos3D<int32> chunk_pos{ px + x, 0, pz + z };
+            Ptr<Chunk> chunk_ptr = get_chunk_server_or_not(*this, chunk_pos);
 
-                    if (not chunk_ptr) continue;
+            if (not chunk_ptr) return;
+            Chunk& chunk = chunk_ptr.value();
+
+            set_chunk(chunk_ptr, chunk_pos.x, chunk_pos.z);
+
+            if (not chunk.dirty.load(std::memory_order_acquire)) return;
+
+            {
+                std::lock_guard lock(pending_jobs_mutex);
+                if (pending_mesh_jobs.contains(chunk_pos)) return;
+                pending_mesh_jobs.insert(chunk_pos);
+            }
+
+            mesh_pool.enqueue([this, chunk_ptr, chunk_pos]() {
+                if (running.load(std::memory_order_relaxed)) {
                     Chunk& chunk = chunk_ptr.value();
+                    Ptr<Chunk> neighbors[4] = {
+                        get_chunk(chunk.chunk_pos.x + 1, chunk.chunk_pos.z),
+                        get_chunk(chunk.chunk_pos.x - 1, chunk.chunk_pos.z),
+                        get_chunk(chunk.chunk_pos.x, chunk.chunk_pos.z + 1),
+                        get_chunk(chunk.chunk_pos.x, chunk.chunk_pos.z - 1)
+                    };
 
-                    set_chunk(chunk_ptr, chunk_pos.x, chunk_pos.z);
+                    chunk.generate_mesh(neighbors);
 
-                    if (not chunk.dirty.load(std::memory_order_acquire)) continue;
-                    
-                    {
-                        std::lock_guard lock(pending_jobs_mutex);
-                        if (pending_mesh_jobs.contains(chunk_pos)) continue;
-                        pending_mesh_jobs.insert(chunk_pos);
-                    }
-
-                    mesh_pool.enqueue([this, chunk_ptr, chunk_pos]() {
-                        if (running.load(std::memory_order_relaxed)) {
-                            Chunk& chunk = chunk_ptr.value();
-                            Ptr<Chunk> neighbors[4] = {
-                                get_chunk(chunk.chunk_pos.x + 1, chunk.chunk_pos.z),
-                                get_chunk(chunk.chunk_pos.x - 1, chunk.chunk_pos.z),
-                                get_chunk(chunk.chunk_pos.x, chunk.chunk_pos.z + 1),
-                                get_chunk(chunk.chunk_pos.x, chunk.chunk_pos.z - 1)
-                            };
-
-                            chunk.generate_mesh(neighbors);
-
-                            std::lock_guard lock(ready_chunks_queue_mutex);
-                            ready_chunks_queue.push_back(chunk_ptr);
-                        }
-
-                        std::lock_guard lock(pending_jobs_mutex);
-                        pending_mesh_jobs.erase(chunk_pos);
-                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                    });
+                    std::lock_guard lock(ready_chunks_queue_mutex);
+                    ready_chunks_queue.push_back(chunk_ptr);
                 }
+
+                std::lock_guard lock(pending_jobs_mutex);
+                pending_mesh_jobs.erase(chunk_pos);
+                std::this_thread::sleep_for(1ms);
+            });
+        };
+
+        process_cell(0, 0);
+
+        for (auto r : range<int32>(1, render_distance + 1)) {
+            for (auto x : range<int32>(-r, r + 1)) {
+                process_cell(x, -r);
+                process_cell(x, r);
+            }
+            for (auto z : range<int32>(-r + 1, r)) {
+                process_cell(-r, z);
+                process_cell(r, z);
             }
         }
     }
 
-    none Main::create_chunk_collision(const Ptr<Chunk>& chunk_ptr, const PackedVector3Array& collision_faces) {
+    none Main::create_chunk_collision(Ptr<Chunk>& chunk_ptr, PackedVector3Array const& collision_faces) {
         if (not chunk_ptr) return;
 
         std::shared_lock lock(chunks_mutex);
 		auto& chunk = chunk_ptr.value();
 
-        if (not chunk.mesh_instance or chunk.collision_built.load(std::memory_order_relaxed)) return;
-
-        for (auto i : range<int32>(chunk.mesh_instance->get_child_count() - 1, -1)) {
-            Node* child = chunk.mesh_instance->get_child(i);
-            if (Object::cast_to<StaticBody3D>(child)) {
-                chunk.mesh_instance->remove_child(child);
-                child->queue_free();
-            }
-        }
+        if (not chunk.mesh_instance) return;
 
         Ref<ArrayMesh> mesh = chunk.mesh_instance->get_mesh();
         if (mesh.is_null() or mesh->get_surface_count() == 0) return;
@@ -672,23 +735,27 @@ namespace craftbuild {
             return;
         }
 
-        StaticBody3D* static_body = memnew(StaticBody3D);
-        CollisionShape3D* col_shape = memnew(CollisionShape3D);
+        if (not chunk.collision_body) {
+            chunk.collision_body = memnew(StaticBody3D);
+            chunk.mesh_instance->add_child(chunk.collision_body);
+        }
+
+        if (not chunk.collision_shape) {
+            chunk.collision_shape = memnew(CollisionShape3D);
+            chunk.collision_body->add_child(chunk.collision_shape);
+        }
+
         Ref<ConcavePolygonShape3D> concave;
         concave.instantiate();
-
         concave->set_faces(collision_faces);
-        col_shape->set_shape(concave);
-        static_body->add_child(col_shape);
 
-        chunk.mesh_instance->add_child(static_body);
-        chunk.collision_built.store(true, std::memory_order_release);
+        chunk.collision_shape->set_shape(concave);
     }
 
-    none Main::update_chunk_mesh(const Ptr<Chunk>& chunk_ptr, const Ref<ArrayMesh>& mesh, PackedVector3Array& collision_faces) {
+    none Main::update_chunk_mesh(Ptr<Chunk>& chunk_ptr, Ref<ArrayMesh> const& mesh) {
 		if (not chunk_ptr) return;
 		auto& chunk = chunk_ptr.value();
-
+        
         if (not chunk.mesh_instance) {
             MeshInstance3D* mi = memnew(MeshInstance3D);
             mi->set_position(Vector3(chunk.chunk_pos.x * Chunk::SIZE_X, 0, chunk.chunk_pos.z * Chunk::SIZE_Z));
@@ -700,24 +767,29 @@ namespace craftbuild {
         chunk.mesh_instance->set_mesh(mesh);
     }
 
-    none Main::unload_distant_chunks(int32 p_cx, int32 p_cz) {
+    none Main::unload_distant_chunks() {
+        const int32 p_cx = (int32)(player_x.load() / Chunk::SIZE_X);
+        const int32 p_cz = (int32)(player_z.load() / Chunk::SIZE_Z);
         const int32 unload_dist = render_distance + 4;
-        int32 removed = 0;
 
+        List<Pos3D<int32>> chunks_to_remove;
         {
-            std::unique_lock lock(chunks_mutex);
-            for (const auto& [chunk_pos, chunk_ptr] : chunks) {
+            std::shared_lock lock(chunks_mutex);
+            for (auto const& [chunk_pos, chunk_ptr] : chunks) {
                 int32 dx = std::abs(chunk_pos.x - p_cx);
                 int32 dz = std::abs(chunk_pos.z - p_cz);
-                if (dx > unload_dist or dz > unload_dist) {
-                    auto& chunk = chunk_ptr.value();
-                    if (chunk.mesh_instance) {
-                        chunk.mesh_instance->queue_free();
-                        chunk.mesh_instance = nullptr;
-                    }
-                    chunks.erase(chunk_pos);
-                    ++removed;
-                }
+                if (dx > unload_dist or dz > unload_dist) chunks_to_remove.append(chunk_pos);
+            }
+        }
+
+        int32 removed = 0;
+        {
+            std::unique_lock lock(chunks_mutex);
+            for (auto&& chunk_pos : chunks_to_remove) {
+                auto& chunk = chunks[chunk_pos].value();
+                chunk.unload_mesh();
+                chunks.erase(chunk_pos);
+                ++removed;
             }
         }
 
@@ -747,7 +819,7 @@ namespace craftbuild {
 
         Ptr<Chunk> chunk(new Obj<Chunk>());
         chunk.value().chunk_pos = chunk_pos;
-        chunks[chunk_pos] = std::move(chunk);
+        chunks[chunk_pos].swap(chunk);
         return chunks[chunk_pos];
     }
     
@@ -790,7 +862,7 @@ namespace craftbuild {
         chunk.value().set_block({ (uint8)lx, (uint8)wy, (uint8)lz }, block_id);
     }
 
-    none Main::save_userdata(const char* path) {
+    none Main::save_userdata(char const* path) {
         String real_path = ProjectSettings::get_singleton()->globalize_path(path);
         std::string std_path = real_path.utf8().get_data();
 
@@ -807,13 +879,13 @@ namespace craftbuild {
         Player* player = static_cast<Player*>(player_ptr);
         if (not player) return;
 
-        ofs.write(reinterpret_cast<const byte*>(&full_screen), sizeof(bool));
-        ofs.write(reinterpret_cast<const byte*>(&player->sensitivity), sizeof(float32));
-        ofs.write(reinterpret_cast<const byte*>(&player->mouse_pitch), sizeof(float32));
-        ofs.write(reinterpret_cast<const byte*>(&render_distance), sizeof(int32));
+        ofs.write(reinterpret_cast<byte const*>(&full_screen), sizeof(bool));
+        ofs.write(reinterpret_cast<byte const*>(&player->sensitivity), sizeof(float32));
+        ofs.write(reinterpret_cast<byte const*>(&player->mouse_pitch), sizeof(float32));
+        ofs.write(reinterpret_cast<byte const*>(&render_distance), sizeof(int32));
     }
 
-    bool Main::load_userdata(const char* path) {
+    bool Main::load_userdata(char const* path) {
         String real_path = ProjectSettings::get_singleton()->globalize_path(path);
         std::string std_path = real_path.utf8().get_data();
 
@@ -873,9 +945,9 @@ namespace craftbuild {
         else server_ptr.value().set_render_distance(rd);
     }
 
-    none Main::set_sleep_time_cpu(int32 stc) {
+    none Main::set_cpu_sleep_time(int32 stc) {
         if (not server_ptr) send_queue.store({ "Set sleep time CPU", { std::to_string(stc) } });
-        else server_ptr.value().set_sleep_time_cpu(stc);
+        else server_ptr.value().set_cpu_sleep_time(stc);
     }
     
     none Main::_bind_methods() {
@@ -890,6 +962,6 @@ namespace craftbuild {
         ClassDB::bind_method(D_METHOD("chat", "msg"), &Main::chat);
         ClassDB::bind_method(D_METHOD("set_seed_and_world_name", "seed", "name"), &Main::set_seed_and_world_name);
         ClassDB::bind_method(D_METHOD("set_render_distance", "rd"), &Main::set_render_distance);
-        ClassDB::bind_method(D_METHOD("set_sleep_time_cpu", "stc"), &Main::set_sleep_time_cpu);
+        ClassDB::bind_method(D_METHOD("set_cpu_sleep_time", "stc"), &Main::set_cpu_sleep_time);
     }
 }

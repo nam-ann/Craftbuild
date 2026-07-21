@@ -20,7 +20,7 @@ import misc.range;
 import misc.number;
 import misc.hasher;
 
-inline std::u32string ptr_to_hex(const none* ptr) noexcept {
+inline std::u32string ptr_to_hex(none const* ptr) noexcept {
     uintptr_t value = (uintptr_t)ptr;
 
     if (value == 0) return U"0x0";
@@ -29,7 +29,7 @@ inline std::u32string ptr_to_hex(const none* ptr) noexcept {
     int32 i = sizeof(buffer) - 1;
     buffer[i--] = U'\0';
 
-    const byte32* hex = U"0123456789ABCDEF";
+    byte32 const* hex = U"0123456789ABCDEF";
 
     while (value > 0) {
         buffer[i--] = hex[value & 0xF];
@@ -42,7 +42,7 @@ inline std::u32string ptr_to_hex(const none* ptr) noexcept {
     return &buffer[i];
 }
 
-inline std::u32string to_u32(const std::string& s) {
+inline std::u32string to_u32(std::string const& s) {
     std::u32string out;
     usize i = 0;
 
@@ -110,9 +110,9 @@ inline none append_utf8(std::string& out, uint32 cp) {
 
 export namespace craftbuild {
     class Str {
-        uint8* __value__;
-        usize __len__;
-        usize __space__;
+        uint8* __value__ = nullptr;
+        usize __len__ = 0;
+        usize __space__ = 0;
 
         struct Iterator {
             uint8* __ptr__;
@@ -126,7 +126,7 @@ export namespace craftbuild {
                 __ptr__++;
                 return *this;
             }
-            bool operator!=(const Iterator& other) const {
+            bool operator!=(Iterator const& other) const {
                 return __ptr__ != other.__ptr__;
             }
         };
@@ -159,7 +159,7 @@ export namespace craftbuild {
         }
 
         // encode UTF-32 string
-        none encode(const std::u32string& s) {
+        none encode(std::u32string const& s) {
             expect(s.size() * 2);
             for (byte32 cp : s) {
                 encode((uint32)cp);
@@ -181,31 +181,34 @@ export namespace craftbuild {
         }
 
     public:
-        Str() : __value__(nullptr), __len__(0), __space__(0) {}
-        explicit Str(int64 i) : __value__(nullptr), __len__(0), __space__(0) { encode(to_u32(std::to_string(i))); }
-        explicit Str(int32 i) : __value__(nullptr), __len__(0), __space__(0) { encode(to_u32(std::to_string(i))); }
-        explicit Str(uint64 i) : __value__(nullptr), __len__(0), __space__(0) { encode(to_u32(std::to_string(i))); }
-        explicit Str(uint32 i) : __value__(nullptr), __len__(0), __space__(0) { encode(to_u32(std::to_string(i))); }
-        explicit Str(float64 i) : __value__(nullptr), __len__(0), __space__(0) { encode(to_u32(std::to_string(i))); }
-        explicit Str(const void* v) : __value__(nullptr), __len__(0), __space__(0) { encode(ptr_to_hex(v)); }
-        Str(const byte32* c) : __value__(nullptr), __len__(0), __space__(0) { encode(c); }
-        Str(const char* s) : __value__(nullptr), __len__(0), __space__(0) { encode(to_u32(s)); }
-        Str(const std::u32string& s) : __value__(nullptr), __len__(0), __space__(0) { encode(s); }
-        Str(const std::string& s) : __value__(nullptr), __len__(0), __space__(0) { encode(to_u32(s)); }
-        Str(const Str& s) : __value__(new uint8[s.__len__]), __len__(s.__len__), __space__(s.__len__) { memcpy(__value__, s.__value__, __len__); }
-        Str(Str&& s) noexcept : __value__(s.__value__), __len__(std::move(s.__len__)), __space__(std::move(s.__space__)) { s.__value__ = nullptr; }
+        Str() noexcept {}
+        explicit Str(int64 i) { encode(to_u32(std::to_string(i))); }
+        explicit Str(int32 i) { encode(to_u32(std::to_string(i))); }
+        explicit Str(uint64 i) { encode(to_u32(std::to_string(i))); }
+        explicit Str(uint32 i) { encode(to_u32(std::to_string(i))); }
+        explicit Str(float64 i) { encode(to_u32(std::to_string(i))); }
+        explicit Str(void const* v) { encode(ptr_to_hex(v)); }
+        Str(byte32 const* c) { encode(c); }
+        Str(char const* s) { encode(to_u32(s)); }
+        Str(std::u32string const& s) { encode(s); }
+        Str(std::string const& s) { encode(to_u32(s)); }
+        Str(Str const& s) : __value__(new uint8[s.__len__]), __len__(s.__len__), __space__(s.__len__) { memcpy(__value__, s.__value__, __len__); }
+        Str(Str&& s) noexcept : __value__(s.__value__), __len__(s.__len__), __space__(s.__space__) {
+            s.__value__ = nullptr;
+            s.__len__ = s.__space__ = 0;
+        }
 
         ~Str() { clear(); }
 
-        Str& operator=(const byte32* c) { *this = std::u32string(c); return *this; }
-        Str& operator=(const char* c) { *this = to_u32(c); return *this; }
-        Str& operator=(const std::u32string& s) {
+        Str& operator=(byte32 const* c) { *this = std::u32string(c); return *this; }
+        Str& operator=(char const* c) { *this = to_u32(c); return *this; }
+        Str& operator=(std::u32string const& s) {
             clear();
             encode(s);
             return *this;
         }
-        Str& operator=(const std::string& s) { *this = to_u32(s); return *this;  }
-        Str& operator=(const Str& s) {
+        Str& operator=(std::string const& s) { *this = to_u32(s); return *this; }
+        Str& operator=(Str const& s) {
             if (this == &s) return *this;
             clear();
             __value__ = new uint8[s.__len__];
@@ -217,17 +220,20 @@ export namespace craftbuild {
             if (this == &s) return *this;
             clear();
             __value__ = s.__value__;
-            __len__ = std::move(s.__len__);
-            __space__ = std::move(s.__space__);
+            __len__ = s.__len__;
+            __space__ = s.__space__;
+
             s.__value__ = nullptr;
+            s.__len__ = s.__space__ = 0;
+
             return *this;
         }
 
-        Str& operator+=(const byte32* c) { *this += std::u32string(c); return *this; }
-        Str& operator+=(const char* c) { *this += std::string(c); return *this; }
-        Str& operator+=(const std::u32string& s) { encode(s); return *this; }
-        Str& operator+=(const std::string& s) { encode(to_u32(s)); return *this; }
-        Str& operator+=(const Str& s) {
+        Str& operator+=(byte32 const* c) { *this += std::u32string(c); return *this; }
+        Str& operator+=(char const* c) { *this += std::string(c); return *this; }
+        Str& operator+=(std::u32string const& s) { encode(s); return *this; }
+        Str& operator+=(std::string const& s) { encode(to_u32(s)); return *this; }
+        Str& operator+=(Str const& s) {
             expect(s.__len__);
             memcpy(&__value__[__len__], s.__value__, s.__len__);
             __len__ += s.__len__;
@@ -256,23 +262,21 @@ export namespace craftbuild {
             return *this;
         }
 
-        Str operator+(const byte32* c) const { Str cache(*this); return cache += c; }
-        Str operator+(const char* c) const { Str cache(*this); return cache += c; }
-        Str operator+(const std::u32string& s) const { Str cache(*this); cache += s; return cache; }
-        Str operator+(const std::string& s) const { Str cache(*this); cache += s; return cache; }
-        Str operator+(const Str& s) const { Str cache(*this); cache += s; return cache; }
+        Str operator+(byte32 const* c) const { Str cache(*this); return cache += c; }
+        Str operator+(char const* c) const { Str cache(*this); return cache += c; }
+        Str operator+(std::u32string const& s) const { Str cache(*this); cache += s; return cache; }
+        Str operator+(std::string const& s) const { Str cache(*this); cache += s; return cache; }
+        Str operator+(Str const& s) const { Str cache(*this); cache += s; return cache; }
         Str operator+(Str&& s) const noexcept { Str cache(*this); cache += s; return cache; }
 
         Str operator*(usize n) const { Str cache(*this); return cache *= n; }
 
         uint8& operator[](usize pos) { return __value__[pos]; }
-        const uint8& operator[](usize pos) const { return __value__[pos]; }
+        uint8 const& operator[](usize pos) const { return __value__[pos]; }
 
-        operator bool() const {
-            return *this != U"";
-        }
+        operator bool() const { return *this != U""; }
 
-        bool operator==(const Str& s) const {
+        bool operator==(Str const& s) const {
             return __len__ == s.__len__ and memcmp(__value__, s.__value__, __len__) == 0;
         }
 
@@ -348,7 +352,7 @@ export namespace craftbuild {
         Str& add_codepoint(uint32 cp) {
             encode(cp);
             return *this;
-		}
+        }
 
         none swap(Str& other) noexcept {
             if (this == &other) return;
@@ -359,30 +363,30 @@ export namespace craftbuild {
         }
 
         uint8* c_ptr() { return __value__; }
-        const uint8* c_ptr() const { return __value__; }
+        uint8 const* c_ptr() const { return __value__; }
 
         Iterator begin() { return Iterator(__value__); }
         Iterator end() { return Iterator(__value__ + __len__); }
         Iterator begin() const { return Iterator(__value__); }
         Iterator end() const { return Iterator(__value__ + __len__); }
 
-        friend std::ostream& operator<<(std::ostream& os, const Str& s) noexcept {
+        friend std::ostream& operator<<(std::ostream& os, Str const& s) noexcept {
             return os << s.std_str();
         }
 
-        friend usize len(const Str& s) { return s.__len__; }
+        friend usize len(Str const& s) { return s.__len__; }
 
-        friend Str operator+(const byte32* c, const Str& s) { return Str(c) + s; }
-        friend Str operator+(const char* c, const Str& s) { return Str(c) + s; }
-        friend Str operator+(const std::string& std_s, const Str& s) { return Str(std_s) + s; }
-        friend Str operator+(const std::u32string& std_s, const Str& s) { return Str(std_s) + s; }
+        friend Str operator+(byte32 const* c, Str const& s) { return Str(c) + s; }
+        friend Str operator+(char const* c, Str const& s) { return Str(c) + s; }
+        friend Str operator+(std::string const& std_s, Str const& s) { return Str(std_s) + s; }
+        friend Str operator+(std::u32string const& std_s, Str const& s) { return Str(std_s) + s; }
 
         friend struct Hasher<Str>;
     };
 
     template <>
     struct Hasher<Str> {
-        usize operator()(const Str& str) const {
+        usize operator()(Str const& str) const {
             constexpr usize FNV_OFFSET = 14695981039346656037ULL;
             constexpr usize FNV_PRIME = 1099511628211ULL;
 

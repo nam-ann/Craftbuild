@@ -35,12 +35,13 @@ import game.core;
 import game.block;
 import game.logger;
 import game.thread;
-import game.server_ptr;
+import game.server;
 import game.network;
 import game.environment;
 import game.world.cave;
 import game.world.chunk;
 import game.world.biome;
+import game.block.redstone;
 import game.player.player_data;
 import game.block.normal_blocks;
 import game.texture.atlas_texture;
@@ -106,9 +107,9 @@ export namespace craftbuild {
         none start_network_thread();
         none start_scheduler_thread();
         none submit_jobs();
-        none create_chunk_collision(const Ptr<Chunk>& chunk, const PackedVector3Array& collision_faces);
-        none update_chunk_mesh(const Ptr<Chunk>& chunk, const Ref<ArrayMesh>& mesh, PackedVector3Array& collision_faces);
-        none unload_distant_chunks(int32 p_cx, int32 p_cz);
+        none create_chunk_collision(Ptr<Chunk>& chunk, PackedVector3Array const& collision_faces);
+        none update_chunk_mesh(Ptr<Chunk>& chunk, Ref<ArrayMesh> const& mesh);
+        none unload_distant_chunks();
 
         Ptr<Chunk> get_chunk(int32 cx, int32 cz);
         Ptr<Chunk> get_or_create_chunk(int32 cx, int32 cz);
@@ -116,8 +117,8 @@ export namespace craftbuild {
         none set_chunk(Ptr<Chunk> chunk, int32 cx, int32 cz);
         none set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz);
 
-        none save_userdata(const char* path = "user://game/userdata.cbdata");
-        bool load_userdata(const char* path = "user://game/userdata.cbdata");
+        none save_userdata(char const* path = "user://game/userdata.cbdata");
+        bool load_userdata(char const* path = "user://game/userdata.cbdata");
 
         none pause();
         none resume();
@@ -129,7 +130,7 @@ export namespace craftbuild {
         none get_world_name();
         none set_seed_and_world_name(int32 seed, const String name);
         none set_render_distance(int32 rd);
-        none set_sleep_time_cpu(int32 stc);
+        none set_cpu_sleep_time(int32 stc);
 
         static none _bind_methods();
 

@@ -17,14 +17,17 @@ module;
 module game.world.chunk;
 
 namespace craftbuild {
-    bool FaceMask::operator==(const FaceMask& other) const {
+    bool FaceMask::operator==(FaceMask const& other) const {
         return layer == other.layer and back_face == other.back_face;
     }
 
-    none Chunk::_get_refs(std::vector<GCObject*>& refs) const { refs.push_back(pending_mesh_data.object()); }
+    none Chunk::_get_refs(std::vector<GCObject*>& refs) const {
+        std::shared_lock lock(mesh_mutex);
+        refs.push_back(pending_mesh_data.object());
+    }
 
     Chunk::~Chunk() {
-        std::lock_guard lock(mesh_mutex);
+        std::unique_lock lock(mesh_mutex);
         if (pending_mesh_data) {
             pending_mesh_data.clear();
         }
@@ -36,6 +39,14 @@ namespace craftbuild {
         id2block.clear();
         id2tag.clear();
         complex_blocks.clear();
+    }
+
+    none Chunk::unload_mesh() {
+        if (mesh_instance) mesh_instance->queue_free();
+        if (collision_body) collision_body->queue_free();
+        if (collision_shape) collision_shape->queue_free();
+        if (multi_mesh_instance) multi_mesh_instance->queue_free();
+        if (dynamic_body) dynamic_body->queue_free();
     }
 
     uint32 Chunk::column_seed(int32 seed, int32 x, int32 z) {
@@ -55,7 +66,7 @@ namespace craftbuild {
         return value * value * (3.0f - 2.0f * value);
     }
 
-    Biome Chunk::lerp_biome(const Biome& a, const Biome& b, float32 t) {
+    Biome Chunk::lerp_biome(Biome const& a, Biome const& b, float32 t) {
         return {
             a.base_noise + (b.base_noise - a.base_noise) * t,
             a.base_height + (b.base_height - a.base_height) * t,
@@ -104,10 +115,10 @@ namespace craftbuild {
         return lerp_biome(bx0, bx1, tz);
     }
 
-    none Chunk::set_block(const Pos3D<uint8>& pos, const Str& block) {
+    none Chunk::set_block(Pos3D<uint8>& pos, Str const& block) {
         set_block(pos, BlockRegistry::get_id(block));
     }
-    none Chunk::set_block(const Pos3D<uint8>& pos, uint32 block_id) {
+    none Chunk::set_block(Pos3D<uint8> const& pos, uint32 block_id) {
         std::unique_lock lock(data_mutex);
         if (block_ids_size >= 255) {
             complex_blocks.emplace(pos, BlockStorageFull(block_id, 0, 0));
@@ -123,14 +134,14 @@ namespace craftbuild {
         id2block[block_id] = block_ids_size;
         block_ids[block_ids_size++] = block_id;
 
-        const auto& default_tags = BlockRegistry::get_block(block_id).value().init_tags();
-        for (const auto& tag : default_tags) tag_block(pos, TagRegistry::get_id(tag.first), tag.second);
+        auto const& default_tags = BlockRegistry::get_block(block_id).value().init_tags();
+        for (auto const& tag : default_tags) tag_block(pos, TagRegistry::get_id(tag.first), tag.second);
     }
 
-    none Chunk::tag_block(const Pos3D<uint8>& pos, const Str& tag, usize tag_data) {
+    none Chunk::tag_block(Pos3D<uint8>& pos, Str const& tag, usize tag_data) {
         tag_block(pos, TagRegistry::get_id(tag), tag_data);
     }
-    none Chunk::tag_block(const Pos3D<uint8>& pos, uint32 tag_id, usize tag_data) {
+    none Chunk::tag_block(Pos3D<uint8> const& pos, uint32 tag_id, usize tag_data) {
         std::unique_lock lock(data_mutex);
         if (tag_ids_size >= 256) {
             complex_blocks[pos].tag = tag_id;
@@ -149,10 +160,10 @@ namespace craftbuild {
         tag_ids[tag_ids_size++] = tag_pair;
     }
 
-    bool Chunk::has_tag(const Pos3D<uint8>& pos, const Str& tag, usize tag_data) const {
+    bool Chunk::has_tag(Pos3D<uint8>& pos, Str const& tag, usize tag_data) const {
         return has_tag(pos, TagRegistry::get_id(tag), tag_data);
     }
-    bool Chunk::has_tag(const Pos3D<uint8>& pos, uint32 tag_id, usize tag_data) const {
+    bool Chunk::has_tag(Pos3D<uint8> const& pos, uint32 tag_id, usize tag_data) const {
         std::shared_lock lock(data_mutex);
         if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return false;
 
@@ -161,20 +172,20 @@ namespace craftbuild {
         }
 
         auto& block_tag = blocks[pos.x][pos.y][pos.z].tag;
-        for (const auto& tag : tag_ids) if (tag == std::make_pair(tag_id, tag_data)) return true;
+        for (auto const& tag : tag_ids) if (tag == std::make_pair(tag_id, tag_data)) return true;
         return false;
     }
 
-    uint32 Chunk::get_block(const Pos3D<uint8>& pos) const {
+    uint32 Chunk::get_block(Pos3D<uint8> const& pos) const {
         if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return 0;
         if (complex_blocks.contains(pos)) return complex_blocks.at(pos).block_id;
         return block_ids[blocks[pos.x][pos.y][pos.z].block_id];
     }
 
-    std::pair<uint32, uint64> Chunk::get_tag(const Pos3D<uint8>& pos) const {
+    std::pair<uint32, uint64> Chunk::get_tag(Pos3D<uint8> const& pos) const {
         if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return std::make_pair(0, 0);
         if (complex_blocks.contains(pos)) {
-            const auto& block = complex_blocks.at(pos);
+            auto const& block = complex_blocks.at(pos);
             return std::make_pair(block.tag, block.tag_data);
         }
         return tag_ids[blocks[pos.x][pos.y][pos.z].tag];
@@ -196,7 +207,7 @@ namespace craftbuild {
         Dict<Pos3D<uint8>, BlockStorageFull> new_complex_blocks;
         auto new_blocks = std::make_unique<BlockStorage[][SIZE_Y][SIZE_Z]>(SIZE_X);
 
-        auto add_block_unlocked = [&](const Pos3D<uint8>& pos, uint32 block_id) {
+        auto add_block_unlocked = [&](Pos3D<uint8> const& pos, uint32 block_id) {
             if (new_block_ids_size >= 256) {
                 new_complex_blocks.emplace(pos, BlockStorageFull(block_id, 0, 0));
                 return;
@@ -282,8 +293,8 @@ namespace craftbuild {
             memcpy(block_ids, new_block_ids, sizeof(uint32) * 256);
 
             block_ids_size = new_block_ids_size;
-            id2block = std::move(new_id2block);
-            complex_blocks = std::move(new_complex_blocks);
+            id2block.swap(new_id2block);
+            complex_blocks.swap(new_complex_blocks);
         }
 
         dirty.store(true, std::memory_order_release);
@@ -328,8 +339,14 @@ namespace craftbuild {
             neighbors[2].c_ptr(),
             neighbors[3].c_ptr()
         };
+        
+        auto is_dyn_block = [this, AIR](uint32 id) -> bool {
+            auto& block = BlockRegistry::get_block(id);
+            if (not block) return false;
+            return block.value().get_texture_layer(Face::TOP) == -1;
+        };
 
-        auto transparent_or_air = [this, raw_neighbors, AIR, TRANSPARENT](int32 bx, int32 by, int32 bz) -> bool {
+        auto transparent_or_air = [this, raw_neighbors, AIR, TRANSPARENT, is_dyn_block](int32 bx, int32 by, int32 bz) -> bool {
             if (by < 0 or by >= Chunk::SIZE_Y) return true;
 
             uint32 id = AIR;
@@ -356,12 +373,13 @@ namespace craftbuild {
                 tag = get_tag({ (uint8)bx, (uint8)by, (uint8)bz });
             }
 
-            return id == AIR or (tag.first == TRANSPARENT and TagRegistry::get_value(TRANSPARENT, tag.second));
+            if (id == AIR or is_dyn_block(id)) return true;
+            return tag.first == TRANSPARENT and TagRegistry::get_value(TRANSPARENT, tag.second);
         };
 
-        auto get_block_layer = [this, AIR](int32 bx, int32 by, int32 bz, Face face) -> int32 {
+        auto get_block_layer = [this, AIR, is_dyn_block](int32 bx, int32 by, int32 bz, Face face) -> int32 {
             uint32 id = get_block({ (uint8)bx, (uint8)by, (uint8)bz });
-            if (id == AIR) return -1;
+            if (id == AIR or is_dyn_block(id)) return -1;
             auto& block = BlockRegistry::get_block(id);
             if (not block) return -1;
             return block.value().get_texture_layer(face);
@@ -374,7 +392,7 @@ namespace craftbuild {
         List<FaceMask> mask;
         mask.resize(Chunk::SIZE_Y * std::max(Chunk::SIZE_X, Chunk::SIZE_Z));
 
-        uint32 vertex_offset = 0;
+        uint64 vertex_offset = 0;
         for (auto d : range<int32>(3)) {
             const int32 u = (d + 1) % 3;
             const int32 v = (d + 2) % 3;
@@ -443,7 +461,7 @@ namespace craftbuild {
                         Pos3D<float32> p2(start[0] + du[0] + dv[0], start[1] + du[1] + dv[1], start[2] + du[2] + dv[2]);
                         Pos3D<float32> p3(start[0] + dv[0], start[1] + dv[1], start[2] + dv[2]);
 
-                        auto get_uv = [&](const Pos3D<float32>& p) -> Vector2 {
+                        auto get_uv = [&](Pos3D<float32> const& p) -> Vector2 {
                             const float32 dx = p.x - p0.x;
                             const float32 dy = p.y - p0.y;
                             const float32 dz = p.z - p0.z;
@@ -451,7 +469,7 @@ namespace craftbuild {
                             if (d == 0)      return Vector2(current_face.back_face ? height - dz : dz, width - dy);
                             else if (d == 1) return Vector2(dx, current_face.back_face ? height - dz : dz);
                             else             return Vector2(current_face.back_face ? width - dx : dx, height - dy);
-                            };
+                        };
 
                         if (not current_face.back_face) {
                             vertices.append(p0); vertices.append(p1);
@@ -504,8 +522,20 @@ namespace craftbuild {
             }
         }
 
+        for (uint8 x = 0; x < Chunk::SIZE_X; ++x) {
+            for (uint16 y = 0; y < Chunk::SIZE_Y; ++y) {
+                for (uint8 z = 0; z < Chunk::SIZE_Z; ++z) {
+                    uint32 id = get_block({ x, (uint8)y, z });
+                    if (is_dyn_block(id)) {
+                        auto tag_info = get_tag({ x, (uint8)y, z });
+                        data.dyn_instances.append({ id, tag_info.second, {x, (uint8)y, z} });
+                    }
+                }
+            }
+        }
+
         {
-            std::lock_guard lock(mesh_mutex);
+            std::unique_lock lock(mesh_mutex);
             pending_mesh_data = data_ptr;
         }
 

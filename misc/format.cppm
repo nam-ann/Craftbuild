@@ -12,14 +12,14 @@ import misc.range;
 import misc.number;
 
 export namespace craftbuild {
-	inline Str time2str(const std::tm& tm, const bool with_date = false) {
+	inline Str time2str(std::tm const& tm, const bool with_date = false) {
 		char buffer[20];
 		if (with_date) std::strftime(buffer, sizeof(buffer), "%Y/%m/%d %H:%M:%S", &tm);
 		else           std::strftime(buffer, sizeof(buffer), "%H:%M:%S", &tm);
 		return Str(buffer);
 	}
 
-	inline Str time2file_name(const std::tm& tm) {
+	inline Str time2file_name(std::tm const& tm) {
 		char buffer[20];
 		std::strftime(buffer, sizeof(buffer), "%Y.%m.%d %H-%M-%S", &tm);
 		return Str(buffer);
@@ -32,11 +32,11 @@ export namespace craftbuild {
 			return __buffer__;
 		}
 
-		friend format&& operator<<(format&& f, const Str& s) {
+		friend format&& operator<<(format&& f, Str const& s) {
 			f.__buffer__ += s;
 			return std::move(f);
 		}
-		friend format&& operator<<(format&& f, const std::string& s) {
+		friend format&& operator<<(format&& f, std::string const& s) {
 			f.__buffer__ += s;
 			return std::move(f);
 		}
@@ -44,7 +44,7 @@ export namespace craftbuild {
 			f.__buffer__ += (std::string)s;
 			return std::move(f);
 		}
-		friend format&& operator<<(format&& f, const byte* s) {
+		friend format&& operator<<(format&& f, byte const* s) {
 			f.__buffer__ += s;
 			return std::move(f);
 		}
@@ -72,16 +72,16 @@ export namespace craftbuild {
 			f.__buffer__ += b ? "true" : "false";
 			return std::move(f);
 		}
-		friend format&& operator<<(format&& f, const void* v) {
+		friend format&& operator<<(format&& f, void const* v) {
 			f.__buffer__ += Str(v);
 			return std::move(f);
 		}
-		friend format&& operator<<(format&& f, const std::tm& tm) {
+		friend format&& operator<<(format&& f, std::tm const& tm) {
 			f.__buffer__ += time2str(tm);
 			return std::move(f);
 		}
 		template <typename T>
-		friend format&& operator<<(format&& f, const std::vector<T>& vt) {
+		friend format&& operator<<(format&& f, std::vector<T> const& vt) {
 			Str result = "[";
 			for (auto i : range<usize>(vt.size())) {
 				result += Str(vt[i]);
@@ -91,7 +91,7 @@ export namespace craftbuild {
 			return std::move(f);
 		}
 		template <typename T>
-		friend format&& operator<<(format&& f, const List<T>& l) {
+		friend format&& operator<<(format&& f, List<T> const& l) {
 			f.__buffer__ += l.str();
 			return std::move(f);
 		}

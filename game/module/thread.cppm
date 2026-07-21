@@ -17,12 +17,12 @@ export namespace craftbuild {
 		inline static std::unordered_map<std::thread::id, Str> threads;
 		inline static std::mutex threads_mutex;
 
-		static none register_thread(const Str& thread_name) {
+		static none register_thread(Str const& thread_name) {
 			std::lock_guard lock(threads_mutex);
 			threads[std::this_thread::get_id()] = thread_name;
 		}
 
-		static Str get_name(const std::thread::id& thread_id) {
+		static Str get_name(std::thread::id const& thread_id) {
 			std::lock_guard lock(threads_mutex);
 			auto it = threads.find(thread_id);
 			if (it == threads.end()) return "Main";
@@ -50,7 +50,7 @@ export namespace craftbuild {
 
                             if (stop and tasks.empty()) return;
 
-                            task = std::move(tasks.front());
+                            task.swap(tasks.front());
                             tasks.pop();
                         }
                         task();

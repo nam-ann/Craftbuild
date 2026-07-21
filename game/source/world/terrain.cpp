@@ -27,7 +27,7 @@ namespace craftbuild {
     VerticalAnchor VerticalAnchor::above_bottom(int32 offset) { return { VerticalAnchorType::ABOVE_BOTTOM, offset }; }
     VerticalAnchor VerticalAnchor::below_top(int32 offset) { return { VerticalAnchorType::BELOW_TOP, offset }; }
 
-    int32 VerticalAnchor::resolve_y(const WorldGenerationContext& context) const {
+    int32 VerticalAnchor::resolve_y(WorldGenerationContext const& context) const {
         switch (type) {
         case VerticalAnchorType::ABSOLUTE:     return value;
         case VerticalAnchorType::ABOVE_BOTTOM: return context.min_y + value;
@@ -42,15 +42,15 @@ namespace craftbuild {
     ConstantHeight::ConstantHeight(VerticalAnchor value) : value(value) {}
 
     HeightProviderPtr ConstantHeight::of(VerticalAnchor value) { return new Obj<ConstantHeight>(value); }
-    const VerticalAnchor& ConstantHeight::get_value() const { return value; }
-    int32 ConstantHeight::sample(RandomSource&, const WorldGenerationContext& context) const { return value.resolve_y(context); }
+    VerticalAnchor const& ConstantHeight::get_value() const { return value; }
+    int32 ConstantHeight::sample(RandomSource&, WorldGenerationContext const& context) const { return value.resolve_y(context); }
     HeightProviderType ConstantHeight::get_type() const { return HeightProviderType::CONSTANT; }
 
     UniformHeight::UniformHeight(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive) : min_inclusive(min_inclusive), max_inclusive(max_inclusive) {}
 
     HeightProviderPtr UniformHeight::of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive) { return new Obj<UniformHeight>(min_inclusive, max_inclusive); }
     
-    int32 UniformHeight::sample(RandomSource& random, const WorldGenerationContext& context) const {
+    int32 UniformHeight::sample(RandomSource& random, WorldGenerationContext const& context) const {
         const int32 min_y = min_inclusive.resolve_y(context);
         const int32 max_y = max_inclusive.resolve_y(context);
         if (min_y > max_y) return min_y;
@@ -63,7 +63,7 @@ namespace craftbuild {
 
     HeightProviderPtr BiasedToBottomHeight::of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 inner) { return new Obj<BiasedToBottomHeight>(min_inclusive, max_inclusive, inner); }
 
-    int32 BiasedToBottomHeight::sample(RandomSource& random, const WorldGenerationContext& context) const {
+    int32 BiasedToBottomHeight::sample(RandomSource& random, WorldGenerationContext const& context) const {
         const int32 min_y = min_inclusive.resolve_y(context);
         const int32 max_y = max_inclusive.resolve_y(context);
         const int32 bound = max_y - min_y - inner + 1;
@@ -79,7 +79,7 @@ namespace craftbuild {
     
     HeightProviderPtr VeryBiasedToBottomHeight::of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 inner) { return new Obj<VeryBiasedToBottomHeight>(min_inclusive, max_inclusive, inner); }
     
-    int32 VeryBiasedToBottomHeight::sample(RandomSource& random, const WorldGenerationContext& context) const {
+    int32 VeryBiasedToBottomHeight::sample(RandomSource& random, WorldGenerationContext const& context) const {
         const int32 min_y = min_inclusive.resolve_y(context);
         const int32 max_y = max_inclusive.resolve_y(context);
         if (max_y - min_y - inner + 1 <= 0) return min_y;
@@ -95,7 +95,7 @@ namespace craftbuild {
 
     HeightProviderPtr TrapezoidHeight::of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 plateau) { return new Obj<TrapezoidHeight>(min_inclusive, max_inclusive, plateau); }
 
-    int32 TrapezoidHeight::sample(RandomSource& random, const WorldGenerationContext& context) const {
+    int32 TrapezoidHeight::sample(RandomSource& random, WorldGenerationContext const& context) const {
         const int32 min_y = min_inclusive.resolve_y(context);
         const int32 max_y = max_inclusive.resolve_y(context);
         if (min_y > max_y) return min_y;
@@ -111,18 +111,18 @@ namespace craftbuild {
     HeightProviderType TrapezoidHeight::get_type() const { return HeightProviderType::TRAPEZOID; }
 
     WeightedListHeight::WeightedListHeight(std::vector<Entry> distribution) : distribution(std::move(distribution)) {
-        for (const Entry& entry : this->distribution) {
+        for (Entry const& entry : this->distribution) {
             if (entry.provider and entry.weight > 0) total_weight += entry.weight;
         }
     }
 
     HeightProviderPtr WeightedListHeight::of(std::vector<Entry> distribution) { return new Obj<WeightedListHeight>(std::move(distribution)); }
 
-    int32 WeightedListHeight::sample(RandomSource& random, const WorldGenerationContext& context) const {
+    int32 WeightedListHeight::sample(RandomSource& random, WorldGenerationContext const& context) const {
         if (total_weight <= 0) return 0;
 
         int32 chosen = random.next_int(total_weight);
-        for (const Entry& entry : distribution) {
+        for (Entry const& entry : distribution) {
             if (not entry.provider or entry.weight <= 0) continue;
             if (chosen < entry.weight) return entry.provider.value().sample(random, context);
             chosen -= entry.weight;

@@ -24,9 +24,9 @@ export namespace craftbuild {
     template <typename T>
     requires std::is_trivially_copyable_v<T>
     class List {
-        T* __value__;
-        usize __len__;
-        usize __space__;
+        T* __value__ = nullptr;
+        usize __len__ = 0;
+        usize __space__ = 0;
 
         struct Iterator {
             T* __ptr__;
@@ -40,15 +40,15 @@ export namespace craftbuild {
                 __ptr__++;
                 return *this;
             }
-            bool operator!=(const Iterator& other) const {
+            bool operator!=(Iterator const& other) const {
                 return __ptr__ != other.__ptr__;
             }
         };
 
     public:
-        List() : __value__(nullptr), __len__(0), __space__(0) {}
-        List(const std::initializer_list<T>& l) : __value__(new T[l.size()]), __space__(l.size()), __len__(l.size()) { memcpy(__value__, l.data(), __len__ * sizeof(T)); }
-        List(const List& s) : __value__(new T[s.__len__]), __len__(s.__len__), __space__(s.__len__) { memcpy(__value__, s.__value__, __len__ * sizeof(T)); }
+        List() noexcept {}
+        List(std::initializer_list<T> const& l) : __value__(new T[l.size()]), __space__(l.size()), __len__(l.size()) { memcpy(__value__, l.data(), __len__ * sizeof(T)); }
+        List(List const& s) : __value__(new T[s.__len__]), __len__(s.__len__), __space__(s.__len__) { memcpy(__value__, s.__value__, __len__ * sizeof(T)); }
         List(List&& s) noexcept : __value__(nullptr), __len__(0), __space__(0) {
             std::swap(__value__, s.__value__);
             std::swap(__len__, s.__len__);
@@ -57,10 +57,10 @@ export namespace craftbuild {
 
         ~List() { clear(); }
 
-        List& operator=(const std::initializer_list<T>& l) {
+        List& operator=(std::initializer_list<T> const& l) {
             return *this = List(l);
         }
-        List& operator=(const List& s) {
+        List& operator=(List const& s) {
             if (this == &s) return *this;
             clear();
             __value__ = new T[s.__len__];
@@ -77,18 +77,18 @@ export namespace craftbuild {
             return *this;
         }
 
-        List& operator+=(const std::initializer_list<T>& l) {
+        List& operator+=(std::initializer_list<T> const& l) {
             expect(l.size());
             memcpy(&__value__[__len__], l.data(), l.size() * sizeof(T));
             __len__ += l.size();
             return *this;
         }
-        List& operator+=(const T& t) {
+        List& operator+=(T const& t) {
             if (__len__ >= __space__) expect(__len__);
             __value__[__len__++] = t;
             return *this;
         }
-        List& operator+=(const List& s) {
+        List& operator+=(List const& s) {
             if (this == &s) return *this += List(s);
             expect(s.__len__);
             memcpy(&__value__[__len__], s.__value__, s.__len__ * sizeof(T));
@@ -118,8 +118,8 @@ export namespace craftbuild {
             return *this;
         }
 
-        List operator+(const std::initializer_list<T>& s) const { List cache(*this); cache += s; return cache; }
-        List operator+(const List& s) const { List cache(*this); cache += s; return cache; }
+        List operator+(std::initializer_list<T> const& s) const { List cache(*this); cache += s; return cache; }
+        List operator+(List const& s) const { List cache(*this); cache += s; return cache; }
         List operator+(List&& s) const noexcept { List cache(*this); cache += s; return cache; }
 
         List operator*(usize n) const { List cache(*this); return cache *= n; }
@@ -133,7 +133,7 @@ export namespace craftbuild {
             return __len__ != 0;
         }
 
-        bool operator==(const List& s) const {
+        bool operator==(List const& s) const {
             if (__len__ != s.__len__) return false;
 
             if (not __value__ and not s.__value__) return true;
@@ -143,10 +143,10 @@ export namespace craftbuild {
             return memcmp(__value__, s.__value__, __len__ * sizeof(T)) == 0;
         }
 
-        List& append(const T& t) {
+        List& append(T const& t) {
             return *this += t;
         }
-        List& insert(usize index, const T& t) {
+        List& insert(usize index, T const& t) {
             if (index < __len__) __value__[index] = t;
             return *this;
         }
@@ -177,13 +177,13 @@ export namespace craftbuild {
             cache = nullptr;
         }
 
-        none resize(usize new_len, const T& fill_value = T{}) {
+        none resize(usize new_len, T const& fill_value = T{}) {
             if (new_len > __space__) archive(new_len);
             if (new_len > __len__) for (auto i : range<usize>(__len__, new_len)) __value__[i] = fill_value;
             __len__ = new_len;
         }
 
-        none fill(const T& fill_value) {
+        none fill(T const& fill_value) {
             for (auto i : range<usize>(__len__)) __value__[i] = fill_value;
         }
 
@@ -207,7 +207,7 @@ export namespace craftbuild {
         T* c_ptr() {
             return __value__;
         }
-        const T* c_ptr() const {
+        T const* c_ptr() const {
             return __value__;
         }
 
@@ -216,7 +216,7 @@ export namespace craftbuild {
         Iterator begin() const { return Iterator(__value__); }
         Iterator end() const { return Iterator(__value__ + __len__); }
 
-        friend usize len(const List& s) { return s.__len__; }
-        friend List operator+(const std::initializer_list<T>& l, const List& s) { return List(l) + s; }
+        friend usize len(List const& s) { return s.__len__; }
+        friend List operator+(std::initializer_list<T>& l, List const& s) { return List(l) + s; }
     };
 }

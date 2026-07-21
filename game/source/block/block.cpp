@@ -13,9 +13,9 @@ module game.block;
 
 namespace craftbuild {
     TagEntry::TagEntry() = default;
-	TagEntry::TagEntry(const Str & n) : name(n) {};
+	TagEntry::TagEntry(Str  const& n) : name(n) {};
 
-	uint32 TagRegistry::register_tag(const Str& name) {
+	uint32 TagRegistry::register_tag(Str const& name) {
         tag.push_back(name);
         const uint32 tag_size = (uint32)(tag.size() - 1);
         tag2id[name] = tag_size;
@@ -40,54 +40,13 @@ namespace craftbuild {
     uint64& TagRegistry::get_value(uint32 tag_id, uint64 index) { return tag[tag_id].value[index]; }
     Str TagRegistry::get_name(uint32 tag_id) { return tag[tag_id].name; }
 
-    uint32 TagRegistry::get_id(const Str& tag_name) {
+    uint32 TagRegistry::get_id(Str const& tag_name) {
         if (tag2id.find(tag_name) == tag2id.end()) return 0;
         return tag2id[tag_name];
     }
 
     Block::~Block() = default;
     std::vector<std::pair<Str, uint64>> Block::init_tags() { return {}; }
-
-    none Block::create_face(Face face, const Vector3& pos, List<Pos3D<real>>& vertices) {
-        switch (face) {
-        case Face::TOP: // +Y
-            vertices.append(pos + Vector3(1, 1, 0));
-            vertices.append(pos + Vector3(0, 1, 0));
-            vertices.append(pos + Vector3(0, 1, 1));
-            vertices.append(pos + Vector3(1, 1, 1));
-            break;
-        case Face::BOTTOM: // -Y
-            vertices.append(pos + Vector3(1, 0, 1));
-            vertices.append(pos + Vector3(0, 0, 1));
-            vertices.append(pos + Vector3(0, 0, 0));
-            vertices.append(pos + Vector3(1, 0, 0));
-            break;
-        case Face::RIGHT: // +X
-            vertices.append(pos + Vector3(1, 1, 0));
-            vertices.append(pos + Vector3(1, 1, 1));
-            vertices.append(pos + Vector3(1, 0, 1));
-            vertices.append(pos + Vector3(1, 0, 0));
-            break;
-        case Face::LEFT: // -X
-            vertices.append(pos + Vector3(0, 1, 1));
-            vertices.append(pos + Vector3(0, 1, 0));
-            vertices.append(pos + Vector3(0, 0, 0));
-            vertices.append(pos + Vector3(0, 0, 1));
-            break;
-        case Face::FRONT: // +Z
-            vertices.append(pos + Vector3(1, 1, 1));
-            vertices.append(pos + Vector3(0, 1, 1));
-            vertices.append(pos + Vector3(0, 0, 1));
-            vertices.append(pos + Vector3(1, 0, 1));
-            break;
-        case Face::BACK: // -Z
-            vertices.append(pos + Vector3(0, 1, 0));
-            vertices.append(pos + Vector3(1, 1, 0));
-            vertices.append(pos + Vector3(1, 0, 0));
-            vertices.append(pos + Vector3(0, 0, 0));
-            break;
-        }
-    }
 
     int32 Block1F::get_texture_layer(Face face) const {
         return base_texture_layer;
@@ -111,7 +70,9 @@ namespace craftbuild {
         return base_texture_layer;
     }
 
-    BlockEntry::BlockEntry(Ptr<Block>&& b, const Str& n, Ref<Texture2D> t) : block(b), name(n), texture(t) {}
+    int32 DynBlock::get_texture_layer(Face face) const { return -1; }
+
+    BlockEntry::BlockEntry(Ptr<Block>&& b, Str const& n, Ref<Texture2D> const& t, Ref<Mesh> const& m) : block(b), name(n), texture(t), mesh(m) {}
 
     Ptr<Block>& BlockRegistry::get_block(uint32 block_id) {
         if (registry.size() <= block_id) return registry[get_id("Air")].block;
@@ -123,10 +84,10 @@ namespace craftbuild {
         return registry[block_id].name;
     }
 
-    uint32 BlockRegistry::get_id(const Str& block_name) {
+    uint32 BlockRegistry::get_id(Str const& block_name) {
         if (name2id.find(block_name) == name2id.end()) return 0;
         return name2id[block_name];
     }
 
-    bool BlockRegistry::has_block(const Str& block_name) { return name2id.contains(block_name); }
+    bool BlockRegistry::has_block(Str const& block_name) { return name2id.contains(block_name); }
 }

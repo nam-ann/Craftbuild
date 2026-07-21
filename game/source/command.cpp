@@ -4,7 +4,7 @@ module;
 
 module game.command;
 
-import game.server_ptr;
+import game.server;
 import game.world.chunk;
 
 namespace craftbuild {
@@ -12,7 +12,7 @@ namespace craftbuild {
         return (x >= -TCPServer::SIZE_X and x <= TCPServer::SIZE_X and y >= 0 and y <= Chunk::SIZE_Y and z >= -TCPServer::SIZE_Z and z <= TCPServer::SIZE_Z);
     }
 
-    Str CommandInterpreter::execute_set_block(const std::vector<Str>& args) {
+    Str CommandInterpreter::execute_set_block(std::vector<Str> const& args) {
         TCPServer* world = static_cast<TCPServer*>(world_ptr);
         if (not world) return "";
         Str output;
@@ -45,14 +45,14 @@ namespace craftbuild {
             output = format{} << "Set block " << block_type << " at (" << x << "," << y << "," << z << ")";
             log<LogType::INFO>(output);
         }
-        catch (const std::exception&) {
+        catch (std::exception const&) {
             output = "Invalid command arguments";
             log<LogType::ERROR>(output);
         }
         return output;
     }
 
-    Str CommandInterpreter::execute_fill(const std::vector<Str>& args) {
+    Str CommandInterpreter::execute_fill(std::vector<Str> const& args) {
         TCPServer* world = static_cast<TCPServer*>(world_ptr);
         if (not world) return "";
         Str output;
@@ -103,14 +103,14 @@ namespace craftbuild {
             output = format{} << "Filled " << block_count << " block " << block_type << " from (" << min_x << "," << min_y << "," << min_z << ") to (" << max_x << "," << max_y << "," << max_z << ")";
             log<LogType::INFO>(output);
         }
-        catch (const std::exception&) {
+        catch (std::exception const&) {
             output = "Invalid command arguments";
             log<LogType::ERROR>(output);
         }
         return output;
     }
 
-    Str CommandInterpreter::execute_give(const std::vector<Str>& args) {
+    Str CommandInterpreter::execute_give(std::vector<Str> const& args) {
         TCPServer* world = static_cast<TCPServer*>(world_ptr);
         if (not world) return "";
         Str output;
@@ -135,7 +135,7 @@ namespace craftbuild {
                     log<LogType::WARNING>(output);
                 }
             }
-            catch (const std::exception&) {
+            catch (std::exception const&) {
                 output = "Invalid command arguments";
                 log<LogType::ERROR>(output);
                 return output;

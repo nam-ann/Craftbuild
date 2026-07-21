@@ -63,7 +63,7 @@ export namespace craftbuild {
         inline static Str file_queue;
         inline static std::mutex log_mutex;
 
-        static none store(const Str& log, const Str& file_log) {
+        static none store(Str const& log, Str const& file_log) {
             if (craftbuild_debug) UtilityFunctions::print(log.std_str().c_str());
 
             std::lock_guard<std::mutex> lock(log_mutex);
@@ -101,24 +101,24 @@ export namespace craftbuild {
     };
 
     template <LogType LOG_TYPE>
-    none log(const Str& message, std::source_location __loc__ = std::source_location::current()) {}
+    none log(Str const& message, std::source_location __loc__ = std::source_location::current()) {}
 
     template <>
-    none log<LogType::NORMAL>(const Str& message, LOC_PARAM) {
+    none log<LogType::NORMAL>(Str const& message, LOC_PARAM) {
         const Str time = get_time();
         const Str info = get_info(__loc__);
 
-        const Str current_log = format{} << time << info << message;
+        const Str current_log = format{} << time << "None:    " << info << message;
         Str log;
 
-        if (colored_log) log += format{} << "\033[97m" << time << info << "\033[37m" << message << "\033[0m";
+        if (colored_log) log += format{} << "\033[97m" << time << "None:    " << info << "\033[37m" << message << "\033[0m";
         else log = current_log;
 
         LogQueue::store(log, current_log);
     }
 
     template <>
-    none log<LogType::VERBOSE>(const Str& message, LOC_PARAM) {
+    none log<LogType::VERBOSE>(Str const& message, LOC_PARAM) {
         if (not log_verbose) return;
 
         const Str time = get_time();
@@ -134,7 +134,7 @@ export namespace craftbuild {
     }
 
     template <>
-    none log<LogType::INFO>(const Str& message, LOC_PARAM) {
+    none log<LogType::INFO>(Str const& message, LOC_PARAM) {
         const Str time = get_time();
         const Str info = get_info(__loc__);
 
@@ -148,7 +148,7 @@ export namespace craftbuild {
     }
 
     template <>
-    none log<LogType::WARNING>(const Str& message, LOC_PARAM) {
+    none log<LogType::WARNING>(Str const& message, LOC_PARAM) {
         const Str time = get_time();
         const Str info = get_info(__loc__);
 
@@ -162,7 +162,7 @@ export namespace craftbuild {
     }
 
     template <>
-    none log<LogType::ERROR>(const Str& message, LOC_PARAM) {
+    none log<LogType::ERROR>(Str const& message, LOC_PARAM) {
         const Str time = get_time();
         const Str info = get_info(__loc__);
 

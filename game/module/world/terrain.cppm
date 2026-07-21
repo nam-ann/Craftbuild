@@ -39,7 +39,7 @@ export namespace craftbuild {
         static VerticalAnchor above_bottom(int32 offset);
         static VerticalAnchor below_top(int32 offset);
 
-        int32 resolve_y(const WorldGenerationContext& context) const;
+        int32 resolve_y(WorldGenerationContext const& context) const;
     };
 
     enum class HeightProviderType { CONSTANT, UNIFORM, BIASED_TO_BOTTOM, VERY_BIASED_TO_BOTTOM, TRAPEZOID, WEIGHTED_LIST };
@@ -48,7 +48,7 @@ export namespace craftbuild {
     public:
         virtual ~HeightProvider();
 
-        virtual int32 sample(RandomSource& random, const WorldGenerationContext& context) const = 0;
+        virtual int32 sample(RandomSource& random, WorldGenerationContext const& context) const = 0;
         virtual HeightProviderType get_type() const = 0;
     };
 
@@ -63,8 +63,8 @@ export namespace craftbuild {
 
         static HeightProviderPtr of(VerticalAnchor value);
 
-        const VerticalAnchor& get_value() const;
-        int32 sample(RandomSource&, const WorldGenerationContext& context) const override;
+        VerticalAnchor const& get_value() const;
+        int32 sample(RandomSource&, WorldGenerationContext const& context) const override;
         HeightProviderType get_type() const override;
     };
 
@@ -78,7 +78,7 @@ export namespace craftbuild {
 
         static HeightProviderPtr of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive);
 
-        int32 sample(RandomSource& random, const WorldGenerationContext& context) const override;
+        int32 sample(RandomSource& random, WorldGenerationContext const& context) const override;
         HeightProviderType get_type() const override;
     };
 
@@ -93,7 +93,7 @@ export namespace craftbuild {
 
         static HeightProviderPtr of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 inner = 1);
 
-        int32 sample(RandomSource& random, const WorldGenerationContext& context) const override;
+        int32 sample(RandomSource& random, WorldGenerationContext const& context) const override;
         HeightProviderType get_type() const override;
     };
 
@@ -108,7 +108,7 @@ export namespace craftbuild {
 
         static HeightProviderPtr of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 inner = 1);
 
-        int32 sample(RandomSource& random, const WorldGenerationContext& context) const override;
+        int32 sample(RandomSource& random, WorldGenerationContext const& context) const override;
         HeightProviderType get_type() const override;
     };
 
@@ -123,7 +123,7 @@ export namespace craftbuild {
 
         static HeightProviderPtr of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 plateau = 0);
 
-        int32 sample(RandomSource& random, const WorldGenerationContext& context) const override;
+        int32 sample(RandomSource& random, WorldGenerationContext const& context) const override;
         HeightProviderType get_type() const override;
     };
 
@@ -143,7 +143,7 @@ export namespace craftbuild {
 
         static HeightProviderPtr of(std::vector<Entry> distribution);
 
-        int32 sample(RandomSource& random, const WorldGenerationContext& context) const override;
+        int32 sample(RandomSource& random, WorldGenerationContext const& context) const override;
         HeightProviderType get_type() const override;
     };
 }
