@@ -21,7 +21,7 @@ namespace craftbuild {
         return layer == other.layer and back_face == other.back_face;
     }
 
-    none Chunk::_get_refs(std::vector<GCObject*>& refs) const {
+    void Chunk::_get_refs(std::vector<GCObject*>& refs) const {
         std::shared_lock lock(mesh_mutex);
         refs.push_back(pending_mesh_data.object());
     }
@@ -33,7 +33,7 @@ namespace craftbuild {
         }
     }
 
-    none Chunk::clear() {
+    void Chunk::clear() {
         memset(block_ids, 0, sizeof(uint32) * 256);
         memset(tag_ids, 0, sizeof(uint32) * 256);
         id2block.clear();
@@ -41,7 +41,7 @@ namespace craftbuild {
         complex_blocks.clear();
     }
 
-    none Chunk::unload_mesh() {
+    void Chunk::unload_mesh() {
         if (mesh_instance) mesh_instance->queue_free();
         if (collision_body) collision_body->queue_free();
         if (collision_shape) collision_shape->queue_free();
@@ -115,10 +115,10 @@ namespace craftbuild {
         return lerp_biome(bx0, bx1, tz);
     }
 
-    none Chunk::set_block(Pos3D<uint8>& pos, Str const& block) {
+    void Chunk::set_block(Pos3D<uint8>& pos, Str const& block) {
         set_block(pos, BlockRegistry::get_id(block));
     }
-    none Chunk::set_block(Pos3D<uint8> const& pos, uint32 block_id) {
+    void Chunk::set_block(Pos3D<uint8> const& pos, uint32 block_id) {
         std::unique_lock lock(data_mutex);
         if (block_ids_size >= 255) {
             complex_blocks.emplace(pos, BlockStorageFull(block_id, 0, 0));
@@ -138,10 +138,10 @@ namespace craftbuild {
         for (auto const& tag : default_tags) tag_block(pos, TagRegistry::get_id(tag.first), tag.second);
     }
 
-    none Chunk::tag_block(Pos3D<uint8>& pos, Str const& tag, usize tag_data) {
+    void Chunk::tag_block(Pos3D<uint8>& pos, Str const& tag, usize tag_data) {
         tag_block(pos, TagRegistry::get_id(tag), tag_data);
     }
-    none Chunk::tag_block(Pos3D<uint8> const& pos, uint32 tag_id, usize tag_data) {
+    void Chunk::tag_block(Pos3D<uint8> const& pos, uint32 tag_id, usize tag_data) {
         std::unique_lock lock(data_mutex);
         if (tag_ids_size >= 256) {
             complex_blocks[pos].tag = tag_id;
@@ -191,7 +191,7 @@ namespace craftbuild {
         return tag_ids[blocks[pos.x][pos.y][pos.z].tag];
     }
 
-    none Chunk::generate_terrain(int32 seed, Ref<FastNoiseLite> noise) {
+    void Chunk::generate_terrain(int32 seed, Ref<FastNoiseLite> noise) {
         const uint32 AIR     = BlockRegistry::get_id("Air");
         const uint32 DIRT    = BlockRegistry::get_id("Dirt");
         const uint32 WATER   = BlockRegistry::get_id("Air");
@@ -302,7 +302,7 @@ namespace craftbuild {
         ++chunk_version;
     }
 
-    none Chunk::generate_mesh(Ptr<Chunk> neighbors[4]) {
+    void Chunk::generate_mesh(Ptr<Chunk> neighbors[4]) {
         Ptr<MeshData> data_ptr = new Obj<MeshData>();
         auto& data = data_ptr.value();
 

@@ -92,11 +92,11 @@ export namespace craftbuild {
 
         uint8 chunk_version = 0;
 
-        none _get_refs(std::vector<GCObject*>& refs) const;
+        void _get_refs(std::vector<GCObject*>& refs) const;
 
         ~Chunk();
-        none clear();
-        none unload_mesh();
+        void clear();
+        void unload_mesh();
 
         static uint32 column_seed(int32 seed, int32 x, int32 z);
         static float32 smoothstep(float32 value);
@@ -104,11 +104,11 @@ export namespace craftbuild {
         static Biome select_biome_at(int32 wx, int32 wz, Ref<FastNoiseLite> noise, usize biome_count);
         static Biome get_blended_biome(int32 wx, int32 wz, Ref<FastNoiseLite> noise, usize biome_count);
 
-        none set_block(Pos3D<uint8>& pos, Str const& block);
-        none set_block(Pos3D<uint8> const& pos, uint32 block_id);
+        void set_block(Pos3D<uint8>& pos, Str const& block);
+        void set_block(Pos3D<uint8> const& pos, uint32 block_id);
 
-        none tag_block(Pos3D<uint8>& pos, Str const& tag, usize tag_data = 0);
-        none tag_block(Pos3D<uint8> const& pos, uint32 tag_id, usize tag_data = 0);
+        void tag_block(Pos3D<uint8>& pos, Str const& tag, usize tag_data = 0);
+        void tag_block(Pos3D<uint8> const& pos, uint32 tag_id, usize tag_data = 0);
 
         bool has_tag(Pos3D<uint8>& pos, Str const& tag, usize tag_data = 0) const;
         bool has_tag(Pos3D<uint8> const& pos, uint32 tag_id, usize tag_data = 0) const;
@@ -116,7 +116,7 @@ export namespace craftbuild {
         uint32 get_block(Pos3D<uint8> const& pos) const;
         std::pair<uint32, uint64> get_tag(Pos3D<uint8> const& pos) const;
 
-        none generate_terrain(int32 seed, Ref<FastNoiseLite> noise);
-        none generate_mesh(Ptr<Chunk> neighbors[4]);
+        void generate_terrain(int32 seed, Ref<FastNoiseLite> noise);
+        void generate_mesh(Ptr<Chunk> neighbors[4]);
     };
 }

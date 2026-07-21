@@ -10,7 +10,7 @@ module;
 module game.texture.atlas_texture;
 
 namespace craftbuild {
-    none AtlasTexture::build_texture_array() {
+    void AtlasTexture::build_texture_array() {
         Array images;
         int32 current_layer = 0;
 

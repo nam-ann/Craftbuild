@@ -63,14 +63,14 @@ export namespace craftbuild {
         inline static Str file_queue;
         inline static std::mutex log_mutex;
 
-        static none store(Str const& log, Str const& file_log) {
+        static void store(Str const& log, Str const& file_log) {
             if (craftbuild_debug) UtilityFunctions::print(log.std_str().c_str());
 
             std::lock_guard<std::mutex> lock(log_mutex);
             file_queue += file_log + "\n";
         }
 
-        static none flush() {
+        static void flush() {
             Str file_dump;
 
             {
@@ -101,10 +101,10 @@ export namespace craftbuild {
     };
 
     template <LogType LOG_TYPE>
-    none log(Str const& message, std::source_location __loc__ = std::source_location::current()) {}
+    void log(Str const& message, std::source_location __loc__ = std::source_location::current()) {}
 
     template <>
-    none log<LogType::NORMAL>(Str const& message, LOC_PARAM) {
+    void log<LogType::NORMAL>(Str const& message, LOC_PARAM) {
         const Str time = get_time();
         const Str info = get_info(__loc__);
 
@@ -118,7 +118,7 @@ export namespace craftbuild {
     }
 
     template <>
-    none log<LogType::VERBOSE>(Str const& message, LOC_PARAM) {
+    void log<LogType::VERBOSE>(Str const& message, LOC_PARAM) {
         if (not log_verbose) return;
 
         const Str time = get_time();
@@ -134,7 +134,7 @@ export namespace craftbuild {
     }
 
     template <>
-    none log<LogType::INFO>(Str const& message, LOC_PARAM) {
+    void log<LogType::INFO>(Str const& message, LOC_PARAM) {
         const Str time = get_time();
         const Str info = get_info(__loc__);
 
@@ -148,7 +148,7 @@ export namespace craftbuild {
     }
 
     template <>
-    none log<LogType::WARNING>(Str const& message, LOC_PARAM) {
+    void log<LogType::WARNING>(Str const& message, LOC_PARAM) {
         const Str time = get_time();
         const Str info = get_info(__loc__);
 
@@ -162,7 +162,7 @@ export namespace craftbuild {
     }
 
     template <>
-    none log<LogType::ERROR>(Str const& message, LOC_PARAM) {
+    void log<LogType::ERROR>(Str const& message, LOC_PARAM) {
         const Str time = get_time();
         const Str info = get_info(__loc__);
 

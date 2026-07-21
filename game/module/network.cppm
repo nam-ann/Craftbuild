@@ -32,12 +32,12 @@ export namespace craftbuild {
         std::vector<Message> msg;
         mutable std::mutex msg_mutex;
 
-        none store(Message const& message) {
+        void store(Message const& message) {
             std::lock_guard lock(msg_mutex);
             msg.push_back(message);
         }
 
-        none send(SOCKET socket) {
+        void send(SOCKET socket) {
             std::vector<Message> send_msg;
 
             {

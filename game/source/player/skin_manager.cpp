@@ -23,7 +23,7 @@ namespace craftbuild {
         return mat;
     }
 
-    none SkinManager::apply_skin_to_model(MeshInstance3D* model, Ref<Texture2D> texture) {
+    void SkinManager::apply_skin_to_model(MeshInstance3D* model, Ref<Texture2D> texture) {
         if (not model) return;
 
         Ref<StandardMaterial3D> mat = create_skin_material(texture);

@@ -52,7 +52,7 @@ import game.command;
 using namespace std::chrono_literals;
 
 namespace craftbuild {
-    none Main::_ready() {
+    void Main::_ready() {
         start_gc_thread();
         start_log_thread();
         
@@ -137,7 +137,7 @@ namespace craftbuild {
         log<LogType::INFO>("Main initialized");
     }
 
-    none Main::_process(float64 delta) {
+    void Main::_process(float64 delta) {
         Player* player = static_cast<Player*>(player_ptr);
         if (not player) return;
 
@@ -303,7 +303,7 @@ namespace craftbuild {
         }
     }
 
-    none Main::_exit_tree() {
+    void Main::_exit_tree() {
 		running.store(false, std::memory_order_relaxed);
 
         server_ptr.clear();
@@ -316,7 +316,7 @@ namespace craftbuild {
         save_userdata();
     }
 
-    none Main::init_singleplayer() {
+    void Main::init_singleplayer() {
         log<LogType::INFO>("Starting local server...");
         server_ptr = new Obj<TCPServer>();
         server_ptr.value().connect(player_name);
@@ -329,12 +329,12 @@ namespace craftbuild {
         start_scheduler_thread();
     }
 
-    none Main::init_multiplayer() {
+    void Main::init_multiplayer() {
         start_network_thread();
         start_scheduler_thread();
     }
 
-    none Main::setup_voxel_material() {
+    void Main::setup_voxel_material() {
         Ref<ShaderMaterial> mat;
         mat.instantiate();
 
@@ -359,7 +359,7 @@ namespace craftbuild {
         world_material = mat;
     }
 
-    none Main::start_gc_thread() {
+    void Main::start_gc_thread() {
         if (gc_thread.joinable()) return;
 
         auto worker = [this]() {
@@ -377,7 +377,7 @@ namespace craftbuild {
         gc_thread = std::thread(worker);
     }
 
-    none Main::start_log_thread() {
+    void Main::start_log_thread() {
         if (log_thread.joinable()) return;
 
         auto worker = [this]() {
@@ -395,7 +395,7 @@ namespace craftbuild {
         log_thread = std::thread(worker);
     }
 
-    none Main::start_network_thread() {
+    void Main::start_network_thread() {
         if (network_thread.joinable()) return;
 
         auto worker = [this]() {
@@ -628,7 +628,7 @@ namespace craftbuild {
         network_thread = std::thread(worker);
     }
 
-    none Main::start_scheduler_thread() {
+    void Main::start_scheduler_thread() {
         scheduler_thread = std::thread([this]() {
             ThreadRegistry::register_thread("Mesh");
             log<LogType::INFO>("Mesh thread started");
@@ -648,7 +648,7 @@ namespace craftbuild {
         });
     }
 
-    none Main::submit_jobs() {
+    void Main::submit_jobs() {
         const int32 px = (int32)std::floor(player_x.load() / Chunk::SIZE_X);
         const int32 pz = (int32)std::floor(player_z.load() / Chunk::SIZE_Z);
 
@@ -718,7 +718,7 @@ namespace craftbuild {
         }
     }
 
-    none Main::create_chunk_collision(Ptr<Chunk>& chunk_ptr, PackedVector3Array const& collision_faces) {
+    void Main::create_chunk_collision(Ptr<Chunk>& chunk_ptr, PackedVector3Array const& collision_faces) {
         if (not chunk_ptr) return;
 
         std::shared_lock lock(chunks_mutex);
@@ -752,7 +752,7 @@ namespace craftbuild {
         chunk.collision_shape->set_shape(concave);
     }
 
-    none Main::update_chunk_mesh(Ptr<Chunk>& chunk_ptr, Ref<ArrayMesh> const& mesh) {
+    void Main::update_chunk_mesh(Ptr<Chunk>& chunk_ptr, Ref<ArrayMesh> const& mesh) {
 		if (not chunk_ptr) return;
 		auto& chunk = chunk_ptr.value();
         
@@ -767,7 +767,7 @@ namespace craftbuild {
         chunk.mesh_instance->set_mesh(mesh);
     }
 
-    none Main::unload_distant_chunks() {
+    void Main::unload_distant_chunks() {
         const int32 p_cx = (int32)(player_x.load() / Chunk::SIZE_X);
         const int32 p_cz = (int32)(player_z.load() / Chunk::SIZE_Z);
         const int32 unload_dist = render_distance + 4;
@@ -839,13 +839,13 @@ namespace craftbuild {
         return chunk.value().get_block({ (uint8)lx, (uint8)wy, (uint8)lz });
     }
 
-    none Main::set_chunk(Ptr<Chunk> chunk, int32 cx, int32 cz) {
+    void Main::set_chunk(Ptr<Chunk> chunk, int32 cx, int32 cz) {
         std::unique_lock lock(chunks_mutex);
         Pos3D<int32> cpos(cx, 0, cz);
 		chunks[cpos] = chunk;
     }
 
-    none Main::set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz) {
+    void Main::set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz) {
         if (wy < 0 or wy >= Chunk::SIZE_Y) return;
         if (not server_ptr) send_queue.store({ "Set block", { std::to_string(block_id), std::to_string(wx), std::to_string(wy), std::to_string(wz) } });
         
@@ -862,7 +862,7 @@ namespace craftbuild {
         chunk.value().set_block({ (uint8)lx, (uint8)wy, (uint8)lz }, block_id);
     }
 
-    none Main::save_userdata(char const* path) {
+    void Main::save_userdata(char const* path) {
         String real_path = ProjectSettings::get_singleton()->globalize_path(path);
         std::string std_path = real_path.utf8().get_data();
 
@@ -907,24 +907,24 @@ namespace craftbuild {
         return true;
     }
 
-    none Main::pause() {
+    void Main::pause() {
         Input* input = Input::get_singleton();
         input->set_mouse_mode(Input::MOUSE_MODE_VISIBLE);
         pausing.store(true, std::memory_order_relaxed);
     }
-    none Main::resume() {
+    void Main::resume() {
         Input* input = Input::get_singleton();
         input->set_mouse_mode(Input::MOUSE_MODE_CAPTURED);
         pausing.store(false, std::memory_order_relaxed);
     }
 
-    none Main::start_chat() {
+    void Main::start_chat() {
         Input* input = Input::get_singleton();
         input->set_mouse_mode(Input::MOUSE_MODE_VISIBLE);
         chatting.store(true, std::memory_order_relaxed);
     }
 
-    none Main::chat(const String msg) {
+    void Main::chat(const String msg) {
         if (not server_ptr) send_queue.store({ "Chat", { (std::string)msg.utf8() } });
         else {
             Str output = server_ptr.value().chat((std::string)msg.utf8());
@@ -935,22 +935,22 @@ namespace craftbuild {
         chatting.store(false, std::memory_order_relaxed);
     }
 
-    none Main::set_seed_and_world_name(int32 seed, const String name) {
+    void Main::set_seed_and_world_name(int32 seed, const String name) {
         if (not server_ptr) send_queue.store({ "Set seed and world name", { std::to_string(seed), (std::string)name.utf8() } });
         else server_ptr.value().set_seed_and_world_name(seed, (std::string)name.utf8());
     }
 
-    none Main::set_render_distance(int32 rd) {
+    void Main::set_render_distance(int32 rd) {
         if (not server_ptr) send_queue.store({ "Set render distance", { std::to_string(rd) } });
         else server_ptr.value().set_render_distance(rd);
     }
 
-    none Main::set_cpu_sleep_time(int32 stc) {
+    void Main::set_cpu_sleep_time(int32 stc) {
         if (not server_ptr) send_queue.store({ "Set sleep time CPU", { std::to_string(stc) } });
         else server_ptr.value().set_cpu_sleep_time(stc);
     }
     
-    none Main::_bind_methods() {
+    void Main::_bind_methods() {
         ADD_SIGNAL(MethodInfo("chat_output", PropertyInfo(Variant::STRING, "line")));
         ClassDB::bind_method(D_METHOD("init"), &Main::_ready);
         ClassDB::bind_method(D_METHOD("singleplayer"), &Main::init_singleplayer);

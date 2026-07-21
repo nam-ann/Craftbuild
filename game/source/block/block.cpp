@@ -29,7 +29,7 @@ namespace craftbuild {
         return len(values) - 1;
     }
 
-    none TagRegistry::set_value(uint32 tag_id, uint64 index, uint64 value) {
+    void TagRegistry::set_value(uint32 tag_id, uint64 index, uint64 value) {
         if (tag_id >= tag.size()) return;
         auto& values = tag[tag_id].value;
         if (index >= len(values)) add_value(tag_id, value);

@@ -24,11 +24,11 @@ export namespace craftbuild {
         float32 day_speed = 0.0001f;
 
     protected:
-        static none _bind_methods();
+        static void _bind_methods();
 
     public:
-        none _ready() override;
-        none _process(float64 delta) override;
+        void _ready() override;
+        void _process(float64 delta) override;
     };
 
     class CraftSky : public WorldEnvironment {
@@ -39,9 +39,9 @@ export namespace craftbuild {
         Ref<ProceduralSkyMaterial> sky_material;
 
     protected:
-        static none _bind_methods();
+        static void _bind_methods();
 
     public:
-        none _ready() override;
+        void _ready() override;
     };
 }

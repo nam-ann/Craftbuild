@@ -13,9 +13,9 @@ import misc.number;
 
 export namespace craftbuild {
     struct GCObject {
-        none* __data__ = nullptr;
-        none(*__deleter__)(none*) = nullptr;
-        none(*__get_refs__)(none*, std::vector<GCObject*>&) = nullptr;
+        void* __data__ = nullptr;
+        void(*__deleter__)(void*) = nullptr;
+        void(*__get_refs__)(void*, std::vector<GCObject*>&) = nullptr;
 
         bool __marked__ = false;
 
@@ -34,18 +34,18 @@ export namespace craftbuild {
         std::mutex __mtx__;
 
     public:
-        none register_object(GCObject* obj) {
+        void register_object(GCObject* obj) {
             if (not obj) [[unlikely]] return;
             std::lock_guard<std::mutex> lock(__mtx__);
             __data__.obj_queue.push_back(obj);
         }
 
-        none add_root(GCObject* obj) {
+        void add_root(GCObject* obj) {
             if (not obj) [[unlikely]] return;
             std::lock_guard<std::mutex> lock(__mtx__);
             ++__data__.root_queue[obj];
         }
-        none remove_root(GCObject* obj) {
+        void remove_root(GCObject* obj) {
             if (not obj) [[unlikely]] return;
             std::lock_guard<std::mutex> lock(__mtx__);
 			--__data__.root_queue[obj];
@@ -69,12 +69,12 @@ export namespace craftbuild {
         inline static std::unordered_map<GCObject*, usize> root_objects;
 
     public:
-        static none register_object(GCObject* obj) { registration_queue.register_object(obj); }
+        static void register_object(GCObject* obj) { registration_queue.register_object(obj); }
          
-        static none add_root(GCObject* obj) { registration_queue.add_root(obj); }
-        static none remove_root(GCObject* obj) { registration_queue.remove_root(obj); }
+        static void add_root(GCObject* obj) { registration_queue.add_root(obj); }
+        static void remove_root(GCObject* obj) { registration_queue.remove_root(obj); }
 
-        static none collect() {
+        static void collect() {
             const NewQueue::Data new_objects = registration_queue.flush();
             all_objects.insert(all_objects.end(), new_objects.obj_queue.begin(), new_objects.obj_queue.end());
 

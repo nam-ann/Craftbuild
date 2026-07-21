@@ -15,7 +15,7 @@ module;
 module game.environment;
 
 namespace craftbuild {
-    none Sun::_ready() {
+    void Sun::_ready() {
         set_color(Color(1.0f, 0.93f, 0.78f));
         set_param(Light3D::PARAM_ENERGY, 1.2f);
         set_param(Light3D::PARAM_INDIRECT_ENERGY, 0.55f);
@@ -26,16 +26,16 @@ namespace craftbuild {
         set_rotation(Vector3(day_angle, -0.75f, 0.0f));
     }
 
-    none Sun::_process(float64 delta) {
+    void Sun::_process(float64 delta) {
         day_angle += day_speed * static_cast<float32>(delta);
         if (day_angle > static_cast<float32>(Math_TAU)) day_angle -= static_cast<float32>(Math_TAU);
 
         set_rotation(Vector3(day_angle, -0.75f, 0.0f));
     }
 
-    none Sun::_bind_methods() {}
+    void Sun::_bind_methods() {}
 
-    none CraftSky::_ready() {
+    void CraftSky::_ready() {
         sky_material.instantiate();
         sky_material->set_sky_top_color(Color(0.00f, 0.85f, 0.90f));
         sky_material->set_sky_horizon_color(Color(0.45f, 1.00f, 1.00f));
@@ -67,5 +67,5 @@ namespace craftbuild {
         set_environment(environment);
     }
 
-    none CraftSky::_bind_methods() {}
+    void CraftSky::_bind_methods() {}
 }

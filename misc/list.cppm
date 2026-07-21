@@ -151,19 +151,19 @@ export namespace craftbuild {
             return *this;
         }
 
-        none clear() {
+        void clear() {
             delete[] __value__;
             __value__ = nullptr;
             __len__ = __space__ = 0;
         }
 
-        none expect(usize extra) {
+        void expect(usize extra) {
             usize needed = __len__ + extra;
             if (not needed) needed = 8;
             archive(needed);
         }
 
-        none archive(usize extra) {
+        void archive(usize extra) {
             if (__space__ >= extra) return;
             __space__ = extra;
 
@@ -177,17 +177,17 @@ export namespace craftbuild {
             cache = nullptr;
         }
 
-        none resize(usize new_len, T const& fill_value = T{}) {
+        void resize(usize new_len, T const& fill_value = T{}) {
             if (new_len > __space__) archive(new_len);
             if (new_len > __len__) for (auto i : range<usize>(__len__, new_len)) __value__[i] = fill_value;
             __len__ = new_len;
         }
 
-        none fill(T const& fill_value) {
+        void fill(T const& fill_value) {
             for (auto i : range<usize>(__len__)) __value__[i] = fill_value;
         }
 
-        none swap(List& other) noexcept {
+        void swap(List& other) noexcept {
             if (this == &other) return;
 
             std::swap(__value__, other.__value__);

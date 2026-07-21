@@ -5,7 +5,7 @@ module;
 module game.world.biome;
 
 namespace craftbuild {
-	none BiomeRegistry::register_biome(Str const& name, Biome const& biome) {
+	void BiomeRegistry::register_biome(Str const& name, Biome const& biome) {
 		name2id[name] = registry.size();
 		registry.emplace_back(BiomeEntry(name, biome));
 	}

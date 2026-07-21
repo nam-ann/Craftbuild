@@ -44,7 +44,7 @@ export namespace craftbuild {
 
         static uint32 register_tag(Str const& name);
         static uint64 add_value(uint32 tag_id, uint64 value);
-        static none set_value(uint32 tag_id, uint64 index, uint64 value);
+        static void set_value(uint32 tag_id, uint64 index, uint64 value);
         static List<uint64>& get_value(uint32 tag_id);
         static uint64& get_value(uint32 tag_id, uint64 index);
         static Str get_name(uint32 tag_id);
@@ -85,7 +85,7 @@ export namespace craftbuild {
 
         template <typename T>
         requires std::derived_from<T, Block>
-        static none register_block(Str const& name, char const* path) {
+        static void register_block(Str const& name, char const* path) {
             Ptr<Block> block = new Obj<T>();
             Ref<Texture2D> texture = nullptr;
             Ref<Mesh> mesh = nullptr;

@@ -30,7 +30,7 @@ import game.command;
 using namespace std::chrono_literals;
 
 namespace craftbuild {
-    none TCPServer::_get_refs(std::vector<GCObject*>&refs) {
+    void TCPServer::_get_refs(std::vector<GCObject*>&refs) {
 		std::shared_lock lock(chunks_mutex);
 		for (auto const& [_, chunk_ptr] : chunks) {
 			if (chunk_ptr) refs.push_back(chunk_ptr.object());
@@ -72,7 +72,7 @@ namespace craftbuild {
         save_world(format{} << "user://game/saves/" << world_name);
     }
 
-    none TCPServer::disconnect(Str const& player_name) {
+    void TCPServer::disconnect(Str const& player_name) {
         if (not players.contains(player_name)) return;
 
         std::unique_lock lock(player_mutex);
@@ -86,7 +86,7 @@ namespace craftbuild {
         log<LogType::INFO>(format{} << "Player disconnected: " << player_name);
     }
 
-	none TCPServer::connect(Str const& player_name) {
+	void TCPServer::connect(Str const& player_name) {
         std::unique_lock lock(player_mutex);
         online_players[player_name];
 
@@ -101,12 +101,12 @@ namespace craftbuild {
 		log<LogType::INFO>(format{} << "Player connected: " << player_name);
 	}
 
-	none TCPServer::update(Str const& player_name, Pos3D<real> const& new_pos) {
+	void TCPServer::update(Str const& player_name, Pos3D<real> const& new_pos) {
 		std::unique_lock lock(player_mutex);
         players[player_name].pos = new_pos;
 	}
 
-    none TCPServer::start_redstone_thread() {
+    void TCPServer::start_redstone_thread() {
         if (redstone_thread.joinable()) return;
 
         auto worker = [this]() {
@@ -121,7 +121,7 @@ namespace craftbuild {
         redstone_thread = std::thread(worker);
     }
 
-    none TCPServer::start_scheduler_thread() {
+    void TCPServer::start_scheduler_thread() {
         scheduler_thread = std::thread([this]() {
             ThreadRegistry::register_thread("Terrain");
             log<LogType::INFO>("Terrain thread started");
@@ -162,7 +162,7 @@ namespace craftbuild {
         });
     }
 
-    none TCPServer::submit_jobs(Pos3D<real> const& player) {
+    void TCPServer::submit_jobs(Pos3D<real> const& player) {
         int32 px = static_cast<int32>(std::floor(player.x / Chunk::SIZE_X));
         int32 pz = static_cast<int32>(std::floor(player.z / Chunk::SIZE_Z));
 
@@ -377,7 +377,7 @@ namespace craftbuild {
         return chunk.value().get_block({ (uint8)lx, (uint8)wy, (uint8)lz });
     }
 
-    none TCPServer::set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz) {
+    void TCPServer::set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz) {
         if (wy < 0 or wy >= Chunk::SIZE_Y) return;
 
         int32 cx = static_cast<int32>(std::floor((float32)wx / Chunk::SIZE_X));
@@ -393,7 +393,7 @@ namespace craftbuild {
         chunk.value().set_block({ (uint8)lx, (uint8)wy, (uint8)lz }, block_id);
     }
 
-    none TCPServer::unload_distant_chunks() {
+    void TCPServer::unload_distant_chunks() {
         const int32 unload_dist = render_distance + 4;
         Set<Pos3D<int32>> still_viewing_chunks;
 
@@ -441,14 +441,14 @@ namespace craftbuild {
         }
     }
 
-    none TCPServer::set_seed_and_world_name(int32 seed, Str const& name) {
+    void TCPServer::set_seed_and_world_name(int32 seed, Str const& name) {
 		world_seed.store(seed, std::memory_order_release);
 		noise->set_seed(seed);
 		world_name = name;
     }
 
-    none TCPServer::set_render_distance(int32 rd) { render_distance = rd; }
-    none TCPServer::set_cpu_sleep_time(int32 stc) { cpu_sleep_time = stc; }
+    void TCPServer::set_render_distance(int32 rd) { render_distance = rd; }
+    void TCPServer::set_cpu_sleep_time(int32 stc) { cpu_sleep_time = stc; }
 
     Str TCPServer::chat(Str const& msg) {
         if (msg) {
@@ -463,7 +463,7 @@ namespace craftbuild {
         return "";
     }
 
-    none TCPServer::save_world(Str const& path) {
+    void TCPServer::save_world(Str const& path) {
         String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/" + world_name + ".cbworld").std_str().c_str());
         std::string std_path = (std::string)real_path.utf8();
 
@@ -563,7 +563,7 @@ namespace craftbuild {
         return true;
     }
 
-    none TCPServer::save_region(Str const& path, int32 rx, int32 rz) {
+    void TCPServer::save_region(Str const& path, int32 rx, int32 rz) {
         String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(rz) + ".cbregion").std_str().c_str());
         std::string std_path = (std::string)real_path.utf8();
 
@@ -701,7 +701,7 @@ namespace craftbuild {
         return true;
     }
 
-    none Server::_ready() {
+    void Server::_ready() {
         start_gc_thread();
         start_log_thread();
 
@@ -817,7 +817,7 @@ namespace craftbuild {
         log<LogType::INFO>("TCP Server listening on port 8888...");
     }
 
-    none Server::_process(float64 delta) {
+    void Server::_process(float64 delta) {
         {
             sockaddr_in client_addr{};
             int32 client_len = sizeof(client_addr);
@@ -928,7 +928,7 @@ namespace craftbuild {
         LogQueue::flush();
     }
 
-    none Server::_exit_tree() {
+    void Server::_exit_tree() {
         closesocket(server_socket);
         WSACleanup();
 
@@ -938,7 +938,7 @@ namespace craftbuild {
 		if (gc_thread.joinable()) gc_thread.join();
     }
 
-    none Server::start_gc_thread() {
+    void Server::start_gc_thread() {
         if (gc_thread.joinable()) return;
 
         auto worker = [this]() {
@@ -956,7 +956,7 @@ namespace craftbuild {
         gc_thread = std::thread(worker);
     }
 
-    none Server::start_log_thread() {
+    void Server::start_log_thread() {
         if (log_thread.joinable()) return;
 
         auto worker = [this]() {

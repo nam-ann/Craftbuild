@@ -67,7 +67,7 @@ export namespace craftbuild {
         Str world_name = "My World";
         Str player_name = "Player";
 
-        none* player_ptr = nullptr;
+        void* player_ptr = nullptr;
         mutable std::shared_mutex player_mutex;
 
         std::atomic<bool> running = true;
@@ -94,48 +94,48 @@ export namespace craftbuild {
 		Ptr<TCPServer> server_ptr;
 
     public:
-        none _ready() override;
-        none _process(float64 delta) override;
-        none _exit_tree() override;
+        void _ready() override;
+        void _process(float64 delta) override;
+        void _exit_tree() override;
 
-        none init_singleplayer();
-        none init_multiplayer();
-        none setup_voxel_material();
+        void init_singleplayer();
+        void init_multiplayer();
+        void setup_voxel_material();
 
-        none start_gc_thread();
-        none start_log_thread();
-        none start_network_thread();
-        none start_scheduler_thread();
-        none submit_jobs();
-        none create_chunk_collision(Ptr<Chunk>& chunk, PackedVector3Array const& collision_faces);
-        none update_chunk_mesh(Ptr<Chunk>& chunk, Ref<ArrayMesh> const& mesh);
-        none unload_distant_chunks();
+        void start_gc_thread();
+        void start_log_thread();
+        void start_network_thread();
+        void start_scheduler_thread();
+        void submit_jobs();
+        void create_chunk_collision(Ptr<Chunk>& chunk, PackedVector3Array const& collision_faces);
+        void update_chunk_mesh(Ptr<Chunk>& chunk, Ref<ArrayMesh> const& mesh);
+        void unload_distant_chunks();
 
         Ptr<Chunk> get_chunk(int32 cx, int32 cz);
         Ptr<Chunk> get_or_create_chunk(int32 cx, int32 cz);
         uint32 get_global_block_id(int32 wx, int32 wy, int32 wz);
-        none set_chunk(Ptr<Chunk> chunk, int32 cx, int32 cz);
-        none set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz);
+        void set_chunk(Ptr<Chunk> chunk, int32 cx, int32 cz);
+        void set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz);
 
-        none save_userdata(char const* path = "user://game/userdata.cbdata");
+        void save_userdata(char const* path = "user://game/userdata.cbdata");
         bool load_userdata(char const* path = "user://game/userdata.cbdata");
 
-        none pause();
-        none resume();
-        none start_chat();
+        void pause();
+        void resume();
+        void start_chat();
 
-        none chat(const String msg);
+        void chat(const String msg);
 
-        none get_seed();
-        none get_world_name();
-        none set_seed_and_world_name(int32 seed, const String name);
-        none set_render_distance(int32 rd);
-        none set_cpu_sleep_time(int32 stc);
+        void get_seed();
+        void get_world_name();
+        void set_seed_and_world_name(int32 seed, const String name);
+        void set_render_distance(int32 rd);
+        void set_cpu_sleep_time(int32 stc);
 
-        static none _bind_methods();
+        static void _bind_methods();
 
         friend class Player;
         friend class CommandInterpreter;
-        friend none craftbuild_mod_main();
+        friend void craftbuild_mod_main();
     };
 }

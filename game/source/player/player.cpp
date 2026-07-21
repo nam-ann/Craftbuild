@@ -52,7 +52,7 @@ namespace craftbuild {
         return true;
     }
 
-    none Player::_ready() {
+    void Player::_ready() {
         // Camera
         camera = get_node<Camera3D>("Camera");
         camera->set_position(Vector3(0, 1.8f, 0));
@@ -95,7 +95,7 @@ namespace craftbuild {
         log<LogType::INFO>("Player initialized");
     }
 
-    none Player::_process(float64 delta) {
+    void Player::_process(float64 delta) {
         Main* world = static_cast<Main*>(world_ptr);
         if (not world) return;
         if (world->pausing.load(std::memory_order_relaxed)) return;
@@ -116,7 +116,7 @@ namespace craftbuild {
         selection_box->set_position(Vector3(block_pos.x, block_pos.y, block_pos.z) + Vector3(0.5, 0.5, 0.5));
     }
 
-    none Player::_physics_process(float64 delta) {
+    void Player::_physics_process(float64 delta) {
         if (gamemode == Gamemode::SPECTATOR) return;
         if (not camera or not world_ptr) return;
 
@@ -202,7 +202,7 @@ namespace craftbuild {
         move_and_slide();
     }
 
-    none Player::_input(Ref<InputEvent> const& event) {
+    void Player::_input(Ref<InputEvent> const& event) {
         if (not camera or not world_ptr) return;
         Main* world = static_cast<Main*>(world_ptr);
         if (world->pausing.load(std::memory_order_relaxed) or world->chatting.load(std::memory_order_relaxed)) return;
@@ -371,12 +371,12 @@ namespace craftbuild {
         return Face::TOP;
     }
 
-    none Player::cycle_hotbar(int32 dir) {
+    void Player::cycle_hotbar(int32 dir) {
         selected_slot = (selected_slot + dir + HOTBAR_SIZE) % HOTBAR_SIZE;
         log<LogType::INFO>(format{} << "Selected slot: " << selected_slot + 1);
     }
 
-    none Player::select_slot(int32 slot) {
+    void Player::select_slot(int32 slot) {
 
     }
 
@@ -384,7 +384,7 @@ namespace craftbuild {
         return hotbar[selected_slot];
     }
 
-    none Player::save_data(std::ostream& os) {
+    void Player::save_data(std::ostream& os) {
         os.write(reinterpret_cast<byte const*>(&speed), sizeof(float32));
         os.write(reinterpret_cast<byte const*>(&gravity), sizeof(float32));
         os.write(reinterpret_cast<byte const*>(&jump_velocity), sizeof(float32));
@@ -396,7 +396,7 @@ namespace craftbuild {
         os.write(reinterpret_cast<byte const*>(&selected_slot), sizeof(uint8));
     }
 
-    none Player::load_data(std::istream& is) {
+    void Player::load_data(std::istream& is) {
         is.read(reinterpret_cast<byte*>(&speed), sizeof(float32));
         is.read(reinterpret_cast<byte*>(&gravity), sizeof(float32));
         is.read(reinterpret_cast<byte*>(&jump_velocity), sizeof(float32));
@@ -408,5 +408,5 @@ namespace craftbuild {
         is.read(reinterpret_cast<byte*>(&selected_slot), sizeof(uint8));
     }
 
-    none Player::_bind_methods() {}
+    void Player::_bind_methods() {}
 }

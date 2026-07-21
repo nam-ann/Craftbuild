@@ -112,13 +112,13 @@ export namespace craftbuild {
 
 		bool operator==(Ptr<T> const& other) const { return __value__ == other.__value__; }
 
-		none clear() {
+		void clear() {
 			if (not __value__) [[unlikely]] return;
 			GarbageCollector::remove_root(__value__);
 			__value__ = nullptr;
 		}
 
-		none swap(Ptr& other) noexcept {
+		void swap(Ptr& other) noexcept {
 			auto* cache = __value__;
 
 			__value__ = other.__value__;

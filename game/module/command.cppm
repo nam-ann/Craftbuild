@@ -70,7 +70,7 @@ namespace craftbuild {
 export namespace craftbuild {
     class CommandInterpreter {
     private:
-        none* world_ptr = nullptr;
+        void* world_ptr = nullptr;
 
         bool is_valid_coordinate(int64 x, int64 y, int64 z);
         bool is_valid_block_type(Str const& block_type) {
@@ -78,7 +78,7 @@ export namespace craftbuild {
         }
 
     public:
-        CommandInterpreter(none* world) : world_ptr(world) {}
+        CommandInterpreter(void* world) : world_ptr(world) {}
 
         Str execute_command(Str const& command_line) {
             Str cmd = trim(command_line);

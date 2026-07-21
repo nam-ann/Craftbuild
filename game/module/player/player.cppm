@@ -58,29 +58,29 @@ export namespace craftbuild {
         int8 hp = 20;
 
         // World
-        none* world_ptr = nullptr;
+        void* world_ptr = nullptr;
         Dictionary hit;
         MeshInstance3D* selection_box;
 
     protected:
-        static none _bind_methods();
+        static void _bind_methods();
 
     public:
-        none _ready() override;
-        none _process(float64 delta) override;
-        none _physics_process(float64 delta) override;
-        none _input(Ref<InputEvent> const& event) override;
+        void _ready() override;
+        void _process(float64 delta) override;
+        void _physics_process(float64 delta) override;
+        void _input(Ref<InputEvent> const& event) override;
 
         bool would_collide_with_player(Pos3D<int32> const& block_pos) const;
         Ref<ShaderMaterial> create_selection_box_material();
         Dictionary raycast_block(real max_distance = 5.0f);
         Face get_face(Pos3D<real> n);
 
-        none cycle_hotbar(int32 dir);
-        none select_slot(int32 slot);
+        void cycle_hotbar(int32 dir);
+        void select_slot(int32 slot);
         uint32 get_selected_block_id() const;
 
-        none save_data(std::ostream& os);
-        none load_data(std::istream& is);
+        void save_data(std::ostream& os);
+        void load_data(std::istream& is);
     };
 }

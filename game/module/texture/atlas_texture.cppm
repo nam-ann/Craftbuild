@@ -22,6 +22,6 @@ export namespace craftbuild {
 
 	struct AtlasTexture {
 		inline static Ref<Texture2DArray> atlas_texture;
-		static none build_texture_array();
+		static void build_texture_array();
 	};
 }

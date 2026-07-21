@@ -18,7 +18,7 @@ import game.thread;
 using namespace godot;
 using namespace craftbuild;
 
-none initialize_module(ModuleInitializationLevel p_level) {
+void initialize_module(ModuleInitializationLevel p_level) {
     if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
 
     log<LogType::VERBOSE>("Hello from the DLL!");
@@ -30,7 +30,7 @@ none initialize_module(ModuleInitializationLevel p_level) {
     ClassDB::register_class<CraftSky>();
 }
 
-none initialize_server(ModuleInitializationLevel p_level) {
+void initialize_server(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
 
 	log<LogType::VERBOSE>("Hello from the Server DLL!");
@@ -39,11 +39,11 @@ none initialize_server(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<Server>();
 }
 
-none uninitialize_module(ModuleInitializationLevel p_level) {
+void uninitialize_module(ModuleInitializationLevel p_level) {
     if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
 }
 
-none uninitialize_server(ModuleInitializationLevel p_level) {
+void uninitialize_server(ModuleInitializationLevel p_level) {
     if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
 }
 

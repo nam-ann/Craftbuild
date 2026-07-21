@@ -20,7 +20,7 @@ import misc.range;
 import misc.number;
 import misc.hasher;
 
-inline std::u32string ptr_to_hex(none const* ptr) noexcept {
+inline std::u32string ptr_to_hex(void const* ptr) noexcept {
     uintptr_t value = (uintptr_t)ptr;
 
     if (value == 0) return U"0x0";
@@ -81,7 +81,7 @@ inline std::u32string to_u32(std::string const& s) {
 }
 
 // UTF-8 ENCODE
-inline none append_utf8(std::string& out, uint32 cp) {
+inline void append_utf8(std::string& out, uint32 cp) {
     // basic validation
     if (cp > 0x10FFFF or (cp >= 0xD800 && cp <= 0xDFFF)) {
         out += "?";
@@ -131,13 +131,13 @@ export namespace craftbuild {
             }
         };
 
-        none append(uint8 byte) {
+        void append(uint8 byte) {
             if (__len__ >= __space__) expect(__len__);
             __value__[__len__++] = byte;
         }
 
         // ENCODE: codepoint -> UEF-8
-        none encode(uint32 cp) {
+        void encode(uint32 cp) {
             if (cp < 0x80) { // ASCII
                 append((uint8)cp);
                 return;
@@ -159,7 +159,7 @@ export namespace craftbuild {
         }
 
         // encode UTF-32 string
-        none encode(std::u32string const& s) {
+        void encode(std::u32string const& s) {
             expect(s.size() * 2);
             for (byte32 cp : s) {
                 encode((uint32)cp);
@@ -318,7 +318,7 @@ export namespace craftbuild {
             __value__ = cache;
         }
 
-        none resize(usize new_len, byte32 fill_value = U' ') {
+        void resize(usize new_len, byte32 fill_value = U' ') {
             if (new_len > __space__) archive(new_len);
             if (new_len > __len__) for (auto i : range<usize>(__len__, new_len)) encode(fill_value);
             __len__ = new_len;
@@ -354,7 +354,7 @@ export namespace craftbuild {
             return *this;
         }
 
-        none swap(Str& other) noexcept {
+        void swap(Str& other) noexcept {
             if (this == &other) return;
 
             std::swap(__value__, other.__value__);

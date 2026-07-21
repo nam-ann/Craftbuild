@@ -17,7 +17,7 @@ export namespace craftbuild {
 		inline static std::unordered_map<std::thread::id, Str> threads;
 		inline static std::mutex threads_mutex;
 
-		static none register_thread(Str const& thread_name) {
+		static void register_thread(Str const& thread_name) {
 			std::lock_guard lock(threads_mutex);
 			threads[std::this_thread::get_id()] = thread_name;
 		}

@@ -56,7 +56,7 @@ export namespace craftbuild {
         Dict<Str, PlayerData> players;
         Dict<Str, uint8> online_players;
         decltype(online_players.begin()) current_player;
-        none* command_ptr = nullptr;
+        void* command_ptr = nullptr;
         mutable std::shared_mutex player_mutex;
         mutable std::mutex current_player_mutex;
 
@@ -76,17 +76,17 @@ export namespace craftbuild {
         inline static int32 SIZE_X = render_distance * 16;
         inline static int32 SIZE_Z = render_distance * 16;
 
-        none _get_refs(std::vector<GCObject*>& refs);
+        void _get_refs(std::vector<GCObject*>& refs);
 
         TCPServer();
         ~TCPServer();
-        none connect(Str const& player_name);
-        none disconnect(Str const& player_name);
-        none update(Str const& player_name, Pos3D<real> const& new_pos);
+        void connect(Str const& player_name);
+        void disconnect(Str const& player_name);
+        void update(Str const& player_name, Pos3D<real> const& new_pos);
 
-        none start_redstone_thread();
-        none start_scheduler_thread();
-        none submit_jobs(Pos3D<real> const& player);
+        void start_redstone_thread();
+        void start_scheduler_thread();
+        void submit_jobs(Pos3D<real> const& player);
 
         std::string serialize_players();
         std::string serialize_chunk(int32 cx, int32 cz);
@@ -94,24 +94,24 @@ export namespace craftbuild {
         Ptr<Chunk> get_or_load_chunk(int32 cx, int32 cz);
         Ptr<Chunk> get_or_create_chunk(int32 cx, int32 cz);
         uint32 get_global_block_id(int32 wx, int32 wy, int32 wz);
-        none set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz);
-        none unload_distant_chunks();
+        void set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz);
+        void unload_distant_chunks();
 
-        none set_seed_and_world_name(int32 seed, Str const& name);
-        none set_render_distance(int32 rd);
-        none set_cpu_sleep_time(int32 stc);
+        void set_seed_and_world_name(int32 seed, Str const& name);
+        void set_render_distance(int32 rd);
+        void set_cpu_sleep_time(int32 stc);
 
         Str chat(Str const& message);
 
-        none save_world(Str const& path);
+        void save_world(Str const& path);
         bool load_world(Str const& path);
-        none save_region(Str const& path, int32 rx, int32 rz);
+        void save_region(Str const& path, int32 rx, int32 rz);
         bool load_region(Str const& path, int32 rx, int32 rz);
 
         friend class Main;
         friend class Server;
         friend class CommandInterpreter;
-        friend none craftbuild_mod_main();
+        friend void craftbuild_mod_main();
 	};
 
     struct Client {
@@ -134,13 +134,13 @@ export namespace craftbuild {
         std::thread log_thread;
 
     public:
-        none _ready() override;
-        none _process(float64 delta) override;
-        none _exit_tree() override;
+        void _ready() override;
+        void _process(float64 delta) override;
+        void _exit_tree() override;
 
-        none start_gc_thread();
-        none start_log_thread();
+        void start_gc_thread();
+        void start_log_thread();
 
-		static none _bind_methods() {}
+		static void _bind_methods() {}
     };
 }
