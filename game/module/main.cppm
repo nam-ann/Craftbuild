@@ -53,10 +53,10 @@ export namespace craftbuild {
         GDCLASS(Main, Node3D)
 
     private:
-        std::vector<Ptr<Chunk>> ready_chunks_queue;
+        List<Pos3D<int32>> ready_chunks_queue;
         mutable std::mutex ready_chunks_queue_mutex;
 
-        Dict<Pos3D<int32>, Ptr<Chunk>> chunks;
+        Dict<Pos3D<int32>, std::pair<Ptr<Chunk>, ChunkMesh>> chunks;
         mutable std::shared_mutex chunks_mutex;
 
         Set<Pos3D<int32>> requested_chunks;
@@ -107,12 +107,14 @@ export namespace craftbuild {
         void start_network_thread();
         void start_scheduler_thread();
         void submit_jobs();
-        void create_chunk_collision(Ptr<Chunk>& chunk, PackedVector3Array const& collision_faces);
-        void update_chunk_mesh(Ptr<Chunk>& chunk, Ref<ArrayMesh> const& mesh);
+        void create_chunk_collision(ChunkMesh& chunk_mesh, Pos3D<int32>& pos, PackedVector3Array const& collision_faces);
+        void update_chunk_mesh(ChunkMesh& chunk_mesh, Pos3D<int32>& pos, Ref<ArrayMesh> const& mesh);
         void unload_distant_chunks();
 
         Ptr<Chunk> get_chunk(int32 cx, int32 cz);
         Ptr<Chunk> get_or_create_chunk(int32 cx, int32 cz);
+        ChunkMesh& ref_mesh(int32 cx, int32 cz);
+        Ptr<Chunk>& ref_chunk(int32 cx, int32 cz);
         uint32 get_global_block_id(int32 wx, int32 wy, int32 wz);
         void set_chunk(Ptr<Chunk> chunk, int32 cx, int32 cz);
         void set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz);

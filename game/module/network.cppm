@@ -22,6 +22,8 @@ import misc.number;
 import misc.format;
 import game.logger;
 
+using namespace std::chrono_literals;
+
 export namespace craftbuild {
     struct Message {
         Str content;
@@ -55,7 +57,7 @@ export namespace craftbuild {
                     int32 sent = ::send(socket, arg.data() + total_payload_sent, (int32)(arg.size() - total_payload_sent), 0);
                     if (sent == SOCKET_ERROR) {
                         if (WSAGetLastError() == WSAEWOULDBLOCK) {
-                            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                            std::this_thread::sleep_for(1ms);
                             continue;
                         }
                         log<LogType::ERROR>(format{} << "Failed to send message: " << message.content);

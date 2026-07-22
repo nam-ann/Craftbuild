@@ -21,16 +21,17 @@ namespace craftbuild {
         return layer == other.layer and back_face == other.back_face;
     }
 
-    void Chunk::_get_refs(std::vector<GCObject*>& refs) const {
-        std::shared_lock lock(mesh_mutex);
-        refs.push_back(pending_mesh_data.object());
+    ChunkMesh::~ChunkMesh() {
+        std::unique_lock lock(mesh_mutex);
+        clear();
     }
 
-    Chunk::~Chunk() {
-        std::unique_lock lock(mesh_mutex);
-        if (pending_mesh_data) {
-            pending_mesh_data.clear();
-        }
+    void ChunkMesh::clear() {
+        if (mesh_instance) mesh_instance->queue_free();
+        if (collision_body) collision_body->queue_free();
+        if (collision_shape) collision_shape->queue_free();
+        if (multi_mesh_instance) multi_mesh_instance->queue_free();
+        if (dynamic_body) dynamic_body->queue_free();
     }
 
     void Chunk::clear() {
@@ -39,14 +40,6 @@ namespace craftbuild {
         id2block.clear();
         id2tag.clear();
         complex_blocks.clear();
-    }
-
-    void Chunk::unload_mesh() {
-        if (mesh_instance) mesh_instance->queue_free();
-        if (collision_body) collision_body->queue_free();
-        if (collision_shape) collision_shape->queue_free();
-        if (multi_mesh_instance) multi_mesh_instance->queue_free();
-        if (dynamic_body) dynamic_body->queue_free();
     }
 
     uint32 Chunk::column_seed(int32 seed, int32 x, int32 z) {
@@ -302,7 +295,7 @@ namespace craftbuild {
         ++chunk_version;
     }
 
-    void Chunk::generate_mesh(Ptr<Chunk> neighbors[4]) {
+    void Chunk::generate_mesh(ChunkMesh& mesh, Ptr<Chunk> neighbors[4]) {
         Ptr<MeshData> data_ptr = new Obj<MeshData>();
         auto& data = data_ptr.value();
 
@@ -535,8 +528,8 @@ namespace craftbuild {
         }
 
         {
-            std::unique_lock lock(mesh_mutex);
-            pending_mesh_data = data_ptr;
+            std::unique_lock lock(mesh.mesh_mutex);
+            mesh.pending_mesh_data = data_ptr;
         }
 
         dirty.store(false, std::memory_order_release);

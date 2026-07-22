@@ -114,7 +114,7 @@ namespace craftbuild {
             log<LogType::INFO>("Redstone thread started");
 
             while (running.load(std::memory_order_relaxed)) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                std::this_thread::sleep_for(10ms);
             }
         };
 
@@ -132,7 +132,7 @@ namespace craftbuild {
                 {
                     std::shared_lock lock(player_mutex);
                     if (online_players.empty()) {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                        std::this_thread::sleep_for(500ms);
                         continue;
                     }
                 }
@@ -186,6 +186,7 @@ namespace craftbuild {
             terrain_pool.enqueue([this, chunk_ptr, chunk_pos]() {
                 if (running.load(std::memory_order_relaxed)) {
                     auto& chunk = chunk_ptr.value();
+
                     chunk.generate_terrain(world_seed.load(), noise);
 
                     Pos3D<int32> offsets[4] = { {1,0,0}, {-1,0,0}, {0,0,1}, {0,0,-1} };
@@ -203,7 +204,7 @@ namespace craftbuild {
 
                 std::lock_guard lock(pending_jobs_mutex);
                 pending_terrain_jobs.erase(chunk_pos);
-                std::this_thread::sleep_for(1ms);
+                std::this_thread::sleep_for(2ms);
             });
         };
 
@@ -428,12 +429,7 @@ namespace craftbuild {
 
         {
             std::unique_lock lock(chunks_mutex);
-            for (auto const& pos : pending_unloads) {
-                auto chunk_ptr = chunks[pos];
-                if (not chunk_ptr) continue;
-                auto& chunk = chunk_ptr.value();
-                chunks.erase(pos);
-            }
+            for (auto const& pos : pending_unloads) chunks.erase(pos);
         }
 
         for (auto const& [rx, _, rz] : regions_to_save) {
@@ -947,7 +943,7 @@ namespace craftbuild {
 
             while (running.load(std::memory_order_relaxed)) {
                 GarbageCollector::collect();
-                std::this_thread::sleep_for(std::chrono::seconds(5));
+                std::this_thread::sleep_for(5s);
             }
 
             GarbageCollector::collect();
@@ -965,7 +961,7 @@ namespace craftbuild {
 
             while (running.load(std::memory_order_relaxed)) {
                 LogQueue::flush();
-                std::this_thread::sleep_for(std::chrono::seconds(1));
+                std::this_thread::sleep_for(1s);
             }
 
             LogQueue::flush();

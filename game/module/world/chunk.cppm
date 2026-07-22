@@ -57,6 +57,21 @@ export namespace craftbuild {
         bool operator==(FaceMask const& other) const;
     };
 
+    struct ChunkMesh {
+        MeshInstance3D* mesh_instance = nullptr;
+        StaticBody3D* collision_body = nullptr;
+        CollisionShape3D* collision_shape = nullptr;
+
+        MultiMeshInstance3D* multi_mesh_instance = nullptr;
+        StaticBody3D* dynamic_body = nullptr;
+
+        Ptr<MeshData> pending_mesh_data = nullptr;
+        mutable std::shared_mutex mesh_mutex;
+
+        ~ChunkMesh();
+        void clear();
+    };
+
     class Chunk {
     public:
         inline static constexpr uint8 SIZE_X = 16;
@@ -80,23 +95,9 @@ export namespace craftbuild {
         std::atomic<bool> dirty = true;
         mutable std::shared_mutex data_mutex;
 
-        MeshInstance3D* mesh_instance = nullptr;
-        StaticBody3D* collision_body = nullptr;
-        CollisionShape3D* collision_shape = nullptr;
-
-        MultiMeshInstance3D* multi_mesh_instance = nullptr;
-        StaticBody3D* dynamic_body = nullptr;
-
-        Ptr<MeshData> pending_mesh_data = nullptr;
-        mutable std::shared_mutex mesh_mutex;
-
         uint8 chunk_version = 0;
 
-        void _get_refs(std::vector<GCObject*>& refs) const;
-
-        ~Chunk();
         void clear();
-        void unload_mesh();
 
         static uint32 column_seed(int32 seed, int32 x, int32 z);
         static float32 smoothstep(float32 value);
@@ -117,6 +118,6 @@ export namespace craftbuild {
         std::pair<uint32, uint64> get_tag(Pos3D<uint8> const& pos) const;
 
         void generate_terrain(int32 seed, Ref<FastNoiseLite> noise);
-        void generate_mesh(Ptr<Chunk> neighbors[4]);
+        void generate_mesh(ChunkMesh& mesh, Ptr<Chunk> neighbors[4]);
     };
 }
