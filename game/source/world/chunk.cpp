@@ -21,12 +21,9 @@ namespace craftbuild {
         return layer == other.layer and back_face == other.back_face;
     }
 
-    ChunkMesh::~ChunkMesh() {
-        std::unique_lock lock(mesh_mutex);
-        clear();
-    }
+    ChunkRender::~ChunkRender() { clear(); }
 
-    void ChunkMesh::clear() {
+    void ChunkRender::clear() {
         if (mesh_instance) mesh_instance->queue_free();
         if (collision_body) collision_body->queue_free();
         if (collision_shape) collision_shape->queue_free();
@@ -295,7 +292,7 @@ namespace craftbuild {
         ++chunk_version;
     }
 
-    void Chunk::generate_mesh(ChunkMesh& mesh, Ptr<Chunk> neighbors[4]) {
+    void Chunk::generate_mesh(ChunkRender& mesh, Ptr<Chunk> neighbors[4]) {
         Ptr<MeshData> data_ptr = new Obj<MeshData>();
         auto& data = data_ptr.value();
 

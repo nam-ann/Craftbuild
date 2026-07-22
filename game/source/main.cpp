@@ -719,7 +719,7 @@ namespace craftbuild {
         }
     }
 
-    void Main::create_chunk_collision(ChunkMesh& chunk_mesh, Pos3D<int32>& pos, PackedVector3Array const& collision_faces) {
+    void Main::create_chunk_collision(ChunkRender& chunk_mesh, Pos3D<int32>& pos, PackedVector3Array const& collision_faces) {
         if (not chunk_mesh.mesh_instance) return;
 
         Ref<ArrayMesh> mesh = chunk_mesh.mesh_instance->get_mesh();
@@ -748,7 +748,7 @@ namespace craftbuild {
         chunk_mesh.collision_shape->set_shape(concave);
     }
 
-    void Main::update_chunk_mesh(ChunkMesh& chunk_mesh, Pos3D<int32>& pos, Ref<ArrayMesh> const& mesh) {
+    void Main::update_chunk_mesh(ChunkRender& chunk_mesh, Pos3D<int32>& pos, Ref<ArrayMesh> const& mesh) {
         if (not chunk_mesh.mesh_instance) {
             MeshInstance3D* mi = memnew(MeshInstance3D);
             mi->set_position(Vector3(pos.x * Chunk::SIZE_X, 0, pos.z * Chunk::SIZE_Z));
@@ -779,8 +779,6 @@ namespace craftbuild {
         {
             std::unique_lock lock(chunks_mutex);
             for (auto&& chunk_pos : chunks_to_remove) {
-                auto& chunk_mesh = chunks[chunk_pos].second;
-                chunk_mesh.clear();
                 chunks.erase(chunk_pos);
                 ++removed;
             }
@@ -815,7 +813,7 @@ namespace craftbuild {
         return chunks[chunk_pos].first;
     }
 
-    ChunkMesh& Main::ref_mesh(int32 cx, int32 cz) {
+    ChunkRender& Main::ref_mesh(int32 cx, int32 cz) {
         std::shared_lock lock(chunks_mutex);
         Pos3D<int32> cpos(cx, 0, cz);
         return chunks[cpos].second;

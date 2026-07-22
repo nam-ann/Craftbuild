@@ -57,7 +57,7 @@ export namespace craftbuild {
         bool operator==(FaceMask const& other) const;
     };
 
-    struct ChunkMesh {
+    struct ChunkRender {
         MeshInstance3D* mesh_instance = nullptr;
         StaticBody3D* collision_body = nullptr;
         CollisionShape3D* collision_shape = nullptr;
@@ -68,7 +68,7 @@ export namespace craftbuild {
         Ptr<MeshData> pending_mesh_data = nullptr;
         mutable std::shared_mutex mesh_mutex;
 
-        ~ChunkMesh();
+        ~ChunkRender();
         void clear();
     };
 
@@ -118,6 +118,6 @@ export namespace craftbuild {
         std::pair<uint32, uint64> get_tag(Pos3D<uint8> const& pos) const;
 
         void generate_terrain(int32 seed, Ref<FastNoiseLite> noise);
-        void generate_mesh(ChunkMesh& mesh, Ptr<Chunk> neighbors[4]);
+        void generate_mesh(ChunkRender& mesh, Ptr<Chunk> neighbors[4]);
     };
 }
