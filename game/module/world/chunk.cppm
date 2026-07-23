@@ -68,8 +68,7 @@ export namespace craftbuild {
         Ptr<MeshData> pending_mesh_data = nullptr;
         mutable std::shared_mutex mesh_mutex;
 
-        ChunkRender() noexcept;
-        ChunkRender(ChunkRender&& other) noexcept;
+        ~ChunkRender() noexcept;
         void clear();
     };
 

@@ -300,13 +300,6 @@ namespace craftbuild {
             std::lock_guard lock(ready_chunks_queue_mutex);
             for (auto& chunk_pos : deferred_chunks) ready_chunks_queue.append(chunk_pos);
         }
-
-        std::vector<ChunkRender> meshes_to_remove;
-        {
-            std::lock_guard lock(meshes_to_free_queue_mutex);
-            meshes_to_free_queue.swap(meshes_to_remove);
-        }
-        for (auto& mesh : meshes_to_remove) mesh.clear();
     }
 
     void Main::_exit_tree() {
@@ -775,7 +768,6 @@ namespace craftbuild {
         const int32 p_cz = (int32)(player_z.load() / Chunk::SIZE_Z);
         const int32 unload_dist = render_distance + 4;
 
-        std::vector<ChunkRender> meshes_to_remove;
         int32 removed = 0;
         {
             std::unique_lock lock(chunks_mutex);
@@ -786,17 +778,12 @@ namespace craftbuild {
                 int32 dz = std::abs(chunk_pos.z - p_cz);
 
                 if (dx > unload_dist or dz > unload_dist) {
-                    meshes_to_remove.push_back(std::move(chunk_pair.second));
+                    chunk_pair.second.clear();
                     it = chunks.erase(it);
                     ++removed;
                 }
                 else ++it;
             }
-        }
-
-        {
-            std::lock_guard lock(meshes_to_free_queue_mutex);
-            meshes_to_free_queue.swap(meshes_to_remove);
         }
 
         if (removed) log<LogType::VERBOSE>(format{} << "Queued unload for " << removed << " chunks");

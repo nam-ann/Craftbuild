@@ -21,21 +21,7 @@ namespace craftbuild {
         return layer == other.layer and back_face == other.back_face;
     }
 
-    ChunkRender::ChunkRender() noexcept {}
-    ChunkRender::ChunkRender(ChunkRender&& other) noexcept :
-        mesh_instance(other.mesh_instance),
-        collision_body(other.collision_body),
-        collision_shape(other.collision_shape),
-        multi_mesh_instance(other.multi_mesh_instance),
-        dynamic_body(other.dynamic_body),
-        pending_mesh_data(std::move(other.pending_mesh_data)) {
-
-        other.mesh_instance = nullptr;
-        other.collision_body = nullptr;
-        other.collision_shape = nullptr;
-        other.multi_mesh_instance = nullptr;
-        other.dynamic_body = nullptr;
-    }
+    ChunkRender::~ChunkRender() noexcept { clear(); }
 
     void ChunkRender::clear() {
         if (mesh_instance) mesh_instance->queue_free();
