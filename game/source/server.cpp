@@ -183,10 +183,10 @@ namespace craftbuild {
                 pending_terrain_jobs.insert(chunk_pos);
             }
 
-            terrain_pool.enqueue([this, chunk_ptr, chunk_pos]() {
-                if (running.load(std::memory_order_relaxed)) {
-                    auto& chunk = chunk_ptr.value();
+            terrain_pool.enqueue([this, chunk_ptr]() {
+                auto& chunk = chunk_ptr.value();
 
+                if (running.load(std::memory_order_relaxed)) {
                     chunk.generate_terrain(world_seed.load(), noise);
 
                     Pos3D<int32> offsets[4] = { {1,0,0}, {-1,0,0}, {0,0,1}, {0,0,-1} };
@@ -203,8 +203,8 @@ namespace craftbuild {
                 }
 
                 std::lock_guard lock(pending_jobs_mutex);
-                pending_terrain_jobs.erase(chunk_pos);
-                std::this_thread::sleep_for(2ms);
+                pending_terrain_jobs.erase(chunk.chunk_pos);
+                std::this_thread::sleep_for(4ms);
             });
         };
 
@@ -314,10 +314,11 @@ namespace craftbuild {
     }
 
     Ptr<Chunk> TCPServer::get_chunk(int32 cx, int32 cz) {
-        std::shared_lock lock(chunks_mutex);
         Pos3D<int32> cpos(cx, 0, cz);
 
+        std::shared_lock lock(chunks_mutex);
         auto it = chunks.find(cpos);
+
         if (it == chunks.end()) return nullptr;
         return it->second;
     }

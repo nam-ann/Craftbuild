@@ -186,12 +186,12 @@ namespace craftbuild {
                 continue;
             }
 
-            auto& chunk_mesh = ref_mesh(chunk_pos.x, chunk_pos.z);
+            auto& chunk_render = ref_mesh(chunk_pos.x, chunk_pos.z);
                
             Ptr<MeshData> data_ptr = nullptr;
             {
-                std::lock_guard lock(chunk_mesh.mesh_mutex);
-                if (chunk_mesh.pending_mesh_data) data_ptr.swap(chunk_mesh.pending_mesh_data);
+                std::lock_guard lock(chunk_render.mesh_mutex);
+                if (chunk_render.pending_mesh_data) data_ptr.swap(chunk_render.pending_mesh_data);
             }
 
             if (not data_ptr) continue;
@@ -235,8 +235,8 @@ namespace craftbuild {
                 arrays[Mesh::ARRAY_TEX_UV2] = uvs_layer;
 
                 mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
-                update_chunk_mesh(chunk_mesh, chunk_pos, mesh);
-                create_chunk_collision(chunk_mesh, chunk_pos, collision_faces);
+                update_chunk_mesh(chunk_render, chunk_pos, mesh);
+                create_chunk_collision(chunk_render, chunk_pos, collision_faces);
             }
 
             if (not data.dyn_instances) {
@@ -244,14 +244,14 @@ namespace craftbuild {
                 continue;
             }
 
-            if (not chunk_mesh.mesh_instance) update_chunk_mesh(chunk_mesh, chunk_pos, nullptr);
-            if (not chunk_mesh.dynamic_body) {
-                chunk_mesh.dynamic_body = memnew(StaticBody3D);
-                chunk_mesh.mesh_instance->add_child(chunk_mesh.dynamic_body);
+            if (not chunk_render.mesh_instance) update_chunk_mesh(chunk_render, chunk_pos, nullptr);
+            if (not chunk_render.dynamic_body) {
+                chunk_render.dynamic_body = memnew(StaticBody3D);
+                chunk_render.mesh_instance->add_child(chunk_render.dynamic_body);
             }
-            else while (chunk_mesh.dynamic_body->get_child_count() > 0) {
-                Node* child = chunk_mesh.dynamic_body->get_child(0);
-                chunk_mesh.dynamic_body->remove_child(child);
+            else while (chunk_render.dynamic_body->get_child_count() > 0) {
+                Node* child = chunk_render.dynamic_body->get_child(0);
+                chunk_render.dynamic_body->remove_child(child);
                 child->queue_free();
             }
 
@@ -265,7 +265,7 @@ namespace craftbuild {
                 col_shape->set_shape(box);
                 col_shape->set_position(Vector3(inst.local_pos.x + 0.5f, inst.local_pos.y + 0.5f, inst.local_pos.z + 0.5f));
 
-                chunk_mesh.dynamic_body->add_child(col_shape);
+                chunk_render.dynamic_body->add_child(col_shape);
                 grouped_instances[inst.block_id].emplace_back(std::move(inst));
             }
 
@@ -285,12 +285,12 @@ namespace craftbuild {
                     multimesh->set_instance_transform((int32)i, transform);
                 }
 
-                if (not chunk_mesh.multi_mesh_instance) {
-                    chunk_mesh.multi_mesh_instance = memnew(MultiMeshInstance3D);
-                    chunk_mesh.mesh_instance->add_child(chunk_mesh.multi_mesh_instance);
+                if (not chunk_render.multi_mesh_instance) {
+                    chunk_render.multi_mesh_instance = memnew(MultiMeshInstance3D);
+                    chunk_render.mesh_instance->add_child(chunk_render.multi_mesh_instance);
                 }
 
-                chunk_mesh.multi_mesh_instance->set_multimesh(multimesh);
+                chunk_render.multi_mesh_instance->set_multimesh(multimesh);
             }
 
             ++updates_this_frame;
@@ -652,7 +652,9 @@ namespace craftbuild {
         const int32 pz = (int32)std::floor(player_z.load() / Chunk::SIZE_Z);
 
         auto get_chunk_server_or_not = +[](Main& self, Pos3D<int32> chunk_pos) {
-            return self.ref_chunk(chunk_pos.x, chunk_pos.z) = self.server_ptr.value().get_chunk(chunk_pos.x, chunk_pos.z);
+            Ptr<Chunk> chunk = self.server_ptr.value().get_chunk(chunk_pos.x, chunk_pos.z);
+            self.set_chunk(chunk, chunk_pos.x, chunk_pos.z);
+            return chunk;
         };
 
         if (not server_ptr) {
@@ -683,9 +685,10 @@ namespace craftbuild {
                 pending_mesh_jobs.insert(chunk_pos);
             }
 
-            mesh_pool.enqueue([this, chunk_ptr, chunk_pos]() {
+            mesh_pool.enqueue([this, chunk_ptr]() {
+                auto& chunk = chunk_ptr.value();
+
                 if (running.load(std::memory_order_relaxed)) {
-                    Chunk& chunk = chunk_ptr.value();
                     Ptr<Chunk> neighbors[4] = {
                         get_chunk(chunk.chunk_pos.x + 1, chunk.chunk_pos.z),
                         get_chunk(chunk.chunk_pos.x - 1, chunk.chunk_pos.z),
@@ -693,15 +696,15 @@ namespace craftbuild {
                         get_chunk(chunk.chunk_pos.x, chunk.chunk_pos.z - 1)
                     };
 
-                    chunk.generate_mesh(chunks[chunk_pos].second, neighbors);
+                    chunk.generate_mesh(ref_mesh(chunk.chunk_pos.x, chunk.chunk_pos.z), neighbors);
 
                     std::lock_guard lock(ready_chunks_queue_mutex);
                     ready_chunks_queue.append(chunk.chunk_pos);
                 }
 
                 std::lock_guard lock(pending_jobs_mutex);
-                pending_mesh_jobs.erase(chunk_pos);
-                std::this_thread::sleep_for(2ms);
+                pending_mesh_jobs.erase(chunk.chunk_pos);
+                std::this_thread::sleep_for(4ms);
             });
         };
 
@@ -719,10 +722,10 @@ namespace craftbuild {
         }
     }
 
-    void Main::create_chunk_collision(ChunkRender& chunk_mesh, Pos3D<int32>& pos, PackedVector3Array const& collision_faces) {
-        if (not chunk_mesh.mesh_instance) return;
+    void Main::create_chunk_collision(ChunkRender& chunk_render, Pos3D<int32>& pos, PackedVector3Array const& collision_faces) {
+        if (not chunk_render.mesh_instance) return;
 
-        Ref<ArrayMesh> mesh = chunk_mesh.mesh_instance->get_mesh();
+        Ref<ArrayMesh> mesh = chunk_render.mesh_instance->get_mesh();
         if (mesh.is_null() or mesh->get_surface_count() == 0) return;
         if (collision_faces.size() == 0) return;
 
@@ -731,33 +734,33 @@ namespace craftbuild {
             return;
         }
 
-        if (not chunk_mesh.collision_body) {
-            chunk_mesh.collision_body = memnew(StaticBody3D);
-            chunk_mesh.mesh_instance->add_child(chunk_mesh.collision_body);
+        if (not chunk_render.collision_body) {
+            chunk_render.collision_body = memnew(StaticBody3D);
+            chunk_render.mesh_instance->add_child(chunk_render.collision_body);
         }
 
-        if (not chunk_mesh.collision_shape) {
-            chunk_mesh.collision_shape = memnew(CollisionShape3D);
-            chunk_mesh.collision_body->add_child(chunk_mesh.collision_shape);
+        if (not chunk_render.collision_shape) {
+            chunk_render.collision_shape = memnew(CollisionShape3D);
+            chunk_render.collision_body->add_child(chunk_render.collision_shape);
         }
 
         Ref<ConcavePolygonShape3D> concave;
         concave.instantiate();
         concave->set_faces(collision_faces);
 
-        chunk_mesh.collision_shape->set_shape(concave);
+        chunk_render.collision_shape->set_shape(concave);
     }
 
-    void Main::update_chunk_mesh(ChunkRender& chunk_mesh, Pos3D<int32>& pos, Ref<ArrayMesh> const& mesh) {
-        if (not chunk_mesh.mesh_instance) {
+    void Main::update_chunk_mesh(ChunkRender& chunk_render, Pos3D<int32>& pos, Ref<ArrayMesh> const& mesh) {
+        if (not chunk_render.mesh_instance) {
             MeshInstance3D* mi = memnew(MeshInstance3D);
             mi->set_position(Vector3(pos.x * Chunk::SIZE_X, 0, pos.z * Chunk::SIZE_Z));
             mi->set_material_override(world_material);
             add_child(mi);
-            chunk_mesh.mesh_instance = mi;
+            chunk_render.mesh_instance = mi;
         }
 
-        chunk_mesh.mesh_instance->set_mesh(mesh);
+        chunk_render.mesh_instance->set_mesh(mesh);
     }
 
     void Main::unload_distant_chunks() {
@@ -788,10 +791,11 @@ namespace craftbuild {
     }
 
     Ptr<Chunk> Main::get_chunk(int32 cx, int32 cz) {
-        std::shared_lock lock(chunks_mutex);
         Pos3D<int32> cpos(cx, 0, cz);
 
+        std::shared_lock lock(chunks_mutex);
         auto it = chunks.find(cpos);
+
         if (it == chunks.end()) return nullptr;
         return it->second.first;
     }
@@ -814,15 +818,10 @@ namespace craftbuild {
     }
 
     ChunkRender& Main::ref_mesh(int32 cx, int32 cz) {
-        std::shared_lock lock(chunks_mutex);
         Pos3D<int32> cpos(cx, 0, cz);
-        return chunks[cpos].second;
-    }
 
-    Ptr<Chunk>& Main::ref_chunk(int32 cx, int32 cz) {
-        std::shared_lock lock(chunks_mutex);
-        Pos3D<int32> cpos(cx, 0, cz);
-        return chunks[cpos].first;
+        std::unique_lock lock(chunks_mutex);
+        return chunks[cpos].second;
     }
     
     uint32 Main::get_global_block_id(int32 wx, int32 wy, int32 wz) {
@@ -841,9 +840,10 @@ namespace craftbuild {
         return chunk.value().get_block({ (uint8)lx, (uint8)wy, (uint8)lz });
     }
 
-    void Main::set_chunk(Ptr<Chunk> chunk, int32 cx, int32 cz) {
-        std::unique_lock lock(chunks_mutex);
+    void Main::set_chunk(Ptr<Chunk>& chunk, int32 cx, int32 cz) {
         Pos3D<int32> cpos(cx, 0, cz);
+
+        std::unique_lock lock(chunks_mutex);
 		chunks[cpos].first = chunk;
     }
 
