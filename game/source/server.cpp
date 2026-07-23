@@ -204,7 +204,7 @@ namespace craftbuild {
 
                 std::lock_guard lock(pending_jobs_mutex);
                 pending_terrain_jobs.erase(chunk.chunk_pos);
-                std::this_thread::sleep_for(4ms);
+                std::this_thread::sleep_for(10ms);
             });
         };
 
@@ -401,9 +401,9 @@ namespace craftbuild {
 
         {
             std::shared_lock lock(chunks_mutex);
-            for (auto& [chunk_pos, chunk] : chunks) {
+            for (auto const& [chunk_pos, _] : chunks) {
                 std::shared_lock lock(player_mutex);
-                for (auto [player_name, _] : online_players) {
+                for (auto const& [player_name, _] : online_players) {
                     auto& player_pos = players[player_name].pos;
                     int32 dx = std::abs(chunk_pos.x - (int32)std::floor(player_pos.x / Chunk::SIZE_X));
                     int32 dz = std::abs(chunk_pos.z - (int32)std::floor(player_pos.z / Chunk::SIZE_Z));
@@ -413,24 +413,21 @@ namespace craftbuild {
         }
 
         Set<Pos3D<int32>> regions_to_save;
-        List<Pos3D<int32>> pending_unloads;
 
         {
-            std::shared_lock lock(chunks_mutex);
-            for (auto const& [chunk_pos, chunk] : chunks) {
+            std::unique_lock lock(chunks_mutex);
+            for (auto it = chunks.begin(); it != chunks.end();) {
+                auto const& chunk_pos = it->first;
+
                 if (still_viewing_chunks.find(chunk_pos) == still_viewing_chunks.end()) {
                     int32 rx = (chunk_pos.x >= 0) ? (chunk_pos.x / 16) : ((chunk_pos.x - 15) / 16);
                     int32 rz = (chunk_pos.z >= 0) ? (chunk_pos.z / 16) : ((chunk_pos.z - 15) / 16);
 
                     regions_to_save.insert({ rx, 0, rz });
-                    pending_unloads.append(chunk_pos);
+                    it = chunks.erase(it);
                 }
+                else ++it;
             }
-        }
-
-        {
-            std::unique_lock lock(chunks_mutex);
-            for (auto const& pos : pending_unloads) chunks.erase(pos);
         }
 
         for (auto const& [rx, _, rz] : regions_to_save) {
@@ -702,7 +699,6 @@ namespace craftbuild {
         start_gc_thread();
         start_log_thread();
 
-        
         TagRegistry::register_tag("face");
         TagRegistry::register_tag("transparent");
         TagRegistry::register_tag("collision_size");

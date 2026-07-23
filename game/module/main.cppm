@@ -56,6 +56,9 @@ export namespace craftbuild {
         List<Pos3D<int32>> ready_chunks_queue;
         mutable std::mutex ready_chunks_queue_mutex;
 
+        std::vector<ChunkRender> meshes_to_free_queue;
+        mutable std::mutex meshes_to_free_queue_mutex;
+
         Dict<Pos3D<int32>, std::pair<Ptr<Chunk>, ChunkRender>> chunks;
         mutable std::shared_mutex chunks_mutex;
 

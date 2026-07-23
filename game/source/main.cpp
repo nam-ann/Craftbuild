@@ -300,6 +300,13 @@ namespace craftbuild {
             std::lock_guard lock(ready_chunks_queue_mutex);
             for (auto& chunk_pos : deferred_chunks) ready_chunks_queue.append(chunk_pos);
         }
+
+        std::vector<ChunkRender> meshes_to_remove;
+        {
+            std::lock_guard lock(meshes_to_free_queue_mutex);
+            meshes_to_free_queue.swap(meshes_to_remove);
+        }
+        for (auto& mesh : meshes_to_remove) mesh.clear();
     }
 
     void Main::_exit_tree() {
@@ -704,7 +711,7 @@ namespace craftbuild {
 
                 std::lock_guard lock(pending_jobs_mutex);
                 pending_mesh_jobs.erase(chunk.chunk_pos);
-                std::this_thread::sleep_for(4ms);
+                std::this_thread::sleep_for(10ms);
             });
         };
 
@@ -768,23 +775,28 @@ namespace craftbuild {
         const int32 p_cz = (int32)(player_z.load() / Chunk::SIZE_Z);
         const int32 unload_dist = render_distance + 4;
 
-        List<Pos3D<int32>> chunks_to_remove;
-        {
-            std::shared_lock lock(chunks_mutex);
-            for (auto const& [chunk_pos, chunk_ptr] : chunks) {
-                int32 dx = std::abs(chunk_pos.x - p_cx);
-                int32 dz = std::abs(chunk_pos.z - p_cz);
-                if (dx > unload_dist or dz > unload_dist) chunks_to_remove.append(chunk_pos);
-            }
-        }
-
+        std::vector<ChunkRender> meshes_to_remove;
         int32 removed = 0;
         {
             std::unique_lock lock(chunks_mutex);
-            for (auto&& chunk_pos : chunks_to_remove) {
-                chunks.erase(chunk_pos);
-                ++removed;
+            for (auto it = chunks.begin(); it != chunks.end();) {
+                auto& [chunk_pos, chunk_pair] = *it;
+
+                int32 dx = std::abs(chunk_pos.x - p_cx);
+                int32 dz = std::abs(chunk_pos.z - p_cz);
+
+                if (dx > unload_dist or dz > unload_dist) {
+                    meshes_to_remove.push_back(std::move(chunk_pair.second));
+                    it = chunks.erase(it);
+                    ++removed;
+                }
+                else ++it;
             }
+        }
+
+        {
+            std::lock_guard lock(meshes_to_free_queue_mutex);
+            meshes_to_free_queue.swap(meshes_to_remove);
         }
 
         if (removed) log<LogType::VERBOSE>(format{} << "Queued unload for " << removed << " chunks");
