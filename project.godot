@@ -46,3 +46,4 @@ view_history={
 [rendering]
 
 rendering_device/driver.windows="d3d12"
+textures/default_filters/texture_mipmap_bias=-2.0

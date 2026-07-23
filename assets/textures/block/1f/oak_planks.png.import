@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cyq3hk858xrck"
-path="res://.godot/imported/diamond_ore.png-cf1c217d434ce7c87180b84b35a83f22.ctex"
+uid="uid://coaa2ca3qhh03"
+path="res://.godot/imported/oak_planks.png-bc3f808f4fc677ef012e49b931a49883.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/block/1 face/diamond_ore.png"
-dest_files=["res://.godot/imported/diamond_ore.png-cf1c217d434ce7c87180b84b35a83f22.ctex"]
+source_file="res://assets/textures/block/1f/oak_planks.png"
+dest_files=["res://.godot/imported/oak_planks.png-bc3f808f4fc677ef012e49b931a49883.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

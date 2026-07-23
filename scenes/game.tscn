@@ -6,20 +6,21 @@
 [ext_resource type="Script" uid="uid://cxmuhw4grh6rf" path="res://assets/scripts/SettingBtn.gd" id="4_gee14"]
 [ext_resource type="Script" uid="uid://c0ceo8cbu6ogd" path="res://assets/scripts/main/LeaveBtn.gd" id="5_0tnpc"]
 [ext_resource type="Texture2D" uid="uid://c1bmb8ftneuq8" path="res://assets/crosshair.png" id="6_p57ef"]
+[ext_resource type="Script" uid="uid://dd5j3xi5xp6gc" path="res://assets/scripts/main/FPSLabel.gd" id="7_u5sy4"]
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_p57ef"]
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_u5sy4"]
 radius = 0.3
 height = 1.8
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_u5sy4"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gee14"]
 transparency = 4
 albedo_texture = ExtResource("2_p57ef")
 albedo_texture_force_srgb = true
 
-[sub_resource type="BoxMesh" id="BoxMesh_gee14"]
+[sub_resource type="BoxMesh" id="BoxMesh_0tnpc"]
 size = Vector3(0.6, 2, 0.3)
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_0tnpc"]
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_vtaks"]
 sky_top_color = Color(0, 0.85, 0.9, 1)
 sky_horizon_color = Color(0.45, 1, 1, 1)
 sky_curve = 0.18
@@ -31,14 +32,14 @@ ground_energy_multiplier = 0.18
 sun_angle_max = 14.0
 sun_curve = 0.08
 
-[sub_resource type="Sky" id="Sky_vtaks"]
-sky_material = SubResource("ProceduralSkyMaterial_0tnpc")
+[sub_resource type="Sky" id="Sky_kvpfn"]
+sky_material = SubResource("ProceduralSkyMaterial_vtaks")
 process_mode = 3
 
-[sub_resource type="Environment" id="Environment_kvpfn"]
+[sub_resource type="Environment" id="Environment_dinhu"]
 background_mode = 2
 background_energy_multiplier = 0.7
-sky = SubResource("Sky_vtaks")
+sky = SubResource("Sky_kvpfn")
 ambient_light_source = 3
 ambient_light_energy = 0.25
 reflected_light_source = 2
@@ -54,7 +55,7 @@ velocity = Vector3(0, 0, 5)
 
 [node name="Shape" type="CollisionShape3D" parent="Player" unique_id=1808141800]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-shape = SubResource("CapsuleShape3D_p57ef")
+shape = SubResource("CapsuleShape3D_u5sy4")
 
 [node name="Camera" type="Camera3D" parent="Player" unique_id=282328567]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
@@ -62,8 +63,8 @@ current = true
 
 [node name="Mesh" type="MeshInstance3D" parent="Player" unique_id=1273041936]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-material_override = SubResource("StandardMaterial3D_u5sy4")
-mesh = SubResource("BoxMesh_gee14")
+material_override = SubResource("StandardMaterial3D_gee14")
+mesh = SubResource("BoxMesh_0tnpc")
 
 [node name="ResumeBtn" type="Button" parent="." unique_id=1180982376]
 anchors_preset = 4
@@ -104,7 +105,55 @@ theme_override_font_sizes/font_size = 20
 text = "Leave"
 script = ExtResource("5_0tnpc")
 
-[node name="Panel" type="Panel" parent="." unique_id=688092735]
+[node name="Hotbar 1" type="Panel" parent="." unique_id=1949350471]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -256.0
+offset_top = -53.0
+offset_right = -200.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Hotbar 2" type="Panel" parent="." unique_id=277570956]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -199.0
+offset_top = -53.0
+offset_right = -143.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Hotbar 3" type="Panel" parent="." unique_id=630171825]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -142.0
+offset_top = -53.0
+offset_right = -86.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Hotbar 4" type="Panel" parent="." unique_id=928194727]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -85.0
+offset_top = -53.0
+offset_right = -29.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Hotbar 5" type="Panel" parent="." unique_id=688092735]
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
@@ -116,8 +165,56 @@ offset_right = 28.0
 grow_horizontal = 2
 grow_vertical = 0
 
+[node name="Hotbar 6" type="Panel" parent="." unique_id=1203408408]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 29.0
+offset_top = -53.0
+offset_right = 85.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Hotbar 7" type="Panel" parent="." unique_id=355869334]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 86.0
+offset_top = -53.0
+offset_right = 142.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Hotbar 8" type="Panel" parent="." unique_id=8877973]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 144.0
+offset_top = -53.0
+offset_right = 200.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Hotbar 9" type="Panel" parent="." unique_id=1369195220]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 201.0
+offset_top = -53.0
+offset_right = 257.0
+grow_horizontal = 2
+grow_vertical = 0
+
 [node name="Sun" type="Sun" parent="." unique_id=954182571]
-transform = Transform3D(0.73168886, 0.48862848, -0.47526148, 0, 0.6972336, 0.7168438, 0.6816388, -0.5245065, 0.5101581, 0, 0, 0)
+transform = Transform3D(0.73168886, 0.472194, -0.4915934, 0, 0.7211934, 0.6927335, 0.6816388, -0.5068654, 0.52768916, 0, 0, 0)
 light_color = Color(1, 0.93, 0.78, 1)
 light_energy = 1.2
 light_indirect_energy = 0.55
@@ -125,7 +222,7 @@ shadow_enabled = true
 directional_shadow_max_distance = 512.0
 
 [node name="CraftSky" type="CraftSky" parent="." unique_id=117233425]
-environment = SubResource("Environment_kvpfn")
+environment = SubResource("Environment_dinhu")
 
 [node name="Crosshair" type="TextureRect" parent="." unique_id=171843478]
 anchors_preset = 8
@@ -141,17 +238,6 @@ grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("6_p57ef")
 
-[node name="ChatBox" type="TextEdit" parent="." unique_id=44354687]
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 2.0
-offset_top = -32.0
-offset_right = 509.0
-offset_bottom = -2.0
-grow_vertical = 0
-theme_override_font_sizes/font_size = 20
-
 [node name="Output" type="Label" parent="." unique_id=1998115197]
 anchors_preset = 2
 anchor_top = 1.0
@@ -163,3 +249,21 @@ offset_bottom = -32.0
 grow_vertical = 0
 theme_override_font_sizes/font_size = 20
 vertical_alignment = 2
+
+[node name="FPS" type="Label" parent="." unique_id=213134099]
+offset_right = 156.0
+offset_bottom = 23.0
+theme_override_font_sizes/font_size = 20
+text = "0 FPS"
+script = ExtResource("7_u5sy4")
+
+[node name="ChatBox" type="TextEdit" parent="." unique_id=1400547662]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = -32.0
+offset_right = 509.0
+offset_bottom = -2.0
+grow_vertical = 0
+theme_override_font_sizes/font_size = 20

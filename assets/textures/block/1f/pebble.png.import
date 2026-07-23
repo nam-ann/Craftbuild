@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://djjds8e0r5dl3"
-path="res://.godot/imported/pebble.png-c6ded653e452fcdb5f5e3fe82c95aa42.ctex"
+uid="uid://dm0ejtpyca681"
+path="res://.godot/imported/pebble.png-4469e586fd92f15e7cb16a51d7e00d15.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/block/1 face/pebble.png"
-dest_files=["res://.godot/imported/pebble.png-c6ded653e452fcdb5f5e3fe82c95aa42.ctex"]
+source_file="res://assets/textures/block/1f/pebble.png"
+dest_files=["res://.godot/imported/pebble.png-4469e586fd92f15e7cb16a51d7e00d15.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

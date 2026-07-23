@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dkix46o7hph7f"
-path="res://.godot/imported/diamond_block.png-f97de5502745c6d222b13f651d3cd3c8.ctex"
+uid="uid://bxehudqbu4bol"
+path="res://.godot/imported/diamond_ore.png-25feda8e4905eb20743a87cdb537e91e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/block/1 face/diamond_block.png"
-dest_files=["res://.godot/imported/diamond_block.png-f97de5502745c6d222b13f651d3cd3c8.ctex"]
+source_file="res://assets/textures/block/1f/diamond_ore.png"
+dest_files=["res://.godot/imported/diamond_ore.png-25feda8e4905eb20743a87cdb537e91e.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

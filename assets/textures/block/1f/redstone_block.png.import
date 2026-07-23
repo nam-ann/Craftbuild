@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c61xn5snxwl0t"
-path="res://.godot/imported/oak_planks.png-74cff260fc0e2d54a18dacec74cebf1a.ctex"
+uid="uid://cgx4lo4whupjv"
+path="res://.godot/imported/redstone_block.png-8c85922b4bb76b712bfcf35a2982510d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/block/1 face/oak_planks.png"
-dest_files=["res://.godot/imported/oak_planks.png-74cff260fc0e2d54a18dacec74cebf1a.ctex"]
+source_file="res://assets/textures/block/1f/redstone_block.png"
+dest_files=["res://.godot/imported/redstone_block.png-8c85922b4bb76b712bfcf35a2982510d.ctex"]
 
 [params]
 

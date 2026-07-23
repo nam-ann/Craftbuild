@@ -13,9 +13,10 @@ var current_history = 0
 func _ready() -> void:
 	chat_output.connect(_on_chat_output)
 	chat_box.visible = false
-	init()
+	singleplayer()
 	set_seed_and_world_name(Global.world_seed, Global.world_name)
 	set_render_distance(int(Global.render_distance))
+	init()
 
 func _input(_event):
 	if Input.is_action_just_pressed("enter"):
