@@ -122,7 +122,7 @@ export namespace craftbuild {
 			auto* cache = __value__;
 
 			__value__ = other.__value__;
-			other.__value__ = __value__;
+			other.__value__ = cache;
 		}
 
 		inline Obj<T>* object() const noexcept { return __value__; }
