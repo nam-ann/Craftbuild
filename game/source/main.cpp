@@ -337,7 +337,7 @@ namespace craftbuild {
         Ref<ShaderMaterial> mat;
         mat.instantiate();
 
-        String shader_path = "res://assets/shaders/visual.cbshader";
+        String shader_path = "res://assets/shaders/visual.glsl";
 
         Ref<Shader> shader;
         shader.instantiate();
