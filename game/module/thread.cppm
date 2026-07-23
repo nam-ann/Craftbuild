@@ -1,10 +1,10 @@
 module;
 
-#include <thread>
 #include <includes.hpp>
 #include <mutex>
-#include <functional>
 #include <queue>
+#include <thread>
+#include <functional>
 
 export module game.thread;
 
@@ -17,17 +17,8 @@ export namespace craftbuild {
 		inline static std::unordered_map<std::thread::id, Str> threads;
 		inline static std::mutex threads_mutex;
 
-		static void register_thread(Str const& thread_name) {
-			std::lock_guard lock(threads_mutex);
-			threads[std::this_thread::get_id()] = thread_name;
-		}
-
-		static Str get_name(std::thread::id const& thread_id) {
-			std::lock_guard lock(threads_mutex);
-			auto it = threads.find(thread_id);
-			if (it == threads.end()) return "Main";
-			return it->second;
-		}
+        static void register_thread(Str const& thread_name);
+        static Str get_name(std::thread::id const& thread_id);
 	};
 
     class ThreadPool {
@@ -39,35 +30,8 @@ export namespace craftbuild {
         bool stop;
 
     public:
-        ThreadPool(size_t n) : stop(false) {
-            for (size_t i = 0; i < n; ++i) {
-                workers.emplace_back([this]() {
-                    while (true) {
-                        std::function<void()> task;
-                        {
-                            std::unique_lock<std::mutex> lock(mutex);
-                            cv.wait(lock, [this] { return stop or not tasks.empty(); });
-
-                            if (stop and tasks.empty()) return;
-
-                            task.swap(tasks.front());
-                            tasks.pop();
-                        }
-                        task();
-                    }
-                });
-            }
-        }
-
-        ~ThreadPool() {
-            {
-                std::lock_guard<std::mutex> lock(mutex);
-                stop = true;
-            }
-            cv.notify_all();
-
-            for (auto& w : workers) w.join();
-        }
+        ThreadPool(size_t n);
+        ~ThreadPool();
 
         template<class F>
         void enqueue(F&& f) {

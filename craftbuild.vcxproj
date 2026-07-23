@@ -163,10 +163,12 @@
     <ClCompile Include="game\module\network.cppm" />
     <ClCompile Include="game\module\player\player_data.cppm" />
     <ClCompile Include="game\source\environment.cpp" />
+    <ClCompile Include="game\source\network.cpp" />
     <ClCompile Include="game\source\player\skin_manager.cpp" />
     <ClCompile Include="game\source\server.cpp" />
     <ClCompile Include="game\module\server.cppm" />
     <ClCompile Include="game\module\world\cave.cppm" />
+    <ClCompile Include="game\source\thread.cpp" />
     <ClCompile Include="misc\gc.cppm" />
     <ClCompile Include="misc\list.cppm" />
     <ClCompile Include="misc\pos.cppm" />

@@ -158,5 +158,11 @@
     <ClCompile Include="game\source\block\restone.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="game\source\network.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game\source\thread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
