@@ -1,11 +1,6 @@
-module;
-
-#include <includes.hpp>
-
-#include <algorithm>
-#include <random>
-
 export module game.world.terrain;
+
+import std;
 
 import misc.ptr;
 import misc.number;

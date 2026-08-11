@@ -1,18 +1,13 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/fast_noise_lite.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
-#pragma warning(pop)
-
-#include <includes.hpp>
-#include <mutex>
-#include <cmath>
-#include <algorithm>
-#include <shared_mutex>
-#include <unordered_set>
+DO_WARNING
 
 module game.world.chunk;
 
@@ -279,8 +274,8 @@ namespace craftbuild {
 
         {
             std::unique_lock lock(data_mutex);
-            memcpy(blocks, new_blocks.get(), sizeof(BlockStorage) * Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z);
-            memcpy(block_ids, new_block_ids, sizeof(uint32) * 256);
+            std::memcpy(blocks, new_blocks.get(), sizeof(BlockStorage) * Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z);
+            std::memcpy(block_ids, new_block_ids, sizeof(uint32) * 256);
 
             block_ids_size = new_block_ids_size;
             id2block.swap(new_id2block);

@@ -1,16 +1,10 @@
-module;
-
-#include <includes.hpp>
-#include <atomic>
-#include <concepts>
-#include <unordered_set>
-
 export module misc.ptr;
+
+import std;
 
 import misc.gc;
 import misc.number;
 import misc.format;
-import game.logger;
 
 export namespace craftbuild {
 	template <typename T>

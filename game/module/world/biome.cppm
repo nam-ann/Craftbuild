@@ -1,7 +1,3 @@
-module;
-
-#include <includes.hpp>
-
 export module game.world.biome;
 
 import misc.str;

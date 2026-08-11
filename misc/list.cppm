@@ -1,19 +1,6 @@
-module;
-
-#include <limits>
-#include <iostream>
-#include <utility>
-#include <cstring>
-#include <compare>
-#include <ratio>
-#include <cstddef>
-#include <charconv>
-#include <memory>
-#include <stdexcept>
-#include <initializer_list>
-#include <concepts>
-
 export module misc.list;
+
+import std;
 
 import misc.str;
 import misc.range;
@@ -47,8 +34,8 @@ export namespace craftbuild {
 
     public:
         List() noexcept {}
-        List(std::initializer_list<T> const& l) : __value__(new T[l.size()]), __space__(l.size()), __len__(l.size()) { memcpy(__value__, l.data(), __len__ * sizeof(T)); }
-        List(List const& s) : __value__(new T[s.__len__]), __len__(s.__len__), __space__(s.__len__) { memcpy(__value__, s.__value__, __len__ * sizeof(T)); }
+        List(std::initializer_list<T> const& l) : __value__(new T[l.size()]), __space__(l.size()), __len__(l.size()) { std::memcpy(__value__, l.data(), __len__ * sizeof(T)); }
+        List(List const& s) : __value__(new T[s.__len__]), __len__(s.__len__), __space__(s.__len__) { std::memcpy(__value__, s.__value__, __len__ * sizeof(T)); }
         List(List&& s) noexcept : __value__(nullptr), __len__(0), __space__(0) {
             std::swap(__value__, s.__value__);
             std::swap(__len__, s.__len__);
@@ -64,7 +51,7 @@ export namespace craftbuild {
             if (this == &s) return *this;
             clear();
             __value__ = new T[s.__len__];
-            memcpy(__value__, s.__value__, s.__len__ * sizeof(T));
+            std::memcpy(__value__, s.__value__, s.__len__ * sizeof(T));
             __len__ = __space__ = s.__len__;
             return *this;
         }
@@ -79,7 +66,7 @@ export namespace craftbuild {
 
         List& operator+=(std::initializer_list<T> const& l) {
             expect(l.size());
-            memcpy(&__value__[__len__], l.data(), l.size() * sizeof(T));
+            std::memcpy(&__value__[__len__], l.data(), l.size() * sizeof(T));
             __len__ += l.size();
             return *this;
         }
@@ -91,14 +78,14 @@ export namespace craftbuild {
         List& operator+=(List const& s) {
             if (this == &s) return *this += List(s);
             expect(s.__len__);
-            memcpy(&__value__[__len__], s.__value__, s.__len__ * sizeof(T));
+            std::memcpy(&__value__[__len__], s.__value__, s.__len__ * sizeof(T));
             __len__ += s.__len__;
             return *this;
         }
         List& operator+=(List&& s) noexcept {
             if (this == &s) return *this;
             expect(s.__len__);
-            memcpy(&__value__[__len__], s.__value__, s.__len__ * sizeof(T));
+            std::memcpy(&__value__[__len__], s.__value__, s.__len__ * sizeof(T));
             __len__ += s.__len__;
             s.clear();
             return *this;
@@ -112,7 +99,7 @@ export namespace craftbuild {
             const List original(*this);
             expect(__len__ * (n - 1));
             for (auto i : range<usize>(n - 1)) {
-                memcpy(&__value__[__len__], original.__value__, original.__len__ * sizeof(T));
+                std::memcpy(&__value__[__len__], original.__value__, original.__len__ * sizeof(T));
                 __len__ += original.__len__;
             }
             return *this;
@@ -169,7 +156,7 @@ export namespace craftbuild {
 
             T* cache = new T[extra];
             if (__value__) {
-                memcpy(cache, __value__, __len__ * sizeof(T));
+                std::memcpy(cache, __value__, __len__ * sizeof(T));
                 delete[] __value__;
             }
 

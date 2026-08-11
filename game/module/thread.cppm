@@ -1,12 +1,6 @@
-module;
-
-#include <includes.hpp>
-#include <mutex>
-#include <queue>
-#include <thread>
-#include <functional>
-
 export module game.thread;
+
+import std;
 
 import misc.str;
 import misc.dict;

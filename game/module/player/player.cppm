@@ -1,17 +1,18 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <godot_cpp/classes/camera3d.hpp>
 #include <godot_cpp/classes/input_event.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
 #include <godot_cpp/classes/character_body3d.hpp>
-#pragma warning(pop)
-
-#include <includes.hpp>
-#include <shared_mutex>
+DO_WARNING
 
 export module game.player;
+
+import std;
 
 import misc.pos;
 import misc.ptr;

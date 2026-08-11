@@ -1,8 +1,3 @@
-module;
-
-#include <includes.hpp>
-#include <unordered_map>
-
 module game.world.cave;
 
 namespace craftbuild {

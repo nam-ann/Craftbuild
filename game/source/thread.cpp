@@ -1,11 +1,3 @@
-module;
-
-#include <includes.hpp>
-#include <mutex>
-#include <queue>
-#include <thread>
-#include <functional>
-
 module game.thread;
 
 namespace craftbuild {

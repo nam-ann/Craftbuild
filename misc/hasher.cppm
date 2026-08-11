@@ -1,11 +1,6 @@
-module;
-
-#include <includes.hpp>
-#include <xhash>
-#include <utility>
-
 export module misc.hasher;
 
+import std;
 import misc.number;
 
 export namespace craftbuild {

@@ -1,31 +1,17 @@
-module;
-
-#include <limits>
-#include <string>
-#include <vector>
-#include <iostream>
-#include <utility>
-#include <cstring>
-#include <format>
-#include <compare>
-#include <ratio>
-#include <cstddef>
-#include <charconv>
-#include <memory>
-#include <stdexcept>
-
 export module misc.str;
+
+import std;
 
 import misc.range;
 import misc.number;
 import misc.hasher;
 
 inline std::u32string ptr_to_hex(void const* ptr) noexcept {
-    uintptr_t value = (uintptr_t)ptr;
+    std::uintptr_t value = (std::uintptr_t)ptr;
 
     if (value == 0) return U"0x0";
 
-    byte32 buffer[2 + sizeof(uintptr_t) * 2 + 1]; // "0x" + hex + null
+    byte32 buffer[2 + sizeof(std::uintptr_t) * 2 + 1]; // "0x" + hex + null
     int32 i = sizeof(buffer) - 1;
     buffer[i--] = U'\0';
 
@@ -50,7 +36,7 @@ inline std::u32string to_u32(std::string const& s) {
         uint32 cp = 0;
         unsigned char c = s[i];
 
-        if (c < 0x80) { // 1 byte
+        if (c < 0x80) { // 1 char
             cp = c;
             i += 1;
         }
@@ -89,22 +75,22 @@ inline void append_utf8(std::string& out, uint32 cp) {
     }
 
     if (cp <= 0x7F) {
-        out.push_back(static_cast<byte>(cp));
+        out.push_back(static_cast<char>(cp));
     }
     else if (cp <= 0x7FF) {
-        out.push_back(static_cast<byte>(0xC0 | (cp >> 6)));
-        out.push_back(static_cast<byte>(0x80 | (cp & 0x3F)));
+        out.push_back(static_cast<char>(0xC0 | (cp >> 6)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
     }
     else if (cp <= 0xFFFF) {
-        out.push_back(static_cast<byte>(0xE0 | (cp >> 12)));
-        out.push_back(static_cast<byte>(0x80 | ((cp >> 6) & 0x3F)));
-        out.push_back(static_cast<byte>(0x80 | (cp & 0x3F)));
+        out.push_back(static_cast<char>(0xE0 | (cp >> 12)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
     }
     else {
-        out.push_back(static_cast<byte>(0xF0 | (cp >> 18)));
-        out.push_back(static_cast<byte>(0x80 | ((cp >> 12) & 0x3F)));
-        out.push_back(static_cast<byte>(0x80 | ((cp >> 6) & 0x3F)));
-        out.push_back(static_cast<byte>(0x80 | (cp & 0x3F)));
+        out.push_back(static_cast<char>(0xF0 | (cp >> 18)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
     }
 }
 
@@ -131,9 +117,9 @@ export namespace craftbuild {
             }
         };
 
-        void append(uint8 byte) {
+        void append(uint8 b) {
             if (__len__ >= __space__) expect(__len__);
-            __value__[__len__++] = byte;
+            __value__[__len__++] = b;
         }
 
         // ENCODE: codepoint -> UEF-8
@@ -155,7 +141,7 @@ export namespace craftbuild {
             for (auto i : range<int32>(n - 1, 0)) {
                 append(chunks[i] | 0x80); // continuation
             }
-            append(chunks[0]); // last byte
+            append(chunks[0]); // last char
         }
 
         // encode UTF-32 string
@@ -171,10 +157,10 @@ export namespace craftbuild {
             uint32 result = 0;
 
             while (i < __len__) {
-                uint8 byte = __value__[i++];
-                result = (result << 7) | (byte & 0x7F);
+                uint8 b = __value__[i++];
+                result = (result << 7) | (b & 0x7F);
 
-                if ((byte & 0x80) == 0) break;
+                if ((b & 0x80) == 0) break;
             }
 
             return result;
@@ -192,7 +178,7 @@ export namespace craftbuild {
         Str(char const* s) { encode(to_u32(s)); }
         Str(std::u32string const& s) { encode(s); }
         Str(std::string const& s) { encode(to_u32(s)); }
-        Str(Str const& s) : __value__(new uint8[s.__len__]), __len__(s.__len__), __space__(s.__len__) { memcpy(__value__, s.__value__, __len__); }
+        Str(Str const& s) : __value__(new uint8[s.__len__]), __len__(s.__len__), __space__(s.__len__) { std::memcpy(__value__, s.__value__, __len__); }
         Str(Str&& s) noexcept : __value__(s.__value__), __len__(s.__len__), __space__(s.__space__) {
             s.__value__ = nullptr;
             s.__len__ = s.__space__ = 0;
@@ -212,7 +198,7 @@ export namespace craftbuild {
             if (this == &s) return *this;
             clear();
             __value__ = new uint8[s.__len__];
-            memcpy(__value__, s.__value__, s.__len__);
+            std::memcpy(__value__, s.__value__, s.__len__);
             __len__ = __space__ = s.__len__;
             return *this;
         }
@@ -235,14 +221,14 @@ export namespace craftbuild {
         Str& operator+=(std::string const& s) { encode(to_u32(s)); return *this; }
         Str& operator+=(Str const& s) {
             expect(s.__len__);
-            memcpy(&__value__[__len__], s.__value__, s.__len__);
+            std::memcpy(&__value__[__len__], s.__value__, s.__len__);
             __len__ += s.__len__;
             return *this;
         }
         Str& operator+=(Str&& s) noexcept {
             if (this == &s) return *this;
             expect(s.__len__);
-            memcpy(&__value__[__len__], s.__value__, s.__len__);
+            std::memcpy(&__value__[__len__], s.__value__, s.__len__);
             __len__ += s.__len__;
             s.clear();
             return *this;
@@ -256,7 +242,7 @@ export namespace craftbuild {
             Str original(*this);
             expect(__len__ * (n - 1));
             for (auto i : range<usize>(n - 1)) {
-                memcpy(&__value__[__len__], original.__value__, original.__len__);
+                std::memcpy(&__value__[__len__], original.__value__, original.__len__);
                 __len__ += original.__len__;
             }
             return *this;
@@ -277,7 +263,7 @@ export namespace craftbuild {
         operator bool() const { return *this != U""; }
 
         bool operator==(Str const& s) const {
-            return __len__ == s.__len__ and memcmp(__value__, s.__value__, __len__) == 0;
+            return __len__ == s.__len__ and std::memcmp(__value__, s.__value__, __len__) == 0;
         }
 
         // FULL DECODE -> UTF-8 string
@@ -310,7 +296,7 @@ export namespace craftbuild {
 
             uint8* cache = new uint8[extra];
             if (__value__) {
-                memcpy(cache, __value__, __len__);
+                std::memcpy(cache, __value__, __len__);
                 delete[] __value__;
             }
 

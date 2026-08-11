@@ -1,10 +1,6 @@
-module;
-
-#include <includes.hpp>
-#include <ctime>
-#include <string>
-
 export module misc.format;
+
+import std;
 
 import misc.str;
 import misc.list;
@@ -44,7 +40,7 @@ export namespace craftbuild {
 			f.__buffer__ += (std::string)s;
 			return std::move(f);
 		}
-		friend format&& operator<<(format&& f, byte const* s) {
+		friend format&& operator<<(format&& f, char const* s) {
 			f.__buffer__ += s;
 			return std::move(f);
 		}

@@ -1,8 +1,6 @@
-module;
-
-#include <includes.hpp>
-
 export module game.world.cave;
+
+import std;
 
 import misc.str;
 import misc.dict;

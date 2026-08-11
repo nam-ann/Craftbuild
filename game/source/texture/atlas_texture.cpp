@@ -1,11 +1,11 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/classes/texture2d_array.hpp>
-#pragma warning(pop)
-
-#include <includes.hpp>
+DO_WARNING
 
 module game.texture.atlas_texture;
 

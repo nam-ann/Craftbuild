@@ -1,8 +1,8 @@
-#pragma warning(push, 0)
-#include <godot_cpp/classes/engine.hpp>
-#pragma warning(pop)
+#include <defs.hpp>
 
-#include <includes.hpp>
+NO_WARNING
+#include <godot_cpp/classes/engine.hpp>
+DO_WARNING
 
 import misc.pos;
 import misc.number;

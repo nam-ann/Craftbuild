@@ -1,21 +1,19 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/static_body3d.hpp>
 #include <godot_cpp/classes/fast_noise_lite.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/collision_shape3d.hpp>
 #include <godot_cpp/classes/multi_mesh_instance3d.hpp>
-#pragma warning(pop)
-
-#include <includes.hpp>
-#include <mutex>
-#include <algorithm>
-#include <shared_mutex>
-#include <unordered_set>
+DO_WARNING
 
 export module game.world.chunk;
+
+import std;
 
 import misc.gc;
 import misc.ptr;

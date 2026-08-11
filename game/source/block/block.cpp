@@ -1,13 +1,12 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <godot_cpp/variant/vector2.hpp>
 #include <godot_cpp/variant/vector3.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
-#pragma warning(pop)
-
-#include <includes.hpp>
-#include <functional>
+DO_WARNING
 
 module game.block;
 

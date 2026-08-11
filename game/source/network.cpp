@@ -1,17 +1,15 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
 
 #pragma comment(lib, "ws2_32.lib")
 #undef ERROR
-#pragma warning(pop)
-
-#include <includes.hpp>
-#include <mutex>
-#include <cstring>
+DO_WARNING
 
 module game.network;
 

@@ -1,6 +1,8 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <godot_cpp/classes/mesh.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/classes/packed_scene.hpp>
@@ -8,11 +10,11 @@ module;
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 #include <godot_cpp/variant/vector3.hpp>
-#pragma warning(pop)
-
-#include <includes.hpp>
+DO_WARNING
 
 export module game.block;
+
+import std;
 
 import misc.ptr;
 import misc.str;

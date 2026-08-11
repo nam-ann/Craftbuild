@@ -1,8 +1,6 @@
-module;
-
-#include <includes.hpp>
-
 export module game.block.normal_blocks;
+
+import std;
 
 import misc.str;
 import misc.number;

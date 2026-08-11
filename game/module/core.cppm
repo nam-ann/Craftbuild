@@ -1,20 +1,22 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/classes/wrapped.hpp>
-#pragma warning(pop)
+DO_WARNING
 
-#include <includes.hpp>
-#include <concepts>
 #define VERSION "26.8"
 
 export module game.core;
 
-using namespace godot;
+import std;
 
 import misc.pos;
 import misc.number;
+
+using namespace godot;
 
 export namespace craftbuild {
     inline constexpr char const* version = VERSION;

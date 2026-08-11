@@ -1,6 +1,8 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
@@ -29,23 +31,10 @@ module;
 #include <godot_cpp/classes/multi_mesh_instance3d.hpp>
 #include <godot_cpp/classes/concave_polygon_shape3d.hpp>
 #include <godot_cpp/variant/node_path.hpp>
-#pragma warning(pop)
-
-#include <includes.hpp>
-#include <cmath>
-#include <thread>
-#include <chrono>
-#include <random>
-#include <string>
-#include <iomanip>
-#include <cstring>
-#include <fstream>
-#include <filesystem>
-#include <shared_mutex>
+DO_WARNING
 
 module game.main;
 
-using byte = char;
 import game.player;
 import game.command;
 
@@ -166,12 +155,9 @@ namespace craftbuild {
                 auto& player_data = server_ptr.value().players[player_name];
 
                 player->hp = player_data.hp;
-                memcpy(&player->hotbar, &player_data.hotbar, sizeof(uint32) * PlayerData::HOTBAR_SIZE);
+                std::memcpy(&player->hotbar, &player_data.hotbar, sizeof(uint32) * PlayerData::HOTBAR_SIZE);
             }
         }
-
-        constexpr int32 max_updates = 8;
-        int32 updates_this_frame = 0;
 
         List<Pos3D<int32>> chunks_to_upload;
         {
@@ -180,120 +166,122 @@ namespace craftbuild {
         }
 
         List<Pos3D<int32>> deferred_chunks;
-        for (auto& chunk_pos : chunks_to_upload) {
-            if (updates_this_frame >= max_updates) {
-                deferred_chunks.append(chunk_pos);
-                continue;
-            }
+        {
+            PackedVector3Array vertices;
+            PackedVector3Array normals;
+            PackedInt32Array indices;
+            PackedVector2Array uvs;
+            PackedVector2Array uvs_layer;
+            PackedVector3Array collision_faces;
 
-            auto& chunk_render = ref_mesh(chunk_pos.x, chunk_pos.z);
-               
-            Ptr<MeshData> data_ptr = nullptr;
-            {
-                std::lock_guard lock(chunk_render.mesh_mutex);
-                if (chunk_render.pending_mesh_data) data_ptr.swap(chunk_render.pending_mesh_data);
-            }
+            constexpr int32 max_updates = 8;
+            int32 updates_this_frame = 0;
 
-            if (not data_ptr) continue;
-            auto& data = data_ptr.value();
+            for (auto& chunk_pos : chunks_to_upload) {
+                if (updates_this_frame >= max_updates) {
+                    deferred_chunks.append(chunk_pos);
+                    continue;
+                }
 
-            Ref<ArrayMesh> mesh;
-            mesh.instantiate();
+                auto& chunk_render = ref_mesh(chunk_pos.x, chunk_pos.z);
 
-            if (len(data.vertices) != 0) {
-                Array arrays;
-                arrays.resize(Mesh::ARRAY_MAX);
+                Ptr<MeshData> data_ptr = nullptr;
+                {
+                    std::lock_guard lock(chunk_render.mesh_mutex);
+                    if (chunk_render.pending_mesh_data) data_ptr.swap(chunk_render.pending_mesh_data);
+                }
 
-                PackedVector3Array vertices;
-                vertices.resize(len(data.vertices));
-                memcpy(vertices.ptrw(), data.vertices.c_ptr(), len(data.vertices) * sizeof(Pos3D<float32>));
+                if (not data_ptr) continue;
+                auto& data = data_ptr.value();
 
-                PackedVector3Array normals;
-                normals.resize(len(data.normals));
-                memcpy(normals.ptrw(), data.normals.c_ptr(), len(data.normals) * sizeof(Pos3D<float32>));
+                if (data.vertices) {
+                    vertices.resize(len(data.vertices));
+                    normals.resize(len(data.normals));
+                    indices.resize(len(data.indices));
+                    uvs.resize(len(data.uvs));
+                    uvs_layer.resize(len(data.uvs_layer));
+                    collision_faces.resize(len(data.collision_faces));
 
-                PackedInt32Array indices;
-                indices.resize(len(data.indices));
-                memcpy(indices.ptrw(), data.indices.c_ptr(), len(data.indices) * sizeof(int32));
+                    std::memcpy(vertices.ptrw(), data.vertices.c_ptr(), len(data.vertices) * sizeof(Pos3D<float32>));
+                    std::memcpy(normals.ptrw(), data.normals.c_ptr(), len(data.normals) * sizeof(Pos3D<float32>));
+                    std::memcpy(indices.ptrw(), data.indices.c_ptr(), len(data.indices) * sizeof(int32));
+                    std::memcpy(uvs.ptrw(), data.uvs.c_ptr(), len(data.uvs) * sizeof(Pos2D<float32>));
+                    std::memcpy(uvs_layer.ptrw(), data.uvs_layer.c_ptr(), len(data.uvs_layer) * sizeof(Pos2D<float32>));
+                    std::memcpy(collision_faces.ptrw(), data.collision_faces.c_ptr(), len(data.collision_faces) * sizeof(Pos3D<float32>));
 
-                PackedVector2Array uvs;
-                uvs.resize(len(data.uvs));
-                memcpy(uvs.ptrw(), data.uvs.c_ptr(), len(data.uvs) * sizeof(Vector2));
+                    Array arrays;
+                    arrays.resize(Mesh::ARRAY_MAX);
 
-                PackedVector2Array uvs_layer;
-                uvs_layer.resize(len(data.uvs_layer));
-                memcpy(uvs_layer.ptrw(), data.uvs_layer.c_ptr(), len(data.uvs_layer) * sizeof(Vector2));
+                    arrays[Mesh::ARRAY_VERTEX] = vertices;
+                    arrays[Mesh::ARRAY_NORMAL] = normals;
+                    arrays[Mesh::ARRAY_INDEX] = indices;
+                    arrays[Mesh::ARRAY_TEX_UV] = uvs;
+                    arrays[Mesh::ARRAY_TEX_UV2] = uvs_layer;
 
-                PackedVector3Array collision_faces;
-                collision_faces.resize(len(data.collision_faces));
-                memcpy(collision_faces.ptrw(), data.collision_faces.c_ptr(), len(data.collision_faces) * sizeof(Pos3D<float32>));
+                    Ref<ArrayMesh> mesh;
+                    mesh.instantiate();
 
-                arrays[Mesh::ARRAY_VERTEX] = vertices;
-                arrays[Mesh::ARRAY_NORMAL] = normals;
-                arrays[Mesh::ARRAY_INDEX] = indices;
-                arrays[Mesh::ARRAY_TEX_UV] = uvs;
-                arrays[Mesh::ARRAY_TEX_UV2] = uvs_layer;
+                    mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
+                    update_chunk_mesh(chunk_render, chunk_pos, mesh);
+                    create_chunk_collision(chunk_render, chunk_pos, collision_faces);
+                }
 
-                mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
-                update_chunk_mesh(chunk_render, chunk_pos, mesh);
-                create_chunk_collision(chunk_render, chunk_pos, collision_faces);
-            }
+                if (not data.dyn_instances) {
+                    ++updates_this_frame;
+                    continue;
+                }
 
-            if (not data.dyn_instances) {
+                if (not chunk_render.mesh_instance) update_chunk_mesh(chunk_render, chunk_pos, nullptr);
+                if (not chunk_render.dynamic_body) {
+                    chunk_render.dynamic_body = memnew(StaticBody3D);
+                    chunk_render.mesh_instance->add_child(chunk_render.dynamic_body);
+                }
+                else while (chunk_render.dynamic_body->get_child_count() > 0) {
+                    Node* child = chunk_render.dynamic_body->get_child(0);
+                    chunk_render.dynamic_body->remove_child(child);
+                    child->queue_free();
+                }
+
+                Dict<uint32, std::vector<DynBlockInstance>> grouped_instances;
+                for (auto&& inst : data.dyn_instances) {
+                    Ref<BoxShape3D> box;
+                    box.instantiate();
+                    box->set_size(Vector3(1.0f, 0.1f, 1.0f));
+
+                    CollisionShape3D* col_shape = memnew(CollisionShape3D);
+                    col_shape->set_shape(box);
+                    col_shape->set_position(Vector3(inst.local_pos.x + 0.5f, inst.local_pos.y + 0.5f, inst.local_pos.z + 0.5f));
+
+                    chunk_render.dynamic_body->add_child(col_shape);
+                    grouped_instances[inst.block_id].emplace_back(std::move(inst));
+                }
+
+                for (auto const& [id, instances] : grouped_instances) {
+                    if (id >= BlockRegistry::registry.size()) continue;
+
+                    Ref<MultiMesh> multimesh;
+                    multimesh.instantiate();
+                    multimesh->set_transform_format(MultiMesh::TRANSFORM_3D);
+                    multimesh->set_mesh(BlockRegistry::registry[id].mesh);
+                    multimesh->set_instance_count((int32)instances.size());
+
+                    for (usize i : range<usize>(instances.size())) {
+                        auto const& inst = instances[i];
+                        Transform3D transform;
+                        transform.origin = Vector3(inst.local_pos.x, inst.local_pos.y + 0.01f, inst.local_pos.z);
+                        multimesh->set_instance_transform((int32)i, transform);
+                    }
+
+                    if (not chunk_render.multi_mesh_instance) {
+                        chunk_render.multi_mesh_instance = memnew(MultiMeshInstance3D);
+                        chunk_render.mesh_instance->add_child(chunk_render.multi_mesh_instance);
+                    }
+
+                    chunk_render.multi_mesh_instance->set_multimesh(multimesh);
+                }
+
                 ++updates_this_frame;
-                continue;
             }
-
-            if (not chunk_render.mesh_instance) update_chunk_mesh(chunk_render, chunk_pos, nullptr);
-            if (not chunk_render.dynamic_body) {
-                chunk_render.dynamic_body = memnew(StaticBody3D);
-                chunk_render.mesh_instance->add_child(chunk_render.dynamic_body);
-            }
-            else while (chunk_render.dynamic_body->get_child_count() > 0) {
-                Node* child = chunk_render.dynamic_body->get_child(0);
-                chunk_render.dynamic_body->remove_child(child);
-                child->queue_free();
-            }
-
-            Dict<uint32, std::vector<DynBlockInstance>> grouped_instances;
-            for (auto&& inst : data.dyn_instances) {
-                CollisionShape3D* col_shape = memnew(CollisionShape3D);
-                Ref<BoxShape3D> box;
-                box.instantiate();
-                box->set_size(Vector3(1.0f, 0.1f, 1.0f));
-
-                col_shape->set_shape(box);
-                col_shape->set_position(Vector3(inst.local_pos.x + 0.5f, inst.local_pos.y + 0.5f, inst.local_pos.z + 0.5f));
-
-                chunk_render.dynamic_body->add_child(col_shape);
-                grouped_instances[inst.block_id].emplace_back(std::move(inst));
-            }
-
-            for (auto const& [id, instances] : grouped_instances) {
-                if (id >= BlockRegistry::registry.size()) continue;
-
-                Ref<MultiMesh> multimesh;
-                multimesh.instantiate();
-                multimesh->set_transform_format(MultiMesh::TRANSFORM_3D);
-                multimesh->set_mesh(BlockRegistry::registry[id].mesh);
-                multimesh->set_instance_count((int32)instances.size());
-
-                for (usize i : range<usize>(instances.size())) {
-                    auto const& inst = instances[i];
-                    Transform3D transform;
-                    transform.origin = Vector3(inst.local_pos.x, inst.local_pos.y + 0.01f, inst.local_pos.z);
-                    multimesh->set_instance_transform((int32)i, transform);
-                }
-
-                if (not chunk_render.multi_mesh_instance) {
-                    chunk_render.multi_mesh_instance = memnew(MultiMeshInstance3D);
-                    chunk_render.mesh_instance->add_child(chunk_render.multi_mesh_instance);
-                }
-
-                chunk_render.multi_mesh_instance->set_multimesh(multimesh);
-            }
-
-            ++updates_this_frame;
         }
 
         {
@@ -512,7 +500,7 @@ namespace craftbuild {
                         }
 
                         // Deserialize
-                        std::string world_data(reinterpret_cast<byte const*>(decompressed_pba.ptr()), decompressed_pba.size());
+                        std::string world_data(reinterpret_cast<char const*>(decompressed_pba.ptr()), decompressed_pba.size());
                         std::stringstream is(world_data, std::ios::binary | std::ios::in);
 
                         auto cx = std::stoi(message.arguments[1]), cz = std::stoi(message.arguments[2]);
@@ -520,52 +508,52 @@ namespace craftbuild {
                         std::unique_lock data_lock(chunk.data_mutex);
                         chunk.clear();
 
-                        is.read(reinterpret_cast<byte*>(&chunk.blocks[0][0][0]), (uint64)Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z * sizeof(BlockStorage));
+                        is.read(reinterpret_cast<char*>(&chunk.blocks[0][0][0]), (uint64)Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z * sizeof(BlockStorage));
                         log<LogType::VERBOSE>(format{} << chunk.blocks[0][0][0].block_id);
                         
-                        is.read(reinterpret_cast<byte*>(&chunk.block_ids_size), sizeof(uint8));
-                        is.read(reinterpret_cast<byte*>(&chunk.block_ids), sizeof(uint32) * 256);
+                        is.read(reinterpret_cast<char*>(&chunk.block_ids_size), sizeof(uint8));
+                        is.read(reinterpret_cast<char*>(&chunk.block_ids), sizeof(uint32) * 256);
 
                         uint8 id2block_size = 0;
-                        is.read(reinterpret_cast<byte*>(&id2block_size), sizeof(uint8));
+                        is.read(reinterpret_cast<char*>(&id2block_size), sizeof(uint8));
                         chunk.id2block.reserve(id2block_size);
                         for (auto j : range<uint8>(id2block_size)) {
                             uint32 global_id = 0;
-                            is.read(reinterpret_cast<byte*>(&global_id), sizeof(uint32));
-                            is.read(reinterpret_cast<byte*>(&chunk.id2block[global_id]), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&global_id), sizeof(uint32));
+                            is.read(reinterpret_cast<char*>(&chunk.id2block[global_id]), sizeof(uint8));
                         }
 
-                        is.read(reinterpret_cast<byte*>(&chunk.tag_ids_size), sizeof(uint8));
-                        is.read(reinterpret_cast<byte*>(&chunk.tag_ids), sizeof(std::pair<uint32, uint64>) * 256);
+                        is.read(reinterpret_cast<char*>(&chunk.tag_ids_size), sizeof(uint8));
+                        is.read(reinterpret_cast<char*>(&chunk.tag_ids), sizeof(std::pair<uint32, uint64>) * 256);
 
                         uint8 id2tag_size = 0;
-                        is.read(reinterpret_cast<byte*>(&id2tag_size), sizeof(uint8));
+                        is.read(reinterpret_cast<char*>(&id2tag_size), sizeof(uint8));
                         chunk.id2tag.reserve(id2tag_size);
                         for (auto j : range<uint8>(id2tag_size)) {
                             std::pair<uint32, uint64> global_id;
-                            is.read(reinterpret_cast<byte*>(&global_id.first), sizeof(uint32));
-                            is.read(reinterpret_cast<byte*>(&global_id.second), sizeof(uint64));
-                            is.read(reinterpret_cast<byte*>(&chunk.id2tag[global_id]), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&global_id.first), sizeof(uint32));
+                            is.read(reinterpret_cast<char*>(&global_id.second), sizeof(uint64));
+                            is.read(reinterpret_cast<char*>(&chunk.id2tag[global_id]), sizeof(uint8));
                         }
 
                         uint32 complex_size = 0;
-                        is.read(reinterpret_cast<byte*>(&complex_size), sizeof(uint32));
+                        is.read(reinterpret_cast<char*>(&complex_size), sizeof(uint32));
                         chunk.complex_blocks.reserve(complex_size);
                         for (auto j : range<uint32>(complex_size)) {
                             Pos3D<uint8> key{};
                             BlockStorageFull value{};
 
-                            is.read(reinterpret_cast<byte*>(&key.x), sizeof(uint8));
-                            is.read(reinterpret_cast<byte*>(&key.y), sizeof(uint8));
-                            is.read(reinterpret_cast<byte*>(&key.z), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&key.x), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&key.y), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&key.z), sizeof(uint8));
 
-                            is.read(reinterpret_cast<byte*>(&value.block_id), sizeof(uint32));
-                            is.read(reinterpret_cast<byte*>(&value.tag), sizeof(uint32));
+                            is.read(reinterpret_cast<char*>(&value.block_id), sizeof(uint32));
+                            is.read(reinterpret_cast<char*>(&value.tag), sizeof(uint32));
 
                             chunk.complex_blocks.emplace(key, value);
                         }
 
-                        is.read(reinterpret_cast<byte*>(&chunk.chunk_version), sizeof(uint8));
+                        is.read(reinterpret_cast<char*>(&chunk.chunk_version), sizeof(uint8));
 
                         chunk.generated.store(true, std::memory_order_release);
                         chunk.dirty.store(true, std::memory_order_release);
@@ -587,19 +575,19 @@ namespace craftbuild {
                         std::stringstream is(message.arguments[0]);
 
                         uint64 player_count = 0;
-                        is.read(reinterpret_cast<byte*>(&player_count), sizeof(uint64));
+                        is.read(reinterpret_cast<char*>(&player_count), sizeof(uint64));
 
                         for (auto i : range<uint64>(player_count)) {
                             uint64 name_len = 0;
                             Str name;
                             PlayerData player_data;
 
-                            is.read(reinterpret_cast<byte*>(&name_len), sizeof(uint64));
+                            is.read(reinterpret_cast<char*>(&name_len), sizeof(uint64));
                             name.resize(name_len);
-                            is.read(reinterpret_cast<byte*>(name.c_ptr()), name_len);
-                            is.read(reinterpret_cast<byte*>(&player_data.hp), sizeof(uint8));
-                            is.read(reinterpret_cast<byte*>(&player_data.pos), sizeof(Pos3D<real>));
-                            is.read(reinterpret_cast<byte*>(&player_data.hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);
+                            is.read(reinterpret_cast<char*>(name.c_ptr()), name_len);
+                            is.read(reinterpret_cast<char*>(&player_data.hp), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&player_data.pos), sizeof(Pos3D<real>));
+                            is.read(reinterpret_cast<char*>(&player_data.hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);
 
                             if (name == player_name) {
                                 Player* player = static_cast<Player*>(player_ptr);
@@ -880,10 +868,10 @@ namespace craftbuild {
         Player* player = static_cast<Player*>(player_ptr);
         if (not player) return;
 
-        ofs.write(reinterpret_cast<byte const*>(&full_screen), sizeof(bool));
-        ofs.write(reinterpret_cast<byte const*>(&player->sensitivity), sizeof(float32));
-        ofs.write(reinterpret_cast<byte const*>(&player->mouse_pitch), sizeof(float32));
-        ofs.write(reinterpret_cast<byte const*>(&render_distance), sizeof(int32));
+        ofs.write(reinterpret_cast<char const*>(&full_screen), sizeof(bool));
+        ofs.write(reinterpret_cast<char const*>(&player->sensitivity), sizeof(float32));
+        ofs.write(reinterpret_cast<char const*>(&player->mouse_pitch), sizeof(float32));
+        ofs.write(reinterpret_cast<char const*>(&render_distance), sizeof(int32));
     }
 
     bool Main::load_userdata(char const* path) {
@@ -898,10 +886,10 @@ namespace craftbuild {
             Player* player = static_cast<Player*>(player_ptr);
             if (not player) return false;
 
-            ifs.read(reinterpret_cast<byte*>(&full_screen), sizeof(bool));
-            ifs.read(reinterpret_cast<byte*>(&player->sensitivity), sizeof(float32));
-            ifs.read(reinterpret_cast<byte*>(&player->mouse_pitch), sizeof(float32));
-            ifs.read(reinterpret_cast<byte*>(&render_distance), sizeof(int32));
+            ifs.read(reinterpret_cast<char*>(&full_screen), sizeof(bool));
+            ifs.read(reinterpret_cast<char*>(&player->sensitivity), sizeof(float32));
+            ifs.read(reinterpret_cast<char*>(&player->mouse_pitch), sizeof(float32));
+            ifs.read(reinterpret_cast<char*>(&render_distance), sizeof(int32));
         }
 
 		log<LogType::INFO>("Userdata loaded");

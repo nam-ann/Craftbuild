@@ -1,16 +1,17 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <godot_cpp/variant/vector3.hpp>
 #include <godot_cpp/variant/vector3i.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 #include <godot_cpp/variant/vector2i.hpp>
-#pragma warning(pop)
-
-#include <includes.hpp>
-#include <xhash>
+DO_WARNING
 
 export module misc.pos;
+
+import std;
 
 import misc.format;
 import misc.number;
@@ -37,7 +38,7 @@ export namespace craftbuild {
         requires AbleToCast<T, T2>
         Pos3D(Pos3D<T2> const& pos) : x((T)pos.x), y((T)pos.y), z((T)pos.z) {}
 
-#define def_operator(op) Pos3D& operator##op##=(Pos3D const& other) { x op##= other.x, y op##= other.y, z op##= other.z; return *this;}
+#define def_operator(op) Pos3D& operator op##=(Pos3D const& other) { x op##= other.x, y op##= other.y, z op##= other.z; return *this;}
 
         def_operator(+);
         def_operator(-);
@@ -46,7 +47,7 @@ export namespace craftbuild {
         def_operator(%);
 
 #undef def_operator
-#define def_operator(op) Pos3D operator##op(Pos3D const& other) const { Pos3D result; result.x op##= other.x, result.y op##= other.y, result.z op##= other.z; return result;}
+#define def_operator(op) Pos3D operator op(Pos3D const& other) const { Pos3D result; result.x op##= other.x, result.y op##= other.y, result.z op##= other.z; return result;}
 
         def_operator(+);
         def_operator(-);
@@ -85,7 +86,7 @@ export namespace craftbuild {
         requires AbleToCast<T, T2>
         Pos2D(Pos2D<T2> const& pos) : x((T)pos.x), y((T)pos.y) {}
 
-#define def_operator(op) Pos2D& operator##op##=(Pos2D const& other) { x op##= other.x, y op##= other.y; return *this;}
+#define def_operator(op) Pos2D& operator op##=(Pos2D const& other) { x op##= other.x, y op##= other.y; return *this;}
 
         def_operator(+);
         def_operator(-);
@@ -94,7 +95,7 @@ export namespace craftbuild {
         def_operator(%);
 
 #undef def_operator
-#define def_operator(op) Pos2D operator##op(Pos2D const& other) const { Pos2D result; result.x op##= other.x, result.y op##= other.y; return result;}
+#define def_operator(op) Pos2D operator op(Pos2D const& other) const { Pos2D result; result.x op##= other.x, result.y op##= other.y; return result;}
 
         def_operator(+);
         def_operator(-);

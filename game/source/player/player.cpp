@@ -1,6 +1,8 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <godot_cpp/classes/input.hpp>
 #include <godot_cpp/classes/shader.hpp>
 #include <godot_cpp/classes/window.hpp>
@@ -24,11 +26,7 @@ module;
 #include <godot_cpp/variant/vector3.hpp>
 #include <godot_cpp/variant/vector3i.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
-#pragma warning(pop)
-
-#include <includes.hpp>
-#include <algorithm>
-#include <shared_mutex>
+DO_WARNING
 
 module game.player;
 
@@ -385,27 +383,27 @@ namespace craftbuild {
     }
 
     void Player::save_data(std::ostream& os) {
-        os.write(reinterpret_cast<byte const*>(&speed), sizeof(float32));
-        os.write(reinterpret_cast<byte const*>(&gravity), sizeof(float32));
-        os.write(reinterpret_cast<byte const*>(&jump_velocity), sizeof(float32));
-        os.write(reinterpret_cast<byte const*>(&is_grounded), sizeof(bool));
-        os.write(reinterpret_cast<byte const*>(&can_fly), sizeof(bool));
-        os.write(reinterpret_cast<byte const*>(&running), sizeof(bool));
-        os.write(reinterpret_cast<byte const*>(&gamemode), sizeof(Gamemode));
-        os.write(reinterpret_cast<byte const*>(&hotbar), sizeof(uint32) * HOTBAR_SIZE);
-        os.write(reinterpret_cast<byte const*>(&selected_slot), sizeof(uint8));
+        os.write(reinterpret_cast<char const*>(&speed), sizeof(float32));
+        os.write(reinterpret_cast<char const*>(&gravity), sizeof(float32));
+        os.write(reinterpret_cast<char const*>(&jump_velocity), sizeof(float32));
+        os.write(reinterpret_cast<char const*>(&is_grounded), sizeof(bool));
+        os.write(reinterpret_cast<char const*>(&can_fly), sizeof(bool));
+        os.write(reinterpret_cast<char const*>(&running), sizeof(bool));
+        os.write(reinterpret_cast<char const*>(&gamemode), sizeof(Gamemode));
+        os.write(reinterpret_cast<char const*>(&hotbar), sizeof(uint32) * HOTBAR_SIZE);
+        os.write(reinterpret_cast<char const*>(&selected_slot), sizeof(uint8));
     }
 
     void Player::load_data(std::istream& is) {
-        is.read(reinterpret_cast<byte*>(&speed), sizeof(float32));
-        is.read(reinterpret_cast<byte*>(&gravity), sizeof(float32));
-        is.read(reinterpret_cast<byte*>(&jump_velocity), sizeof(float32));
-        is.read(reinterpret_cast<byte*>(&is_grounded), sizeof(bool));
-        is.read(reinterpret_cast<byte*>(&can_fly), sizeof(bool));
-        is.read(reinterpret_cast<byte*>(&running), sizeof(bool));
-        is.read(reinterpret_cast<byte*>(&gamemode), sizeof(Gamemode));
-        is.read(reinterpret_cast<byte*>(&hotbar), sizeof(uint32) * HOTBAR_SIZE);
-        is.read(reinterpret_cast<byte*>(&selected_slot), sizeof(uint8));
+        is.read(reinterpret_cast<char*>(&speed), sizeof(float32));
+        is.read(reinterpret_cast<char*>(&gravity), sizeof(float32));
+        is.read(reinterpret_cast<char*>(&jump_velocity), sizeof(float32));
+        is.read(reinterpret_cast<char*>(&is_grounded), sizeof(bool));
+        is.read(reinterpret_cast<char*>(&can_fly), sizeof(bool));
+        is.read(reinterpret_cast<char*>(&running), sizeof(bool));
+        is.read(reinterpret_cast<char*>(&gamemode), sizeof(Gamemode));
+        is.read(reinterpret_cast<char*>(&hotbar), sizeof(uint32) * HOTBAR_SIZE);
+        is.read(reinterpret_cast<char*>(&selected_slot), sizeof(uint8));
     }
 
     void Player::_bind_methods() {}

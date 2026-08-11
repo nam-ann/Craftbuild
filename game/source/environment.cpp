@@ -1,6 +1,8 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <godot_cpp/classes/directional_light3d.hpp>
 #include <godot_cpp/classes/environment.hpp>
 #include <godot_cpp/classes/procedural_sky_material.hpp>
@@ -8,9 +10,7 @@ module;
 #include <godot_cpp/classes/world_environment.hpp>
 #include <godot_cpp/variant/color.hpp>
 #include <godot_cpp/variant/vector3.hpp>
-#pragma warning(pop)
-
-#include <includes.hpp>
+DO_WARNING
 
 module game.environment;
 

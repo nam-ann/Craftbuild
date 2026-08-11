@@ -1,6 +1,8 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <winsock2.h>
 #include <windows.h>
 
@@ -12,19 +14,10 @@ module;
 #include <godot_cpp/classes/fast_noise_lite.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/variant/packed_byte_array.hpp>
-#pragma warning(pop)
-
-#include <includes.hpp>
-#include <random>
-#include <string>
-#include <sstream>
-#include <fstream>
-#include <filesystem>
-#include <shared_mutex>
+DO_WARNING
 
 module game.server;
 
-using byte = char;
 import game.command;
 
 using namespace std::chrono_literals;
@@ -228,17 +221,17 @@ namespace craftbuild {
         {
             std::shared_lock lock(player_mutex);
             uint64 player_count = online_players.size();
-            os.write(reinterpret_cast<byte const*>(&player_count), sizeof(uint64));
+            os.write(reinterpret_cast<char const*>(&player_count), sizeof(uint64));
 
             for (auto const& [player_name, _] : online_players) {
                 auto const& player_data = players[player_name];
 
                 uint64 name_len = len(player_name);
-                os.write(reinterpret_cast<byte const*>(&name_len), sizeof(uint64));
-                os.write(reinterpret_cast<byte const*>(player_name.c_ptr()), name_len);
-                os.write(reinterpret_cast<byte const*>(&player_data.hp), sizeof(uint8));
-                os.write(reinterpret_cast<byte const*>(&player_data.pos), sizeof(Pos3D<real>));
-                os.write(reinterpret_cast<byte const*>(&player_data.hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);
+                os.write(reinterpret_cast<char const*>(&name_len), sizeof(uint64));
+                os.write(reinterpret_cast<char const*>(player_name.c_ptr()), name_len);
+                os.write(reinterpret_cast<char const*>(&player_data.hp), sizeof(uint8));
+                os.write(reinterpret_cast<char const*>(&player_data.pos), sizeof(Pos3D<real>));
+                os.write(reinterpret_cast<char const*>(&player_data.hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);
             }
         }
 
@@ -255,42 +248,42 @@ namespace craftbuild {
 
         std::shared_lock data_lock(chunk.data_mutex);
 
-        os.write(reinterpret_cast<byte const*>(&chunk.blocks[0][0][0]), (uint64)Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z * sizeof(BlockStorage));
+        os.write(reinterpret_cast<char const*>(&chunk.blocks[0][0][0]), (uint64)Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z * sizeof(BlockStorage));
         
-        os.write(reinterpret_cast<byte const*>(&chunk.block_ids_size), sizeof(uint8));
-        os.write(reinterpret_cast<byte const*>(&chunk.block_ids[0]), sizeof(uint32) * 256);
+        os.write(reinterpret_cast<char const*>(&chunk.block_ids_size), sizeof(uint8));
+        os.write(reinterpret_cast<char const*>(&chunk.block_ids[0]), sizeof(uint32) * 256);
 
         uint8 id2block_size = static_cast<uint8>(chunk.id2block.size());
-        os.write(reinterpret_cast<byte const*>(&id2block_size), sizeof(uint8));
+        os.write(reinterpret_cast<char const*>(&id2block_size), sizeof(uint8));
         for (auto const& [global_id, local_id] : chunk.id2block) {
-            os.write(reinterpret_cast<byte const*>(&global_id), sizeof(uint32));
-            os.write(reinterpret_cast<byte const*>(&local_id), sizeof(uint8));
+            os.write(reinterpret_cast<char const*>(&global_id), sizeof(uint32));
+            os.write(reinterpret_cast<char const*>(&local_id), sizeof(uint8));
         }
 
-        os.write(reinterpret_cast<byte const*>(&chunk.tag_ids_size), sizeof(uint8));
-        os.write(reinterpret_cast<byte const*>(&chunk.tag_ids[0]), sizeof(std::pair<uint32, uint64>) * 256);
+        os.write(reinterpret_cast<char const*>(&chunk.tag_ids_size), sizeof(uint8));
+        os.write(reinterpret_cast<char const*>(&chunk.tag_ids[0]), sizeof(std::pair<uint32, uint64>) * 256);
 
         uint8 id2tag_size = static_cast<uint8>(chunk.id2tag.size());
-        os.write(reinterpret_cast<byte const*>(&id2tag_size), sizeof(uint8));
+        os.write(reinterpret_cast<char const*>(&id2tag_size), sizeof(uint8));
         for (auto const& [global_id, local_id] : chunk.id2tag) {
-            os.write(reinterpret_cast<byte const*>(&global_id.first), sizeof(uint32));
-            os.write(reinterpret_cast<byte const*>(&global_id.second), sizeof(uint64));
-            os.write(reinterpret_cast<byte const*>(&local_id), sizeof(uint8));
+            os.write(reinterpret_cast<char const*>(&global_id.first), sizeof(uint32));
+            os.write(reinterpret_cast<char const*>(&global_id.second), sizeof(uint64));
+            os.write(reinterpret_cast<char const*>(&local_id), sizeof(uint8));
         }
 
         uint32 complex_size = static_cast<uint32>(chunk.complex_blocks.size());
-        os.write(reinterpret_cast<byte const*>(&complex_size), sizeof(uint32));
+        os.write(reinterpret_cast<char const*>(&complex_size), sizeof(uint32));
 
         for (auto const& pair : chunk.complex_blocks) {
-            os.write(reinterpret_cast<byte const*>(&pair.first.x), sizeof(uint8));
-            os.write(reinterpret_cast<byte const*>(&pair.first.y), sizeof(uint8));
-            os.write(reinterpret_cast<byte const*>(&pair.first.z), sizeof(uint8));
+            os.write(reinterpret_cast<char const*>(&pair.first.x), sizeof(uint8));
+            os.write(reinterpret_cast<char const*>(&pair.first.y), sizeof(uint8));
+            os.write(reinterpret_cast<char const*>(&pair.first.z), sizeof(uint8));
 
-            os.write(reinterpret_cast<byte const*>(&pair.second.block_id), sizeof(uint32));
-            os.write(reinterpret_cast<byte const*>(&pair.second.tag), sizeof(uint32));
+            os.write(reinterpret_cast<char const*>(&pair.second.block_id), sizeof(uint32));
+            os.write(reinterpret_cast<char const*>(&pair.second.tag), sizeof(uint32));
         }
 
-        os.write(reinterpret_cast<byte const*>(&chunk.chunk_version), sizeof(uint8));
+        os.write(reinterpret_cast<char const*>(&chunk.chunk_version), sizeof(uint8));
 
         // Zip
         std::string raw_data = os.str();
@@ -473,24 +466,24 @@ namespace craftbuild {
         log<LogType::INFO>("Saving world...");
 
         uint64 version_len = strlen(version);
-        ofs.write(reinterpret_cast<byte const*>(&version_len), sizeof(uint64));
+        ofs.write(reinterpret_cast<char const*>(&version_len), sizeof(uint64));
         ofs.write(version, sizeof(char) * version_len);
 
         uint32 seed = world_seed.load(std::memory_order_release);
-        ofs.write(reinterpret_cast<byte const*>(&seed), sizeof(uint32));
+        ofs.write(reinterpret_cast<char const*>(&seed), sizeof(uint32));
 
         {
             std::shared_lock lock(player_mutex);
             const uint64 player_count = players.size();
-            ofs.write(reinterpret_cast<byte const*>(&player_count), sizeof(uint64));
+            ofs.write(reinterpret_cast<char const*>(&player_count), sizeof(uint64));
 
             for (auto const& [player_name, player_data] : players) {
                 const uint64 player_name_len = len(player_name);
-                ofs.write(reinterpret_cast<byte const*>(&player_name_len), sizeof(uint64));
-                ofs.write(reinterpret_cast<byte const*>(player_name.c_ptr()), player_name_len);
-                ofs.write(reinterpret_cast<byte const*>(&player_data.hp), sizeof(uint8));
-                ofs.write(reinterpret_cast<byte const*>(&player_data.pos), sizeof(Pos3D<real>));
-                ofs.write(reinterpret_cast<byte const*>(&player_data.hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);
+                ofs.write(reinterpret_cast<char const*>(&player_name_len), sizeof(uint64));
+                ofs.write(reinterpret_cast<char const*>(player_name.c_ptr()), player_name_len);
+                ofs.write(reinterpret_cast<char const*>(&player_data.hp), sizeof(uint8));
+                ofs.write(reinterpret_cast<char const*>(&player_data.pos), sizeof(Pos3D<real>));
+                ofs.write(reinterpret_cast<char const*>(&player_data.hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);
             }
         }
 
@@ -522,7 +515,7 @@ namespace craftbuild {
         log<LogType::INFO>("Loading world...");
 
         uint64 version_len = 0;
-        ifs.read(reinterpret_cast<byte*>(&version_len), sizeof(uint64));
+        ifs.read(reinterpret_cast<char*>(&version_len), sizeof(uint64));
 
         std::string current_version(version_len, '\0');
         ifs.read(current_version.data(), sizeof(char) * version_len);
@@ -532,24 +525,24 @@ namespace craftbuild {
         }
 
         uint32 seed = 0;
-        ifs.read(reinterpret_cast<byte*>(&seed), sizeof(uint32));
+        ifs.read(reinterpret_cast<char*>(&seed), sizeof(uint32));
         noise->set_seed(seed);
         world_seed.store(static_cast<int32>(seed), std::memory_order_release);
 
         uint64 player_count = 0;
-        ifs.read(reinterpret_cast<byte*>(&player_count), sizeof(uint64));
+        ifs.read(reinterpret_cast<char*>(&player_count), sizeof(uint64));
 
         {
             std::unique_lock lock(player_mutex);
             for (auto i : range<uint64>(player_count)) {
                 Str player_name;
                 uint64 player_name_len = 0;
-                ifs.read(reinterpret_cast<byte*>(&player_name_len), sizeof(uint64));
+                ifs.read(reinterpret_cast<char*>(&player_name_len), sizeof(uint64));
                 player_name.resize(player_name_len);
-                ifs.read(reinterpret_cast<byte*>(player_name.c_ptr()), player_name_len);
-                ifs.read(reinterpret_cast<byte*>(&players[player_name].hp), sizeof(uint8));
-                ifs.read(reinterpret_cast<byte*>(&players[player_name].pos), sizeof(Pos3D<real>));
-                ifs.read(reinterpret_cast<byte*>(&players[player_name].hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);
+                ifs.read(reinterpret_cast<char*>(player_name.c_ptr()), player_name_len);
+                ifs.read(reinterpret_cast<char*>(&players[player_name].hp), sizeof(uint8));
+                ifs.read(reinterpret_cast<char*>(&players[player_name].pos), sizeof(Pos3D<real>));
+                ifs.read(reinterpret_cast<char*>(&players[player_name].hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);
             }
         }
         
@@ -577,46 +570,46 @@ namespace craftbuild {
 				auto chunk_ptr = get_chunk(x, z);
 
                 const bool chunk_exists = chunk_ptr and chunk_ptr.value().generated.load(std::memory_order_acquire);
-			    ofs.write(reinterpret_cast<byte const*>(&chunk_exists), sizeof(bool));
+			    ofs.write(reinterpret_cast<char const*>(&chunk_exists), sizeof(bool));
                 
                 if (not chunk_exists) continue;
 
                 auto& chunk = chunk_ptr.value();
                 std::shared_lock data_lock(chunk.data_mutex);
 
-                ofs.write(reinterpret_cast<byte const*>(&chunk.blocks[0][0][0]), Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z * sizeof(BlockStorage));
+                ofs.write(reinterpret_cast<char const*>(&chunk.blocks[0][0][0]), Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z * sizeof(BlockStorage));
 
-                ofs.write(reinterpret_cast<byte const*>(&chunk.block_ids_size), sizeof(uint8));
-                ofs.write(reinterpret_cast<byte const*>(&chunk.block_ids[0]), sizeof(uint32) * 256);
+                ofs.write(reinterpret_cast<char const*>(&chunk.block_ids_size), sizeof(uint8));
+                ofs.write(reinterpret_cast<char const*>(&chunk.block_ids[0]), sizeof(uint32) * 256);
 
                 uint8 id2block_size = static_cast<uint8>(chunk.id2block.size());
-                ofs.write(reinterpret_cast<byte const*>(&id2block_size), sizeof(uint8));
+                ofs.write(reinterpret_cast<char const*>(&id2block_size), sizeof(uint8));
                 for (auto const& [global_id, local_id] : chunk.id2block) {
-                    ofs.write(reinterpret_cast<byte const*>(&global_id), sizeof(uint32));
-                    ofs.write(reinterpret_cast<byte const*>(&local_id), sizeof(uint8));
+                    ofs.write(reinterpret_cast<char const*>(&global_id), sizeof(uint32));
+                    ofs.write(reinterpret_cast<char const*>(&local_id), sizeof(uint8));
                 }
 
-                ofs.write(reinterpret_cast<byte const*>(&chunk.tag_ids_size), sizeof(uint8));
-                ofs.write(reinterpret_cast<byte const*>(&chunk.tag_ids[0]), sizeof(std::pair<uint32, uint64>) * 256);
+                ofs.write(reinterpret_cast<char const*>(&chunk.tag_ids_size), sizeof(uint8));
+                ofs.write(reinterpret_cast<char const*>(&chunk.tag_ids[0]), sizeof(std::pair<uint32, uint64>) * 256);
 
                 uint8 id2tag_size = static_cast<uint8>(chunk.id2tag.size());
-                ofs.write(reinterpret_cast<byte const*>(&id2tag_size), sizeof(uint8));
+                ofs.write(reinterpret_cast<char const*>(&id2tag_size), sizeof(uint8));
                 for (auto const& [global_id, local_id] : chunk.id2tag) {
-                    ofs.write(reinterpret_cast<byte const*>(&global_id.first), sizeof(uint32));
-                    ofs.write(reinterpret_cast<byte const*>(&global_id.second), sizeof(uint64));
-                    ofs.write(reinterpret_cast<byte const*>(&local_id), sizeof(uint8));
+                    ofs.write(reinterpret_cast<char const*>(&global_id.first), sizeof(uint32));
+                    ofs.write(reinterpret_cast<char const*>(&global_id.second), sizeof(uint64));
+                    ofs.write(reinterpret_cast<char const*>(&local_id), sizeof(uint8));
                 }
 
                 uint32 complex_size = static_cast<uint32>(chunk.complex_blocks.size());
-                ofs.write(reinterpret_cast<byte const*>(&complex_size), sizeof(uint32));
+                ofs.write(reinterpret_cast<char const*>(&complex_size), sizeof(uint32));
 
                 for (auto const& pair : chunk.complex_blocks) {
-                    ofs.write(reinterpret_cast<byte const*>(&pair.first.x), sizeof(uint8));
-                    ofs.write(reinterpret_cast<byte const*>(&pair.first.y), sizeof(uint8));
-                    ofs.write(reinterpret_cast<byte const*>(&pair.first.z), sizeof(uint8));
+                    ofs.write(reinterpret_cast<char const*>(&pair.first.x), sizeof(uint8));
+                    ofs.write(reinterpret_cast<char const*>(&pair.first.y), sizeof(uint8));
+                    ofs.write(reinterpret_cast<char const*>(&pair.first.z), sizeof(uint8));
 
-                    ofs.write(reinterpret_cast<byte const*>(&pair.second.block_id), sizeof(uint32));
-                    ofs.write(reinterpret_cast<byte const*>(&pair.second.tag), sizeof(uint32));
+                    ofs.write(reinterpret_cast<char const*>(&pair.second.block_id), sizeof(uint32));
+                    ofs.write(reinterpret_cast<char const*>(&pair.second.tag), sizeof(uint32));
                 }
 			}
 		}
@@ -635,7 +628,7 @@ namespace craftbuild {
         for (int32 cx : range<int32>(w_rx, w_rx + 16)) {
             for (int32 cz : range<int32>(w_rz, w_rz + 16)) {
                 bool chunk_exists = true;
-				ifs.read(reinterpret_cast<byte*>(&chunk_exists), sizeof(bool));
+				ifs.read(reinterpret_cast<char*>(&chunk_exists), sizeof(bool));
 
 				if (not chunk_exists) continue;
 
@@ -644,44 +637,44 @@ namespace craftbuild {
 
                 chunk.clear();
 
-                ifs.read(reinterpret_cast<byte*>(&chunk.blocks[0][0][0]), sizeof(BlockStorage) * Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z);
+                ifs.read(reinterpret_cast<char*>(&chunk.blocks[0][0][0]), sizeof(BlockStorage) * Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z);
 
-                ifs.read(reinterpret_cast<byte*>(&chunk.block_ids_size), sizeof(uint8));
-                ifs.read(reinterpret_cast<byte*>(&chunk.block_ids[0]), sizeof(uint32) * 256);
+                ifs.read(reinterpret_cast<char*>(&chunk.block_ids_size), sizeof(uint8));
+                ifs.read(reinterpret_cast<char*>(&chunk.block_ids[0]), sizeof(uint32) * 256);
 
                 uint8 id2block_size = 0;
-                ifs.read(reinterpret_cast<byte*>(&id2block_size), sizeof(uint8));
+                ifs.read(reinterpret_cast<char*>(&id2block_size), sizeof(uint8));
                 for (auto j : range<uint8>(id2block_size)) {
                     uint32 global_id = 0;
-                    ifs.read(reinterpret_cast<byte*>(&global_id), sizeof(uint32));
-                    ifs.read(reinterpret_cast<byte*>(&chunk.id2block[global_id]), sizeof(uint8));
+                    ifs.read(reinterpret_cast<char*>(&global_id), sizeof(uint32));
+                    ifs.read(reinterpret_cast<char*>(&chunk.id2block[global_id]), sizeof(uint8));
                 }
 
-                ifs.read(reinterpret_cast<byte*>(&chunk.tag_ids_size), sizeof(uint8));
-                ifs.read(reinterpret_cast<byte*>(&chunk.tag_ids[0]), sizeof(std::pair<uint32, uint64>) * 256);
+                ifs.read(reinterpret_cast<char*>(&chunk.tag_ids_size), sizeof(uint8));
+                ifs.read(reinterpret_cast<char*>(&chunk.tag_ids[0]), sizeof(std::pair<uint32, uint64>) * 256);
 
                 uint8 id2tag_size = 0;
-                ifs.read(reinterpret_cast<byte*>(&id2tag_size), sizeof(uint8));
+                ifs.read(reinterpret_cast<char*>(&id2tag_size), sizeof(uint8));
                 for (auto j : range<uint8>(id2tag_size)) {
                     std::pair<uint32, uint64> global_id;
-                    ifs.read(reinterpret_cast<byte*>(&global_id.first), sizeof(uint32));
-                    ifs.read(reinterpret_cast<byte*>(&global_id.second), sizeof(uint64));
-                    ifs.read(reinterpret_cast<byte*>(&chunk.id2tag[global_id]), sizeof(uint8));
+                    ifs.read(reinterpret_cast<char*>(&global_id.first), sizeof(uint32));
+                    ifs.read(reinterpret_cast<char*>(&global_id.second), sizeof(uint64));
+                    ifs.read(reinterpret_cast<char*>(&chunk.id2tag[global_id]), sizeof(uint8));
                 }
 
                 uint32 complex_size = 0;
-                ifs.read(reinterpret_cast<byte*>(&complex_size), sizeof(uint32));
+                ifs.read(reinterpret_cast<char*>(&complex_size), sizeof(uint32));
 
                 for (auto j : range<uint32>(complex_size)) {
                     Pos3D<uint8> key{};
                     BlockStorageFull value;
 
-                    ifs.read(reinterpret_cast<byte*>(&key.x), sizeof(uint8));
-                    ifs.read(reinterpret_cast<byte*>(&key.y), sizeof(uint8));
-                    ifs.read(reinterpret_cast<byte*>(&key.z), sizeof(uint8));
+                    ifs.read(reinterpret_cast<char*>(&key.x), sizeof(uint8));
+                    ifs.read(reinterpret_cast<char*>(&key.y), sizeof(uint8));
+                    ifs.read(reinterpret_cast<char*>(&key.z), sizeof(uint8));
 
-                    ifs.read(reinterpret_cast<byte*>(&value.block_id), sizeof(uint32));
-                    ifs.read(reinterpret_cast<byte*>(&value.tag), sizeof(uint32));
+                    ifs.read(reinterpret_cast<char*>(&value.block_id), sizeof(uint32));
+                    ifs.read(reinterpret_cast<char*>(&value.tag), sizeof(uint32));
 
                     chunk.complex_blocks.emplace(key, value);
                 }

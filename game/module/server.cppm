@@ -1,6 +1,8 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <winsock2.h>
 #include <windows.h>
 
@@ -9,16 +11,11 @@ module;
 
 #include <godot_cpp/classes/node.hpp>
 #include <godot_cpp/classes/fast_noise_lite.hpp>
-#pragma warning(pop)
-
-#include <includes.hpp>
-#include <string>
-#include <sstream>
-#include <shared_mutex>
-#include <unordered_set>
-#include <unordered_map>
+DO_WARNING
 
 export module game.server;
+
+import std;
 
 import misc.gc;
 import misc.ptr;

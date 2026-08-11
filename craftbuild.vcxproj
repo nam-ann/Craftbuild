@@ -135,7 +135,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;CRAFTBUILD_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;CRAFTBUILD_EXPORTS;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp23</LanguageStandard>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -163,6 +163,7 @@
     <ClCompile Include="game\module\network.cppm" />
     <ClCompile Include="game\module\player\player_data.cppm" />
     <ClCompile Include="game\source\environment.cpp" />
+    <ClCompile Include="game\source\logger.cpp" />
     <ClCompile Include="game\source\network.cpp" />
     <ClCompile Include="game\source\player\skin_manager.cpp" />
     <ClCompile Include="game\source\server.cpp" />
@@ -220,7 +221,7 @@
     <ClCompile Include="game\source\world\cave.cpp" />
     <ClCompile Include="game\source\world\chunk.cpp" />
     <ClCompile Include="game\source\world\terrain.cpp" />
-    <ClInclude Include="includes.hpp" />
+    <ClInclude Include="defs.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />

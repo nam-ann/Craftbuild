@@ -1,8 +1,6 @@
-module;
-
-#include <includes.hpp>
-
 export module misc.range;
+
+import std;
 
 template <typename T>
 requires std::is_arithmetic_v<T>

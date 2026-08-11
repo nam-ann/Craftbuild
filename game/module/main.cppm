@@ -1,6 +1,8 @@
 module;
 
-#pragma warning(push, 0)
+#include <defs.hpp>
+
+NO_WARNING
 #include <godot_cpp/classes/input.hpp>
 #include <godot_cpp/classes/node3d.hpp>
 #include <godot_cpp/classes/array_mesh.hpp>
@@ -8,18 +10,11 @@ module;
 #include <godot_cpp/classes/static_body3d.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
-#pragma warning(pop)
- 
-#include <includes.hpp>
-#include <thread>
-#include <atomic>
-#include <mutex>
-#include <shared_mutex>
-#include <deque>
-#include <memory>
-#include <unordered_set>
+DO_WARNING
 
 export module game.main;
+
+import std;
 
 import misc.gc;
 import misc.ptr;

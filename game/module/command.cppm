@@ -1,14 +1,6 @@
-module;
-
-#include <includes.hpp>
-#include <string>
-#include <sstream>
-#include <vector>
-#include <map>
-#include <algorithm>
-#include <cctype>
-
 export module game.command;
+
+import std;
 
 import misc.pos;
 import misc.str;

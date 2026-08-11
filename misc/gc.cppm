@@ -1,14 +1,6 @@
-module;
-
-#include <includes.hpp>
-#include <mutex>
-#include <atomic>
-#include <thread>
-#include <algorithm>
-#include <unordered_map>
-
 export module misc.gc;
 
+import std;
 import misc.number;
 
 export namespace craftbuild {
