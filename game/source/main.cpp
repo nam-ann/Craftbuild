@@ -3,13 +3,6 @@ module;
 #include <defs.hpp>
 
 NO_WARNING
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
-
-#pragma comment(lib, "ws2_32.lib")
-#undef ERROR
-
 #include <godot_cpp/classes/input.hpp>
 #include <godot_cpp/classes/node3d.hpp>
 #include <godot_cpp/classes/world3d.hpp>
@@ -23,6 +16,7 @@ NO_WARNING
 #include <godot_cpp/classes/static_body3d.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
+#include <godot_cpp/classes/stream_peer_tcp.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/variant/packed_byte_array.hpp>
@@ -159,13 +153,13 @@ namespace craftbuild {
             }
         }
 
-        List<Pos3D<int32>> chunks_to_upload;
+        List<Pos2D<int32>> chunks_to_upload;
         {
             std::lock_guard lock(ready_chunks_queue_mutex);
             ready_chunks_queue.swap(chunks_to_upload);
         }
 
-        List<Pos3D<int32>> deferred_chunks;
+        List<Pos2D<int32>> deferred_chunks;
         {
             PackedVector3Array vertices;
             PackedVector3Array normals;
@@ -174,7 +168,7 @@ namespace craftbuild {
             PackedVector2Array uvs_layer;
             PackedVector3Array collision_faces;
 
-            constexpr int32 max_updates = 8;
+            constexpr auto max_updates = 8;
             int32 updates_this_frame = 0;
 
             for (auto& chunk_pos : chunks_to_upload) {
@@ -183,7 +177,7 @@ namespace craftbuild {
                     continue;
                 }
 
-                auto& chunk_render = ref_mesh(chunk_pos.x, chunk_pos.z);
+                auto& chunk_render = ref_mesh(chunk_pos.x, chunk_pos.y);
 
                 Ptr<MeshData> data_ptr = nullptr;
                 {
@@ -223,7 +217,7 @@ namespace craftbuild {
 
                     mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
                     update_chunk_mesh(chunk_render, chunk_pos, mesh);
-                    create_chunk_collision(chunk_render, chunk_pos, collision_faces);
+                    create_chunk_collision(chunk_render, collision_faces);
                 }
 
                 if (not data.dyn_instances) {
@@ -305,7 +299,7 @@ namespace craftbuild {
 
     void Main::init_singleplayer() {
         log<LogType::INFO>("Starting local server...");
-        server_ptr = new Obj<TCPServer>();
+        server_ptr = new Obj<GameEngine>();
         server_ptr.value().connect(player_name);
 
         if (auto player = static_cast<Player*>(player_ptr)) {
@@ -336,9 +330,9 @@ namespace craftbuild {
                 String shader_code = file->get_as_text();
                 shader->set_code(shader_code);
             }
-			else log<LogType::ERROR>(format{} << "Failed to open shader file at: " << shader_path.utf8());
+			else log<LogType::ERROR>("Failed to open shader file at: "f << shader_path.utf8());
         }
-        else log<LogType::ERROR>(format{} << "Shader file not found at: " << shader_path.utf8());
+        else log<LogType::ERROR>("Shader file not found at: "f << shader_path.utf8());
 
         mat->set_shader(shader);
         mat->set_shader_parameter("u_texture_array", AtlasTexture::atlas_texture);
@@ -389,73 +383,72 @@ namespace craftbuild {
             ThreadRegistry::register_thread("Network");
             log<LogType::INFO>("Network thread started");
 
-            WSADATA wsa;
-            WSAStartup(MAKEWORD(2, 2), &wsa);
+            Ref<StreamPeerTCP> client_peer;
+            client_peer.instantiate();
 
-            SOCKET client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-            sockaddr_in server_addr{};
-            server_addr.sin_family = AF_INET;
-            server_addr.sin_port = htons(8888);
-            inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);
-
-            if (::connect(client_socket, (sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
+            auto err = client_peer->connect_to_host("127.0.0.1", 8888);
+            if (err != godot::OK) {
                 log<LogType::ERROR>("Connect failed");
-                closesocket(client_socket);
-                WSACleanup();
                 return;
             }
 
-            u_long mode = 1;
-            if (ioctlsocket(client_socket, FIONBIO, &mode) != 0) {
-                log<LogType::ERROR>("Failed to set socket to non-blocking mode");
-                closesocket(client_socket);
-                WSACleanup();
-                return;
+            log<LogType::INFO>("Connecting to server...");
+
+            while (running.load(std::memory_order_relaxed)) {
+                client_peer->poll();
+                auto status = client_peer->get_status();
+
+                if (status == StreamPeerTCP::STATUS_CONNECTED) break;
+                if (status == StreamPeerTCP::STATUS_ERROR or status == StreamPeerTCP::STATUS_NONE) {
+                    log<LogType::ERROR>("Failed to connect to server_ptr");
+                    return;
+                }
+
+                std::this_thread::sleep_for(10ms);
             }
 
-            log<LogType::INFO>("Connecting to server_ptr...");
             send_queue.store({ "Connect", { player_name.std_str() } });
 
             {
                 List<char> buffer;
                 while (running.load(std::memory_order_relaxed)) {
-                    const auto recv_state = receive_queue.receive(client_socket, buffer);
+                    const auto recv_state = receive_queue.receive(**client_peer, buffer);
 
                     if (recv_state == ReceiveState::WAITING) {
                         std::this_thread::sleep_for(100ms);
                         continue;
                     }
                     if (recv_state == ReceiveState::ERROR) {
-                        log<LogType::ERROR>("Lost connect to server_ptr");
+                        log<LogType::ERROR>("Lost connect to server");
+                        client_peer->disconnect_from_host();
                         return;
                     }
 
                     Message message = ReceiveQueue::parse(buffer);
 
-					if (message.content == "Connected") {
-						log<LogType::INFO>("Connected to server_ptr");
-						Pos3D<real> player_pos{ std::stof(message.arguments[0]), std::stof(message.arguments[1]), std::stof(message.arguments[2]) };
+                    if (message.content == "Connected") {
+                        log<LogType::INFO>("Connected to server");
+                        Pos3D<real> player_pos{ std::stof(message.arguments[0]), std::stof(message.arguments[1]), std::stof(message.arguments[2]) };
                         if (auto player = static_cast<Player*>(player_ptr)) {
-							std::unique_lock lock(player_mutex);
-							player->set_global_position(player_pos);
-						}
-						break;
-					}
+                            std::unique_lock lock(player_mutex);
+                            player->set_global_position(player_pos);
+                        }
+                        break;
+                    }
                 }
             }
 
             while (running.load(std::memory_order_relaxed)) {
-                send_queue.send(client_socket);
+                send_queue.send(**client_peer);
                 List<char> buffer;
 
-                const auto recv_state = receive_queue.receive(client_socket, buffer);
+                const auto recv_state = receive_queue.receive(**client_peer, buffer);
                 if (recv_state == ReceiveState::WAITING) {
                     std::this_thread::sleep_for(100ms);
                     continue;
                 }
                 if (recv_state == ReceiveState::ERROR) {
-                    log<LogType::ERROR>("Lost connect to server_ptr");
+                    log<LogType::ERROR>("Lost connect to server");
                     break;
                 }
 
@@ -464,14 +457,14 @@ namespace craftbuild {
                 try {
                     if (message.content == "Chunk version") {
                         uint8 chunk_version = std::stoi(message.arguments[0]);
-                        auto cx = std::stoi(message.arguments[1]), cz = std::stoi(message.arguments[2]);
+                        auto cx = std::stoi(message.arguments[1]), cy = std::stoi(message.arguments[2]);
 
-                        if (auto chunk = get_chunk(cx, cz); not chunk or chunk.value().chunk_version != chunk_version) send_queue.store({ "Get chunk data", { std::to_string(cx), std::to_string(cz) } });
+                        if (auto chunk = get_chunk(cx, cy); not chunk or chunk.value().chunk_version != chunk_version) send_queue.store({ "Get chunk data", { std::to_string(cx), std::to_string(cy) } });
                     }
                     else if (message.content == "Chunk data") {
                         // Unzip
                         if (len(buffer) < sizeof(uint32)) {
-                            log<LogType::ERROR>(format{} << "Received chunk data is too small(" << len(buffer) << "). Packet might be corrupted");
+                            log<LogType::ERROR>("Received chunk data is too small("f << len(buffer) << "). Packet might be corrupted");
                             continue;
                         }
 
@@ -480,7 +473,7 @@ namespace craftbuild {
                         PackedByteArray payload = Marshalls::get_singleton()->base64_to_raw(godot_base64_str);
 
                         if (payload.size() < sizeof(uint32)) {
-                            log<LogType::ERROR>(format{} << "Received chunk data is too small(" << payload.size() << ") to contain uncompressed size. Packet might be corrupted");
+                            log<LogType::ERROR>("Received chunk data is too small("f << payload.size() << ") to contain uncompressed size. Packet might be corrupted");
                             continue;
                         }
 
@@ -503,14 +496,14 @@ namespace craftbuild {
                         std::string world_data(reinterpret_cast<char const*>(decompressed_pba.ptr()), decompressed_pba.size());
                         std::stringstream is(world_data, std::ios::binary | std::ios::in);
 
-                        auto cx = std::stoi(message.arguments[1]), cz = std::stoi(message.arguments[2]);
-                        auto& chunk = get_or_create_chunk(cx, cz).value();
+                        auto cx = std::stoi(message.arguments[1]), cy = std::stoi(message.arguments[2]);
+                        auto& chunk = get_or_create_chunk(cx, cy).value();
                         std::unique_lock data_lock(chunk.data_mutex);
                         chunk.clear();
 
-                        is.read(reinterpret_cast<char*>(&chunk.blocks[0][0][0]), (uint64)Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z * sizeof(BlockStorage));
-                        log<LogType::VERBOSE>(format{} << chunk.blocks[0][0][0].block_id);
-                        
+                        is.read(reinterpret_cast<char*>(&chunk.blocks[0][0][0]), (uint64)Chunk::WIDTH * Chunk::HEIGHT * Chunk::WIDTH * sizeof(BlockStorage));
+                        log<LogType::VERBOSE>(""f << chunk.blocks[0][0][0].block_id);
+
                         is.read(reinterpret_cast<char*>(&chunk.block_ids_size), sizeof(uint8));
                         is.read(reinterpret_cast<char*>(&chunk.block_ids), sizeof(uint32) * 256);
 
@@ -558,18 +551,18 @@ namespace craftbuild {
                         chunk.generated.store(true, std::memory_order_release);
                         chunk.dirty.store(true, std::memory_order_release);
 
-                        Pos3D<int32> offsets[4] = { {1,0,0}, {-1,0,0}, {0,0,1}, {0,0,-1} };
+                        Pos2D<int32> offsets[4] = { {1,0}, {-1,0}, {0,1}, {0,-1} };
                         for (auto& o : offsets) {
-                            auto n = get_chunk(chunk.chunk_pos.x + o.x, chunk.chunk_pos.z + o.z);
+                            auto n = get_chunk(chunk.chunk_pos.x + o.x, chunk.chunk_pos.y + o.y);
                             if (n and n.value().generated.load(std::memory_order_acquire)) n.value().dirty.store(true);
                         }
 
                         std::lock_guard lock(requested_chunks_mutex);
-                        requested_chunks.erase({ cx, 0, cz });
+                        requested_chunks.erase({ cx, cy });
                     }
                     else if (message.content == "Chunk not ready") {
                         std::lock_guard lock(requested_chunks_mutex);
-                        requested_chunks.erase({ std::stoi(message.arguments[0]), 0, std::stoi(message.arguments[1]) });
+                        requested_chunks.erase({ std::stoi(message.arguments[0]), std::stoi(message.arguments[1]) });
                     }
                     else if (message.content == "Players data") {
                         std::stringstream is(message.arguments[0]);
@@ -602,14 +595,13 @@ namespace craftbuild {
                     else if (message.content == "Chat response") call_deferred("emit_signal", "chat_output", message.arguments[0].c_str());
                 }
                 catch (std::exception const& e) {
-                    log<LogType::ERROR>(format{} << "Error processing message: " << e.what());
+                    log<LogType::ERROR>("Error processing message: "f << message.content << " - " << e.what());
                 }
 
                 std::this_thread::sleep_for(10ms);
             }
 
-            closesocket(client_socket);
-            WSACleanup();
+            client_peer->disconnect_from_host();
         };
 
         network_thread = std::thread(worker);
@@ -636,34 +628,34 @@ namespace craftbuild {
     }
 
     void Main::submit_jobs() {
-        const int32 px = (int32)std::floor(player_x.load() / Chunk::SIZE_X);
-        const int32 pz = (int32)std::floor(player_z.load() / Chunk::SIZE_Z);
+        const int32 px = int32(std::floor(player_x.load() / Chunk::WIDTH));
+        const int32 pz = int32(std::floor(player_z.load() / Chunk::WIDTH));
 
-        auto get_chunk_server_or_not = +[](Main& self, Pos3D<int32> chunk_pos) {
-            Ptr<Chunk> chunk = self.server_ptr.value().get_chunk(chunk_pos.x, chunk_pos.z);
-            self.set_chunk(chunk, chunk_pos.x, chunk_pos.z);
+        auto get_chunk_server_or_not = +[](Main& self, Pos2D<int32> chunk_pos) {
+            Ptr<Chunk> chunk = self.server_ptr.value().get_chunk(chunk_pos.x, chunk_pos.y);
+            self.set_chunk(chunk, chunk_pos.x, chunk_pos.y);
             return chunk;
         };
 
         if (not server_ptr) {
-            get_chunk_server_or_not = +[](Main& self, Pos3D<int32> chunk_pos) {
+            get_chunk_server_or_not = +[](Main& self, Pos2D<int32> chunk_pos) {
                 std::lock_guard lock(self.requested_chunks_mutex);
-                if (not self.requested_chunks.contains({ chunk_pos.x, 0, chunk_pos.z })) {
-                    self.send_queue.store({ "Get chunk version", { std::to_string(chunk_pos.x), std::to_string(chunk_pos.z) } });
-                    self.requested_chunks.insert({ chunk_pos.x, 0, chunk_pos.z });
+                if (not self.requested_chunks.contains({ chunk_pos.x, chunk_pos.y })) {
+                    self.send_queue.store({ "Get chunk version", { std::to_string(chunk_pos.x), std::to_string(chunk_pos.y) } });
+                    self.requested_chunks.insert({ chunk_pos.x, chunk_pos.y });
                 }
-                return self.get_chunk(chunk_pos.x, chunk_pos.z);
+                return self.get_chunk(chunk_pos.x, chunk_pos.y);
             };
         }
 
         auto process_cell = [&](int32 x, int32 z) {
-            Pos3D<int32> chunk_pos{ px + x, 0, pz + z };
+            Pos2D<int32> chunk_pos{ px + x, pz + z };
             Ptr<Chunk> chunk_ptr = get_chunk_server_or_not(*this, chunk_pos);
 
             if (not chunk_ptr) return;
             Chunk& chunk = chunk_ptr.value();
 
-            set_chunk(chunk_ptr, chunk_pos.x, chunk_pos.z);
+            set_chunk(chunk_ptr, chunk_pos.x, chunk_pos.y);
 
             if (not chunk.dirty.load(std::memory_order_acquire)) return;
 
@@ -678,13 +670,13 @@ namespace craftbuild {
 
                 if (running.load(std::memory_order_relaxed)) {
                     Ptr<Chunk> neighbors[4] = {
-                        get_chunk(chunk.chunk_pos.x + 1, chunk.chunk_pos.z),
-                        get_chunk(chunk.chunk_pos.x - 1, chunk.chunk_pos.z),
-                        get_chunk(chunk.chunk_pos.x, chunk.chunk_pos.z + 1),
-                        get_chunk(chunk.chunk_pos.x, chunk.chunk_pos.z - 1)
+                        get_chunk(chunk.chunk_pos.x + 1, chunk.chunk_pos.y),
+                        get_chunk(chunk.chunk_pos.x - 1, chunk.chunk_pos.y),
+                        get_chunk(chunk.chunk_pos.x, chunk.chunk_pos.y + 1),
+                        get_chunk(chunk.chunk_pos.x, chunk.chunk_pos.y - 1)
                     };
 
-                    chunk.generate_mesh(ref_mesh(chunk.chunk_pos.x, chunk.chunk_pos.z), neighbors);
+                    chunk.generate_mesh(ref_mesh(chunk.chunk_pos.x, chunk.chunk_pos.y), neighbors);
 
                     std::lock_guard lock(ready_chunks_queue_mutex);
                     ready_chunks_queue.append(chunk.chunk_pos);
@@ -710,7 +702,7 @@ namespace craftbuild {
         }
     }
 
-    void Main::create_chunk_collision(ChunkRender& chunk_render, Pos3D<int32>& pos, PackedVector3Array const& collision_faces) {
+    void Main::create_chunk_collision(ChunkRender& chunk_render, PackedVector3Array const& collision_faces) {
         if (not chunk_render.mesh_instance) return;
 
         Ref<ArrayMesh> mesh = chunk_render.mesh_instance->get_mesh();
@@ -718,7 +710,7 @@ namespace craftbuild {
         if (collision_faces.size() == 0) return;
 
         if (collision_faces.size() % 3 != 0) {
-            log<LogType::ERROR>(format{} << "Invalid faces size for collision: " << collision_faces.size());
+            log<LogType::ERROR>("Invalid faces size for collision: "f << collision_faces.size());
             return;
         }
 
@@ -739,10 +731,10 @@ namespace craftbuild {
         chunk_render.collision_shape->set_shape(concave);
     }
 
-    void Main::update_chunk_mesh(ChunkRender& chunk_render, Pos3D<int32>& pos, Ref<ArrayMesh> const& mesh) {
+    void Main::update_chunk_mesh(ChunkRender& chunk_render, Pos2D<int32>& pos, Ref<ArrayMesh> const& mesh) {
         if (not chunk_render.mesh_instance) {
             MeshInstance3D* mi = memnew(MeshInstance3D);
-            mi->set_position(Vector3(pos.x * Chunk::SIZE_X, 0, pos.z * Chunk::SIZE_Z));
+            mi->set_position(Vector3(real(pos.x * Chunk::WIDTH), 0, real(pos.y * Chunk::WIDTH)));
             mi->set_material_override(world_material);
             add_child(mi);
             chunk_render.mesh_instance = mi;
@@ -752,8 +744,8 @@ namespace craftbuild {
     }
 
     void Main::unload_distant_chunks() {
-        const int32 p_cx = (int32)(player_x.load() / Chunk::SIZE_X);
-        const int32 p_cz = (int32)(player_z.load() / Chunk::SIZE_Z);
+        const int32 p_cx = int32(player_x.load() / Chunk::WIDTH);
+        const int32 p_cy = int32(player_z.load() / Chunk::WIDTH);
         const int32 unload_dist = render_distance + 4;
 
         int32 removed = 0;
@@ -763,7 +755,7 @@ namespace craftbuild {
                 auto& [chunk_pos, chunk_pair] = *it;
 
                 int32 dx = std::abs(chunk_pos.x - p_cx);
-                int32 dz = std::abs(chunk_pos.z - p_cz);
+                int32 dz = std::abs(chunk_pos.y - p_cy);
 
                 if (dx > unload_dist or dz > unload_dist) {
                     chunk_pair.second.clear();
@@ -774,11 +766,11 @@ namespace craftbuild {
             }
         }
 
-        if (removed) log<LogType::VERBOSE>(format{} << "Queued unload for " << removed << " chunks");
+        if (removed) log<LogType::VERBOSE>("Queued unload for "f << removed << " chunks");
     }
 
-    Ptr<Chunk> Main::get_chunk(int32 cx, int32 cz) {
-        Pos3D<int32> cpos(cx, 0, cz);
+    Ptr<Chunk> Main::get_chunk(int32 cx, int32 cy) {
+        Pos2D<int32> cpos(cx, cy);
 
         std::shared_lock lock(chunks_mutex);
         auto it = chunks.find(cpos);
@@ -787,8 +779,8 @@ namespace craftbuild {
         return it->second.first;
     }
 
-    Ptr<Chunk> Main::get_or_create_chunk(int32 cx, int32 cz) {
-        Pos3D<int32> chunk_pos{ cx, 0, cz };
+    Ptr<Chunk> Main::get_or_create_chunk(int32 cx, int32 cy) {
+        Pos2D<int32> chunk_pos{ cx, cy };
         {
             std::shared_lock lock(chunks_mutex);
             auto it = chunks.find(chunk_pos);
@@ -804,51 +796,51 @@ namespace craftbuild {
         return chunks[chunk_pos].first;
     }
 
-    ChunkRender& Main::ref_mesh(int32 cx, int32 cz) {
-        Pos3D<int32> cpos(cx, 0, cz);
+    ChunkRender& Main::ref_mesh(int32 cx, int32 cy) {
+        Pos2D<int32> cpos(cx, cy);
 
         std::unique_lock lock(chunks_mutex);
         return chunks[cpos].second;
     }
     
     uint32 Main::get_global_block_id(int32 wx, int32 wy, int32 wz) {
-        if (wy < 0 or wy >= Chunk::SIZE_Y) return BlockRegistry::get_id("Air");
+        if (wy < 0 or wy >= Chunk::HEIGHT) return BlockRegistry::get_id("Air");
 
-        int32 cx = static_cast<int32>(std::floor((float32)wx / Chunk::SIZE_X));
-        int32 cz = static_cast<int32>(std::floor((float32)wz / Chunk::SIZE_Z));
-        Pos3D<int32> cpos(cx, 0, cz);
+        int32 cx = int32(std::floor(float32(wx) / Chunk::WIDTH));
+        int32 cy = int32(std::floor(float32(wz) / Chunk::WIDTH));
+        Pos2D<int32> cpos(cx, cy);
 
-        Ptr<Chunk> chunk = get_chunk(cx, cz);
+        Ptr<Chunk> chunk = get_chunk(cx, cy);
         if (not chunk) return BlockRegistry::get_id("Air");
 
-        int32 lx = (wx % Chunk::SIZE_X + Chunk::SIZE_X) % Chunk::SIZE_X;
-        int32 lz = (wz % Chunk::SIZE_Z + Chunk::SIZE_Z) % Chunk::SIZE_Z;
+        int32 lx = (wx % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
+        int32 lz = (wz % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
 
-        return chunk.value().get_block({ (uint8)lx, (uint8)wy, (uint8)lz });
+        return chunk.value().get_block({ uint8(lx), uint8(wy), uint8(lz) });
     }
 
-    void Main::set_chunk(Ptr<Chunk>& chunk, int32 cx, int32 cz) {
-        Pos3D<int32> cpos(cx, 0, cz);
+    void Main::set_chunk(Ptr<Chunk>& chunk, int32 cx, int32 cy) {
+        Pos2D<int32> cpos(cx, cy);
 
         std::unique_lock lock(chunks_mutex);
 		chunks[cpos].first = chunk;
     }
 
     void Main::set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz) {
-        if (wy < 0 or wy >= Chunk::SIZE_Y) return;
+        if (wy < 0 or wy >= Chunk::HEIGHT) return;
         if (not server_ptr) send_queue.store({ "Set block", { std::to_string(block_id), std::to_string(wx), std::to_string(wy), std::to_string(wz) } });
         
-        int32 cx = static_cast<int32>(std::floor((float32)wx / Chunk::SIZE_X));
-        int32 cz = static_cast<int32>(std::floor((float32)wz / Chunk::SIZE_Z));
-        Pos3D<int32> cpos(cx, 0, cz);
+        int32 cx = int32(std::floor(float32(wx) / Chunk::WIDTH));
+        int32 cy = int32(std::floor(float32(wz) / Chunk::WIDTH));
+        Pos2D<int32> cpos(cx, cy);
 
-        Ptr<Chunk> chunk = get_chunk(cx, cz);
+        Ptr<Chunk> chunk = get_chunk(cx, cy);
         if (not chunk) return;
 
-        int32 lx = (wx % Chunk::SIZE_X + Chunk::SIZE_X) % Chunk::SIZE_X;
-        int32 lz = (wz % Chunk::SIZE_Z + Chunk::SIZE_Z) % Chunk::SIZE_Z;
+        int32 lx = (wx % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
+        int32 lz = (wz % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
 
-        chunk.value().set_block({ (uint8)lx, (uint8)wy, (uint8)lz }, block_id);
+        chunk.value().set_block({ uint8(lx), uint8(wy), uint8(lz) }, block_id);
     }
 
     void Main::save_userdata(char const* path) {
@@ -860,7 +852,7 @@ namespace craftbuild {
 
         std::ofstream ofs(std_path, std::ios::binary);
         if (not ofs.is_open()) {
-            log<LogType::ERROR>(format{} << "Cannot open save file: " << std_path);
+            log<LogType::ERROR>("Cannot open save file: "f << std_path);
             return;
         }
 

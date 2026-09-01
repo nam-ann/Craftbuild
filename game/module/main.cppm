@@ -48,13 +48,13 @@ export namespace craftbuild {
         GDCLASS(Main, Node3D)
 
     private:
-        List<Pos3D<int32>> ready_chunks_queue;
+        List<Pos2D<int32>> ready_chunks_queue;
         mutable std::mutex ready_chunks_queue_mutex;
 
-        Dict<Pos3D<int32>, std::pair<Ptr<Chunk>, ChunkRender>> chunks;
+        Dict<Pos2D<int32>, std::pair<Ptr<Chunk>, ChunkRender>> chunks;
         mutable std::shared_mutex chunks_mutex;
 
-        Set<Pos3D<int32>> requested_chunks;
+        Set<Pos2D<int32>> requested_chunks;
         std::mutex requested_chunks_mutex;
 
         Ref<ShaderMaterial> world_material;
@@ -74,7 +74,7 @@ export namespace craftbuild {
         std::thread network_thread;
         std::thread scheduler_thread;
         ThreadPool mesh_pool{ 4 };
-        Set<Pos3D<int32>> pending_mesh_jobs;
+        Set<Pos2D<int32>> pending_mesh_jobs;
         std::mutex pending_jobs_mutex;
 
         std::atomic<bool> pausing = true;
@@ -86,7 +86,7 @@ export namespace craftbuild {
 
         SendQueue send_queue;
         ReceiveQueue receive_queue;
-		Ptr<TCPServer> server_ptr;
+		Ptr<GameEngine> server_ptr;
 
     public:
         void _ready() override;
@@ -102,15 +102,15 @@ export namespace craftbuild {
         void start_network_thread();
         void start_scheduler_thread();
         void submit_jobs();
-        void create_chunk_collision(ChunkRender& chunk_render, Pos3D<int32>& pos, PackedVector3Array const& collision_faces);
-        void update_chunk_mesh(ChunkRender& chunk_render, Pos3D<int32>& pos, Ref<ArrayMesh> const& mesh);
+        void create_chunk_collision(ChunkRender& chunk_render, PackedVector3Array const& collision_faces);
+        void update_chunk_mesh(ChunkRender& chunk_render, Pos2D<int32>& pos, Ref<ArrayMesh> const& mesh);
         void unload_distant_chunks();
 
-        Ptr<Chunk> get_chunk(int32 cx, int32 cz);
-        Ptr<Chunk> get_or_create_chunk(int32 cx, int32 cz);
-        ChunkRender& ref_mesh(int32 cx, int32 cz);
+        Ptr<Chunk> get_chunk(int32 cx, int32 cy);
+        Ptr<Chunk> get_or_create_chunk(int32 cx, int32 cy);
+        ChunkRender& ref_mesh(int32 cx, int32 cy);
         uint32 get_global_block_id(int32 wx, int32 wy, int32 wz);
-        void set_chunk(Ptr<Chunk>& chunk, int32 cx, int32 cz);
+        void set_chunk(Ptr<Chunk>& chunk, int32 cx, int32 cy);
         void set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz);
 
         void save_userdata(char const* path = "user://game/userdata.cbdata");

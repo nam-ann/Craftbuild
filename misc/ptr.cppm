@@ -131,7 +131,7 @@ export namespace craftbuild {
 		}
 
 		inline std::string address() const {
-			return format{} << __value__;
+			return ""f << __value__;
 		}
 
 		inline T* c_ptr() const noexcept {

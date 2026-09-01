@@ -150,7 +150,7 @@ namespace craftbuild {
     }
     bool Chunk::has_tag(Pos3D<uint8> const& pos, uint32 tag_id, usize tag_data) const {
         std::shared_lock lock(data_mutex);
-        if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return false;
+        if (pos.x >= WIDTH or pos.y >= HEIGHT or pos.z >= WIDTH) return false;
 
         if (tag_ids_size >= 255) {
             return complex_blocks.at(pos).tag == tag_id and complex_blocks.at(pos).tag_data == tag_data;
@@ -162,13 +162,13 @@ namespace craftbuild {
     }
 
     uint32 Chunk::get_block(Pos3D<uint8> const& pos) const {
-        if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return 0;
+        if (pos.x >= WIDTH or pos.y >= HEIGHT or pos.z >= WIDTH) return 0;
         if (complex_blocks.contains(pos)) return complex_blocks.at(pos).block_id;
         return block_ids[blocks[pos.x][pos.y][pos.z].block_id];
     }
 
     std::pair<uint32, uint64> Chunk::get_tag(Pos3D<uint8> const& pos) const {
-        if (pos.x >= SIZE_X or pos.y >= SIZE_Y or pos.z >= SIZE_Z) return std::make_pair(0, 0);
+        if (pos.x >= WIDTH or pos.y >= HEIGHT or pos.z >= WIDTH) return std::make_pair(0, 0);
         if (complex_blocks.contains(pos)) {
             auto const& block = complex_blocks.at(pos);
             return std::make_pair(block.tag, block.tag_data);
@@ -190,7 +190,7 @@ namespace craftbuild {
 
         Dict<uint32, uint8> new_id2block;
         Dict<Pos3D<uint8>, BlockStorageFull> new_complex_blocks;
-        auto new_blocks = std::make_unique<BlockStorage[][SIZE_Y][SIZE_Z]>(SIZE_X);
+        auto new_blocks = std::make_unique<BlockStorage[][HEIGHT][WIDTH]>(WIDTH);
 
         auto add_block_unlocked = [&](Pos3D<uint8> const& pos, uint32 block_id) {
             if (new_block_ids_size >= 256) {
@@ -210,27 +210,27 @@ namespace craftbuild {
             };
 
         const usize biome_count = BiomeRegistry::registry.size();
-        for (auto x : range<uint8>(SIZE_X)) {
-            for (auto z : range<uint8>(SIZE_Z)) {
-                int32 global_x = chunk_pos.x * SIZE_X + x;
-                int32 global_z = chunk_pos.z * SIZE_Z + z;
+        for (auto x : range<uint8>(WIDTH)) {
+            for (auto z : range<uint8>(WIDTH)) {
+                int32 global_x = chunk_pos.x * WIDTH + x;
+                int32 global_z = chunk_pos.y * WIDTH + z;
 
                 const Biome current_biome = get_blended_biome(global_x, global_z, noise, biome_count);
 
-                float32 base_noise = noise->get_noise_2d(static_cast<real_t>(global_x) * current_biome.base_noise, static_cast<real_t>(global_z) * current_biome.base_noise);
+                float32 base_noise = noise->get_noise_2d(real(global_x) * current_biome.base_noise, real(global_z) * current_biome.base_noise);
                 float32 base_elevation = ((base_noise + 1.0f) * 0.5f) * current_biome.base_height;
                 float32 detail_elevation = 0.0f;
                 if (current_biome.detail_noise > 0.0f and current_biome.detail_height > 0.0f) {
-                    const float32 detail_noise = noise->get_noise_2d(static_cast<real_t>(global_x) * current_biome.detail_noise, static_cast<real_t>(global_z) * current_biome.detail_noise);
+                    const float32 detail_noise = noise->get_noise_2d(real(global_x) * current_biome.detail_noise, real(global_z) * current_biome.detail_noise);
                     detail_elevation = detail_noise * current_biome.detail_height;
                 }
                 float32 terrain_base_y = current_biome.min_height + base_elevation + detail_elevation;
 
                 int32 solid_depth = -1;
 
-                for (auto y : range<int16>(SIZE_Y - 1, -1)) {
+                for (auto y : range<int16>(HEIGHT - 1, -1)) {
                     if (y == 0) {
-                        add_block_unlocked({ x, (uint8)y, z }, BEDROCK);
+                        add_block_unlocked({ x, uint8(y), z }, BEDROCK);
                         continue;
                     }
 
@@ -241,13 +241,13 @@ namespace craftbuild {
                     );
 
                     float32 noise_3d = noise->get_noise_3d(
-                        static_cast<real_t>(global_x) * 0.2f,
-                        static_cast<real_t>(y) * 0.3f,
-                        static_cast<real_t>(global_z) * 0.2f
+                        real(global_x) * 0.2f,
+                        real(y) * 0.3f,
+                        real(global_z) * 0.2f
                     );
 
-                    float32 density = terrain_base_y - static_cast<float32>(y) + (noise_3d * 25.0f);
-                    uint32 block_id = AIR;
+                    float32 density = terrain_base_y - float32(y) + (noise_3d * 25.0f);
+                    auto block_id = AIR;
 
                     if (cave_noise <= CHEESE_CAVE.threshold) {
                         if (density > current_biome.base_height * 0.005f) {
@@ -274,7 +274,7 @@ namespace craftbuild {
 
         {
             std::unique_lock lock(data_mutex);
-            std::memcpy(blocks, new_blocks.get(), sizeof(BlockStorage) * Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z);
+            std::memcpy(blocks, new_blocks.get(), sizeof(BlockStorage) * Chunk::WIDTH * Chunk::HEIGHT * Chunk::WIDTH);
             std::memcpy(block_ids, new_block_ids, sizeof(uint32) * 256);
 
             block_ids_size = new_block_ids_size;
@@ -332,30 +332,30 @@ namespace craftbuild {
         };
 
         auto transparent_or_air = [this, raw_neighbors, AIR, TRANSPARENT, is_dyn_block](int32 bx, int32 by, int32 bz) -> bool {
-            if (by < 0 or by >= Chunk::SIZE_Y) return true;
+            if (by < 0 or by >= Chunk::HEIGHT) return true;
 
             uint32 id = AIR;
             std::pair<uint32, usize> tag = { TRANSPARENT, true };
 
-            if (bx >= Chunk::SIZE_X or bx < 0 or bz >= Chunk::SIZE_Z or bz < 0) {
+            if (bx >= Chunk::WIDTH or bx < 0 or bz >= Chunk::WIDTH or bz < 0) {
                 uint8 nid = 0;
-                if (bx >= Chunk::SIZE_X)      nid = 0;
+                if (bx >= Chunk::WIDTH)       nid = 0;
                 else if (bx < 0)              nid = 1;
-                else if (bz >= Chunk::SIZE_Z) nid = 2;
+                else if (bz >= Chunk::WIDTH)  nid = 2;
                 else if (bz < 0)              nid = 3;
 
                 Chunk* neighbor = raw_neighbors[nid];
                 if (not neighbor or not neighbor->generated.load(std::memory_order_acquire)) return true;
 
-                uint8 lx = (uint8)((bx % Chunk::SIZE_X + Chunk::SIZE_X) % Chunk::SIZE_X);
-                uint8 lz = (uint8)((bz % Chunk::SIZE_Z + Chunk::SIZE_Z) % Chunk::SIZE_Z);
+                uint8 lx = uint8((bx % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH);
+                uint8 lz = uint8((bz % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH);
 
-                id = neighbor->get_block({ lx, (uint8)by, lz });
-                tag = neighbor->get_tag({ lx, (uint8)by, lz });
+                id = neighbor->get_block({ lx, uint8(by), lz });
+                tag = neighbor->get_tag({ lx, uint8(by), lz });
             }
             else {
-                id = get_block({ (uint8)bx, (uint8)by, (uint8)bz });
-                tag = get_tag({ (uint8)bx, (uint8)by, (uint8)bz });
+                id = get_block({ uint8(bx), uint8(by), uint8(bz) });
+                tag = get_tag({ uint8(bx), uint8(by), uint8(bz) });
             }
 
             if (id == AIR or is_dyn_block(id)) return true;
@@ -363,19 +363,19 @@ namespace craftbuild {
         };
 
         auto get_block_layer = [this, AIR, is_dyn_block](int32 bx, int32 by, int32 bz, Face face) -> int32 {
-            uint32 id = get_block({ (uint8)bx, (uint8)by, (uint8)bz });
+            uint32 id = get_block({ uint8(bx), uint8(by), uint8(bz) });
             if (id == AIR or is_dyn_block(id)) return -1;
             auto& block = BlockRegistry::get_block(id);
             if (not block) return -1;
             return block.value().get_texture_layer(face);
         };
 
-        const int64 dims[3] = { Chunk::SIZE_X, Chunk::SIZE_Y, Chunk::SIZE_Z };
+        const int64 dims[3] = { Chunk::WIDTH, Chunk::HEIGHT, Chunk::WIDTH };
         const Face front_faces[3] = { Face::RIGHT, Face::TOP,    Face::FRONT };
         const Face back_faces[3] = { Face::LEFT,  Face::BOTTOM, Face::BACK };
 
         List<FaceMask> mask;
-        mask.resize(Chunk::SIZE_Y * std::max(Chunk::SIZE_X, Chunk::SIZE_Z));
+        mask.resize(Chunk::HEIGHT * std::max(Chunk::WIDTH, Chunk::WIDTH));
 
         uint64 vertex_offset = 0;
         for (auto d : range<int32>(3)) {
@@ -433,13 +433,13 @@ namespace craftbuild {
                             ++height;
                         }
 
-                        float32 du[3] = { 0, 0, 0 }; du[u] = (float32)width;
-                        float32 dv[3] = { 0, 0, 0 }; dv[v] = (float32)height;
+                        float32 du[3] = { 0, 0, 0 }; du[u] = float32(width);
+                        float32 dv[3] = { 0, 0, 0 }; dv[v] = float32(height);
 
                         float32 start[3] = { 0, 0, 0 };
-                        start[d] = (float32)(x[d] + 1);
-                        start[u] = (float32)i;
-                        start[v] = (float32)j;
+                        start[d] = float32(x[d] + 1);
+                        start[u] = float32(i);
+                        start[v] = float32(j);
 
                         Pos3D<float32> p0(start[0], start[1], start[2]);
                         Pos3D<float32> p1(start[0] + du[0], start[1] + du[1], start[2] + du[2]);
@@ -482,13 +482,13 @@ namespace craftbuild {
 
                         for (auto n : range<int32>(4)) normals.append(normal);
 
-                        Vector2 layer_uv(static_cast<float>(current_face.layer), 0.0f);
+                        Vector2 layer_uv(float32(current_face.layer), 0.0f);
                         for (auto n : range<int32>(4)) uvs_layer.append(layer_uv);
 
-                        indices.append(vertex_offset + 0); indices.append(vertex_offset + 2); indices.append(vertex_offset + 1);
-                        indices.append(vertex_offset + 0); indices.append(vertex_offset + 3); indices.append(vertex_offset + 2);
+                        indices.append(vertex_offset); indices.append(vertex_offset + 2); indices.append(vertex_offset + 1);
+                        indices.append(vertex_offset); indices.append(vertex_offset + 3); indices.append(vertex_offset + 2);
 
-                        collision_faces.append(vertices[vertex_offset + 0]);
+                        collision_faces.append(vertices[vertex_offset    ]);
                         collision_faces.append(vertices[vertex_offset + 2]);
                         collision_faces.append(vertices[vertex_offset + 1]);
                         collision_faces.append(vertices[vertex_offset + 0]);
@@ -507,13 +507,13 @@ namespace craftbuild {
             }
         }
 
-        for (uint8 x = 0; x < Chunk::SIZE_X; ++x) {
-            for (uint16 y = 0; y < Chunk::SIZE_Y; ++y) {
-                for (uint8 z = 0; z < Chunk::SIZE_Z; ++z) {
-                    uint32 id = get_block({ x, (uint8)y, z });
+        for (uint8 x = 0; x < Chunk::WIDTH; ++x) {
+            for (uint16 y = 0; y < Chunk::HEIGHT; ++y) {
+                for (uint8 z = 0; z < Chunk::WIDTH; ++z) {
+                    uint32 id = get_block({ x, uint8(y), z });
                     if (is_dyn_block(id)) {
-                        auto tag_info = get_tag({ x, (uint8)y, z });
-                        data.dyn_instances.append({ id, tag_info.second, {x, (uint8)y, z} });
+                        auto tag_info = get_tag({ x, uint8(y), z });
+                        data.dyn_instances.append({ id, tag_info.second, {x, uint8(y), z} });
                     }
                 }
             }

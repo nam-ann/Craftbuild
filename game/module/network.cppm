@@ -3,12 +3,7 @@ module;
 #include <defs.hpp>
 
 NO_WARNING
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
-
-#pragma comment(lib, "ws2_32.lib")
-#undef ERROR
+#include <godot_cpp/classes/stream_peer_tcp.hpp>
 DO_WARNING
 
 export module game.network;
@@ -22,6 +17,7 @@ import misc.number;
 import misc.format;
 import game.logger;
 
+using namespace godot;
 using namespace std::chrono_literals;
 
 export namespace craftbuild {
@@ -35,7 +31,7 @@ export namespace craftbuild {
         mutable std::mutex msg_mutex;
 
         void store(Message const& message);
-        void send(SOCKET socket);
+        void send(StreamPeerTCP& peer);
     };
 
     enum class ReceiveState {
@@ -47,7 +43,7 @@ export namespace craftbuild {
     struct ReceiveQueue {
         List<char> buffer;
 
-        ReceiveState receive(SOCKET socket, List<char>& out_data);
+        ReceiveState receive(StreamPeerTCP& peer, List<char>& out_data);
         static Message parse(List<char> buffer);
     };
 }

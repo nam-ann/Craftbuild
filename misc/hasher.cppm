@@ -1,3 +1,11 @@
+module;
+
+#include <defs.hpp>
+
+NO_WARNING
+#include <godot_cpp/classes/ref.hpp>
+DO_WARNING
+
 export module misc.hasher;
 
 import std;
@@ -44,6 +52,11 @@ export namespace craftbuild {
 
             return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
         }
+    };
+
+    template <typename T>
+    struct Hasher<godot::Ref<T>> {
+        usize operator()(godot::Ref<T> const& value) const { return usize(*value); }
     };
 
     template <typename T>

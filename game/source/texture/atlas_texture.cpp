@@ -21,7 +21,7 @@ namespace craftbuild {
             if (original_img.is_null()) continue;
 
             block.block.value().base_texture_layer = current_layer;
-            log<LogType::VERBOSE>(format{} << block.name.std_str().c_str() << " assigned layer: " << current_layer);
+            log<LogType::VERBOSE>(""f << block.name.std_str().c_str() << " assigned layer: " << current_layer);
 
             int32 width = original_img->get_width();
             int32 face_count = width / IMAGE_SIZE;
@@ -43,7 +43,7 @@ namespace craftbuild {
         atlas_texture.instantiate();
         Error err = atlas_texture->create_from_images(images);
 
-        if (err != OK) log<LogType::ERROR>(format{} << "Error: create_from_images failed code: " << (int32)err);
-        else log<LogType::VERBOSE>(format{} << "TextureArray build success: " << current_layer << " layers.");
+        if (err != OK) log<LogType::ERROR>("Error: create_from_images failed code: "f << int32(err));
+        else log<LogType::VERBOSE>("TextureArray build success: "f << current_layer << " layers.");
     }
 }

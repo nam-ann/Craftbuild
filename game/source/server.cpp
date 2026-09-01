@@ -3,12 +3,6 @@ module;
 #include <defs.hpp>
 
 NO_WARNING
-#include <winsock2.h>
-#include <windows.h>
-
-#pragma comment(lib, "ws2_32.lib")
-#undef ERROR
-
 #include <godot_cpp/classes/marshalls.hpp>
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/fast_noise_lite.hpp>
@@ -23,21 +17,21 @@ import game.command;
 using namespace std::chrono_literals;
 
 namespace craftbuild {
-    void TCPServer::_get_refs(std::vector<GCObject*>&refs) {
+    void GameEngine::_get_refs(std::vector<GCObject*>&refs) {
 		std::shared_lock lock(chunks_mutex);
 		for (auto const& [_, chunk_ptr] : chunks) {
 			if (chunk_ptr) refs.push_back(chunk_ptr.object());
 		}
     }
 
-    TCPServer::TCPServer() {
+    GameEngine::GameEngine() {
         command_ptr = new CommandInterpreter(this);
 
         noise.instantiate();
         noise->set_noise_type(FastNoiseLite::TYPE_SIMPLEX);
         noise->set_frequency(0.01f);
 
-        if (not load_world(format{} << "user://game/saves/" << world_name)) {
+        if (not load_world("user://game/saves/"f << world_name)) {
             log<LogType::WARNING>("Save file not found, starting new world.");
             if (world_seed.load(std::memory_order_acquire) == 0) {
                 std::mt19937 generator;
@@ -55,17 +49,17 @@ namespace craftbuild {
         log<LogType::INFO>("Server initialized");
     }
 
-    TCPServer::~TCPServer() {
+    GameEngine::~GameEngine() {
 		running.store(false, std::memory_order_relaxed);
 
 		if (redstone_thread.joinable()) redstone_thread.join();
 		if (scheduler_thread.joinable()) scheduler_thread.join();
         loop_cv.notify_all();
 
-        save_world(format{} << "user://game/saves/" << world_name);
+        save_world("user://game/saves/"f << world_name);
     }
 
-    void TCPServer::disconnect(Str const& player_name) {
+    void GameEngine::disconnect(Str const& player_name) {
         if (not players.contains(player_name)) return;
 
         std::unique_lock lock(player_mutex);
@@ -76,10 +70,10 @@ namespace craftbuild {
             current_player = online_players.begin();
         }
 
-        log<LogType::INFO>(format{} << "Player disconnected: " << player_name);
+        log<LogType::INFO>("Player disconnected: "f << player_name);
     }
 
-	void TCPServer::connect(Str const& player_name) {
+	void GameEngine::connect(Str const& player_name) {
         std::unique_lock lock(player_mutex);
         online_players[player_name];
 
@@ -91,15 +85,15 @@ namespace craftbuild {
         if (players.contains(player_name)) return;
         players[player_name] = PlayerData{ .name = player_name, .pos = {0, 0, 0} };
 
-		log<LogType::INFO>(format{} << "Player connected: " << player_name);
+		log<LogType::INFO>("Player connected: "f << player_name);
 	}
 
-	void TCPServer::update(Str const& player_name, Pos3D<real> const& new_pos) {
+	void GameEngine::update(Str const& player_name, Pos3D<real> const& new_pos) {
 		std::unique_lock lock(player_mutex);
         players[player_name].pos = new_pos;
 	}
 
-    void TCPServer::start_redstone_thread() {
+    void GameEngine::start_redstone_thread() {
         if (redstone_thread.joinable()) return;
 
         auto worker = [this]() {
@@ -114,7 +108,7 @@ namespace craftbuild {
         redstone_thread = std::thread(worker);
     }
 
-    void TCPServer::start_scheduler_thread() {
+    void GameEngine::start_scheduler_thread() {
         scheduler_thread = std::thread([this]() {
             ThreadRegistry::register_thread("Terrain");
             log<LogType::INFO>("Terrain thread started");
@@ -155,18 +149,18 @@ namespace craftbuild {
         });
     }
 
-    void TCPServer::submit_jobs(Pos3D<real> const& player) {
-        int32 px = static_cast<int32>(std::floor(player.x / Chunk::SIZE_X));
-        int32 pz = static_cast<int32>(std::floor(player.z / Chunk::SIZE_Z));
+    void GameEngine::submit_jobs(Pos3D<real> const& player) {
+        int32 px = static_cast<int32>(std::floor(player.x / Chunk::WIDTH));
+        int32 pz = static_cast<int32>(std::floor(player.z / Chunk::WIDTH));
 
-        auto get_or_load_or_create_chunk = [this](int32 cx, int32 cz) -> Ptr<Chunk> {
-			if (auto chunk_ptr = get_or_load_chunk(cx, cz)) return chunk_ptr;
-            return get_or_create_chunk(cx, cz);
+        auto get_or_load_or_create_chunk = [this](int32 cx, int32 cy) -> Ptr<Chunk> {
+			if (auto chunk_ptr = get_or_load_chunk(cx, cy)) return chunk_ptr;
+            return get_or_create_chunk(cx, cy);
         };
 
-        auto process_cell = [&](int32 x, int32 z) {
-            Pos3D<int32> chunk_pos{ px + x, 0, pz + z };
-            auto chunk_ptr = get_or_load_or_create_chunk(chunk_pos.x, chunk_pos.z);
+        auto process_cell = [&](int32 cx, int32 cy) {
+            Pos2D<int32> chunk_pos{ px + cx, pz + cy };
+            auto chunk_ptr = get_or_load_or_create_chunk(chunk_pos.x, chunk_pos.y);
 
             if (chunk_ptr.value().generated.load(std::memory_order_acquire)) return;
 
@@ -182,9 +176,9 @@ namespace craftbuild {
                 if (running.load(std::memory_order_relaxed)) {
                     chunk.generate_terrain(world_seed.load(), noise);
 
-                    Pos3D<int32> offsets[4] = { {1,0,0}, {-1,0,0}, {0,0,1}, {0,0,-1} };
+                    Pos2D<int32> offsets[4] = { {1,0}, {-1,0}, {0,1}, {0,-1} };
                     for (auto& o : offsets) {
-                        auto n_ptr = get_or_load_chunk(chunk.chunk_pos.x + o.x, chunk.chunk_pos.z + o.z);
+                        auto n_ptr = get_or_load_chunk(chunk.chunk_pos.x + o.x, chunk.chunk_pos.y + o.y);
                         if (not n_ptr) continue;
 
                         auto& n = n_ptr.value();
@@ -215,7 +209,7 @@ namespace craftbuild {
         }
     }
 
-    std::string TCPServer::serialize_players() {
+    std::string GameEngine::serialize_players() {
         std::stringstream os;
 
         {
@@ -238,17 +232,17 @@ namespace craftbuild {
         return os.str();
     }
 
-    std::string TCPServer::serialize_chunk(int32 cx, int32 cz) {
+    std::string GameEngine::serialize_chunk(int32 cx, int32 cy) {
         std::stringstream os(std::ios::binary | std::ios::out);
 
 		// Get & serialize chunk data
-        Ptr<Chunk> chunk_ptr = get_chunk(cx, cz);
+        Ptr<Chunk> chunk_ptr = get_chunk(cx, cy);
         if (not chunk_ptr) return "";
         auto& chunk = chunk_ptr.value();
 
         std::shared_lock data_lock(chunk.data_mutex);
 
-        os.write(reinterpret_cast<char const*>(&chunk.blocks[0][0][0]), (uint64)Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z * sizeof(BlockStorage));
+        os.write(reinterpret_cast<char const*>(&chunk.blocks[0][0][0]), uint64(Chunk::WIDTH * Chunk::HEIGHT * Chunk::WIDTH * sizeof(BlockStorage)));
         
         os.write(reinterpret_cast<char const*>(&chunk.block_ids_size), sizeof(uint8));
         os.write(reinterpret_cast<char const*>(&chunk.block_ids[0]), sizeof(uint32) * 256);
@@ -287,7 +281,7 @@ namespace craftbuild {
 
         // Zip
         std::string raw_data = os.str();
-        uint32 uncompressed_size = static_cast<uint32>(raw_data.size());
+        uint32 uncompressed_size = uint32(raw_data.size());
 
         PackedByteArray pba;
         pba.resize(uncompressed_size);
@@ -306,8 +300,8 @@ namespace craftbuild {
         return (std::string)base64_godot_str.utf8();
     }
 
-    Ptr<Chunk> TCPServer::get_chunk(int32 cx, int32 cz) {
-        Pos3D<int32> cpos(cx, 0, cz);
+    Ptr<Chunk> GameEngine::get_chunk(int32 cx, int32 cy) {
+        Pos2D<int32> cpos(cx, cy);
 
         std::shared_lock lock(chunks_mutex);
         auto it = chunks.find(cpos);
@@ -316,20 +310,20 @@ namespace craftbuild {
         return it->second;
     }
 
-    Ptr<Chunk> TCPServer::get_or_load_chunk(int32 cx, int32 cz) {
-        if (auto chunk_ptr = get_chunk(cx, cz)) return chunk_ptr;
+    Ptr<Chunk> GameEngine::get_or_load_chunk(int32 cx, int32 cy) {
+        if (auto chunk_ptr = get_chunk(cx, cy)) return chunk_ptr;
 
         const int32 rx = (cx >= 0) ? (cx / 16) : ((cx - 15) / 16);
-        const int32 rz = (cz >= 0) ? (cz / 16) : ((cz - 15) / 16);
+        const int32 ry = (cy >= 0) ? (cy / 16) : ((cy - 15) / 16);
 
-        const Str path = format{} << "user://game/saves/" << world_name;
-        const String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(rz) + ".cbregion").std_str().c_str());
+        const Str path = "user://game/saves/"f << world_name;
+        const String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(ry) + ".cbregion").std_str().c_str());
         const std::string std_path = (std::string)real_path.utf8();
 
-        const auto chunk_pos = Pos3D<int32>{ cx, 0, cz };
+        const auto chunk_pos = Pos2D<int32>{ cx, cy };
 
         if (std::filesystem::exists(std_path)) {
-            load_region(path, rx, rz);
+            load_region(path, rx, ry);
 
             std::shared_lock lock(chunks_mutex);
             auto it_loaded = chunks.find(chunk_pos);
@@ -339,8 +333,8 @@ namespace craftbuild {
         return nullptr;
     };
 
-    Ptr<Chunk> TCPServer::get_or_create_chunk(int32 cx, int32 cz) {
-        Pos3D<int32> chunk_pos{ cx, 0, cz };
+    Ptr<Chunk> GameEngine::get_or_create_chunk(int32 cx, int32 cy) {
+        Pos2D<int32> chunk_pos{ cx, cy };
         {
             std::shared_lock lock(chunks_mutex);
             auto it = chunks.find(chunk_pos);
@@ -356,41 +350,41 @@ namespace craftbuild {
         return chunks[chunk_pos];
     }
 
-    uint32 TCPServer::get_global_block_id(int32 wx, int32 wy, int32 wz) {
-        if (wy < 0 or wy >= Chunk::SIZE_Y) return BlockRegistry::get_id("Air");
+    uint32 GameEngine::get_global_block_id(int32 wx, int32 wy, int32 wz) {
+        if (wy < 0 or wy >= Chunk::HEIGHT) return BlockRegistry::get_id("Air");
 
-        int32 cx = static_cast<int32>(std::floor((float32)wx / Chunk::SIZE_X));
-        int32 cz = static_cast<int32>(std::floor((float32)wz / Chunk::SIZE_Z));
-        Pos3D<int32> cpos(cx, 0, cz);
+        int32 cx = int32(std::floor(float32(wx) / Chunk::WIDTH));
+        int32 cy = int32(std::floor(float32(wz) / Chunk::WIDTH));
+        Pos2D<int32> cpos(cx, cy);
 
-        Ptr<Chunk> chunk = get_chunk(cx, cz);
+        Ptr<Chunk> chunk = get_chunk(cx, cy);
         if (not chunk) return BlockRegistry::get_id("Air");
 
-        int32 lx = (wx % Chunk::SIZE_X + Chunk::SIZE_X) % Chunk::SIZE_X;
-        int32 lz = (wz % Chunk::SIZE_Z + Chunk::SIZE_Z) % Chunk::SIZE_Z;
+        int32 lx = (wx % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
+        int32 lz = (wz % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
 
-        return chunk.value().get_block({ (uint8)lx, (uint8)wy, (uint8)lz });
+        return chunk.value().get_block({ uint8(lx), uint8(wy), uint8(lz) });
     }
 
-    void TCPServer::set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz) {
-        if (wy < 0 or wy >= Chunk::SIZE_Y) return;
+    void GameEngine::set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz) {
+        if (wy < 0 or wy >= Chunk::HEIGHT) return;
 
-        int32 cx = static_cast<int32>(std::floor((float32)wx / Chunk::SIZE_X));
-        int32 cz = static_cast<int32>(std::floor((float32)wz / Chunk::SIZE_Z));
-        Pos3D<int32> cpos(cx, 0, cz);
+        int32 cx = int32(std::floor(float32(wx) / Chunk::WIDTH));
+        int32 cy = int32(std::floor(float32(wz) / Chunk::WIDTH));
+        Pos2D<int32> cpos(cx, cy);
 
-        Ptr<Chunk> chunk = get_chunk(cx, cz);
+        Ptr<Chunk> chunk = get_chunk(cx, cy);
         if (not chunk) return;
 
-        int32 lx = (wx % Chunk::SIZE_X + Chunk::SIZE_X) % Chunk::SIZE_X;
-        int32 lz = (wz % Chunk::SIZE_Z + Chunk::SIZE_Z) % Chunk::SIZE_Z;
+        int32 lx = (wx % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
+        int32 lz = (wz % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
 
-        chunk.value().set_block({ (uint8)lx, (uint8)wy, (uint8)lz }, block_id);
+        chunk.value().set_block({ uint8(lx), uint8(wy), uint8(lz) }, block_id);
     }
 
-    void TCPServer::unload_distant_chunks() {
+    void GameEngine::unload_distant_chunks() {
         const int32 unload_dist = render_distance + 4;
-        Set<Pos3D<int32>> still_viewing_chunks;
+        Set<Pos2D<int32>> still_viewing_chunks;
 
         {
             std::shared_lock lock(chunks_mutex);
@@ -398,14 +392,14 @@ namespace craftbuild {
                 std::shared_lock lock(player_mutex);
                 for (auto const& [player_name, _] : online_players) {
                     auto& player_pos = players[player_name].pos;
-                    int32 dx = std::abs(chunk_pos.x - (int32)std::floor(player_pos.x / Chunk::SIZE_X));
-                    int32 dz = std::abs(chunk_pos.z - (int32)std::floor(player_pos.z / Chunk::SIZE_Z));
+                    int32 dx = std::abs(chunk_pos.x - int32(std::floor(player_pos.x / Chunk::WIDTH)));
+                    int32 dz = std::abs(chunk_pos.y - int32(std::floor(player_pos.z / Chunk::WIDTH)));
                     if (dx <= unload_dist and dz <= unload_dist) still_viewing_chunks.insert(chunk_pos);
                 }
             }
         }
 
-        Set<Pos3D<int32>> regions_to_save;
+        Set<Pos2D<int32>> regions_to_save;
 
         {
             std::unique_lock lock(chunks_mutex);
@@ -414,33 +408,33 @@ namespace craftbuild {
 
                 if (still_viewing_chunks.find(chunk_pos) == still_viewing_chunks.end()) {
                     int32 rx = (chunk_pos.x >= 0) ? (chunk_pos.x / 16) : ((chunk_pos.x - 15) / 16);
-                    int32 rz = (chunk_pos.z >= 0) ? (chunk_pos.z / 16) : ((chunk_pos.z - 15) / 16);
+                    int32 ry = (chunk_pos.y >= 0) ? (chunk_pos.y / 16) : ((chunk_pos.y - 15) / 16);
 
-                    regions_to_save.insert({ rx, 0, rz });
+                    regions_to_save.insert({ rx, ry });
                     it = chunks.erase(it);
                 }
                 else ++it;
             }
         }
 
-        for (auto const& [rx, _, rz] : regions_to_save) {
-            save_region(format{} << "user://game/saves/" << world_name, rx, rz);
+        for (auto const& [rx, ry] : regions_to_save) {
+            save_region("user://game/saves/"f << world_name, rx, ry);
         }
     }
 
-    void TCPServer::set_seed_and_world_name(int32 seed, Str const& name) {
+    void GameEngine::set_seed_and_world_name(int32 seed, Str const& name) {
 		world_seed.store(seed, std::memory_order_release);
 		noise->set_seed(seed);
 		world_name = name;
     }
 
-    void TCPServer::set_render_distance(int32 rd) { render_distance = rd; }
-    void TCPServer::set_cpu_sleep_time(int32 stc) { cpu_sleep_time = stc; }
+    void GameEngine::set_render_distance(int32 rd) { render_distance = rd; }
+    void GameEngine::set_cpu_sleep_time(int32 stc) { cpu_sleep_time = stc; }
 
-    Str TCPServer::chat(Str const& msg) {
+    Str GameEngine::chat(Str const& msg) {
         if (msg) {
             std::string _msg = msg.std_str();
-            log<LogType::NORMAL>(format{} << "[Player] " << _msg);
+            log<LogType::NORMAL>("[Player] "f << _msg);
             if (_msg.starts_with("/")) {
                 CommandInterpreter* interpreter = static_cast<CommandInterpreter*>(command_ptr);
                 return interpreter->execute_command(_msg.erase(0, 1)).std_str().c_str();
@@ -450,7 +444,7 @@ namespace craftbuild {
         return "";
     }
 
-    void TCPServer::save_world(Str const& path) {
+    void GameEngine::save_world(Str const& path) {
         String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/" + world_name + ".cbworld").std_str().c_str());
         std::string std_path = (std::string)real_path.utf8();
 
@@ -459,7 +453,7 @@ namespace craftbuild {
 
         std::ofstream ofs(std_path, std::ios::binary);
         if (not ofs.is_open()) {
-            log<LogType::ERROR>(format{} << "Cannot open save file: " << std_path);
+            log<LogType::ERROR>("Cannot open save file: "f << std_path);
             return;
         }
 
@@ -489,23 +483,23 @@ namespace craftbuild {
 
         ofs.close();
 
-        Set<Pos3D<int32>> regions_to_save;
+        Set<Pos2D<int32>> regions_to_save;
 
         {
 			std::shared_lock lock(chunks_mutex);
             for (auto const& [chunk_pos, _] : chunks) {
                 int32 rx = (chunk_pos.x >= 0) ? (chunk_pos.x / 16) : ((chunk_pos.x - 15) / 16);
-                int32 rz = (chunk_pos.z >= 0) ? (chunk_pos.z / 16) : ((chunk_pos.z - 15) / 16);
-                regions_to_save.insert({ rx, 0, rz });
+                int32 ry = (chunk_pos.y >= 0) ? (chunk_pos.y / 16) : ((chunk_pos.y - 15) / 16);
+                regions_to_save.insert({ rx, ry });
             }
         }
 
-        for (auto const& [rx, _, rz] : regions_to_save) save_region(path, rx, rz);
+        for (auto const& [rx, ry] : regions_to_save) save_region(path, rx, ry);
 
-        log<LogType::INFO>(format{} << "World saved!");
+        log<LogType::INFO>("World saved!");
     }
 
-    bool TCPServer::load_world(Str const& path) {
+    bool GameEngine::load_world(Str const& path) {
         String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/" + world_name + ".cbworld").std_str().c_str());
         std::string std_path = (std::string)real_path.utf8();
 
@@ -520,7 +514,7 @@ namespace craftbuild {
         std::string current_version(version_len, '\0');
         ifs.read(current_version.data(), sizeof(char) * version_len);
         if (current_version != version) {
-            log<LogType::WARNING>(format{} << "Save version" << "(" << current_version << ")" << " mismatch with current version(" << version << ")");
+            log<LogType::WARNING>("Save version"f << "(" << current_version << ")" << " mismatch with current version(" << version << ")");
 			log<LogType::WARNING>("This game's world loader doesn't support Data Migration. World data might get damaged and cause crashes");
         }
 
@@ -550,23 +544,23 @@ namespace craftbuild {
         return true;
     }
 
-    void TCPServer::save_region(Str const& path, int32 rx, int32 rz) {
-        String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(rz) + ".cbregion").std_str().c_str());
+    void GameEngine::save_region(Str const& path, int32 rx, int32 ry) {
+        String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(ry) + ".cbregion").std_str().c_str());
         std::string std_path = (std::string)real_path.utf8();
 
         std::filesystem::create_directories(std::filesystem::path(std_path).parent_path());
 
         std::ofstream ofs(std_path, std::ios::binary);
         if (not ofs.is_open()) {
-            log<LogType::ERROR>(format{} << "Cannot open save file: " << std_path);
+            log<LogType::ERROR>("Cannot open save file: "f << std_path);
             return;
         }
 
         const int32 cx = rx * 16;
-        const int32 cz = rz * 16;
+        const int32 cy = ry * 16;
 
 		for (int32 x : range<int32>(cx, cx + 16)) {
-			for (int32 z : range<int32>(cz, cz + 16)) {
+			for (int32 z : range<int32>(cy, cy + 16)) {
 				auto chunk_ptr = get_chunk(x, z);
 
                 const bool chunk_exists = chunk_ptr and chunk_ptr.value().generated.load(std::memory_order_acquire);
@@ -577,7 +571,7 @@ namespace craftbuild {
                 auto& chunk = chunk_ptr.value();
                 std::shared_lock data_lock(chunk.data_mutex);
 
-                ofs.write(reinterpret_cast<char const*>(&chunk.blocks[0][0][0]), Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z * sizeof(BlockStorage));
+                ofs.write(reinterpret_cast<char const*>(&chunk.blocks[0][0][0]), Chunk::WIDTH * Chunk::HEIGHT * Chunk::WIDTH * sizeof(BlockStorage));
 
                 ofs.write(reinterpret_cast<char const*>(&chunk.block_ids_size), sizeof(uint8));
                 ofs.write(reinterpret_cast<char const*>(&chunk.block_ids[0]), sizeof(uint32) * 256);
@@ -615,29 +609,29 @@ namespace craftbuild {
 		}
     }
 
-    bool TCPServer::load_region(Str const& path, int32 rx, int32 rz) {
-        String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(rz) + ".cbregion").std_str().c_str());
+    bool GameEngine::load_region(Str const& path, int32 rx, int32 ry) {
+        String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(ry) + ".cbregion").std_str().c_str());
         std::string std_path = (std::string)real_path.utf8();
 
         std::ifstream ifs(std_path, std::ios::binary);
         if (not ifs.is_open()) return false;
 
         const int32 w_rx = rx * 16;
-        const int32 w_rz = rz * 16;
+        const int32 w_rz = ry * 16;
 
         for (int32 cx : range<int32>(w_rx, w_rx + 16)) {
-            for (int32 cz : range<int32>(w_rz, w_rz + 16)) {
+            for (int32 cy : range<int32>(w_rz, w_rz + 16)) {
                 bool chunk_exists = true;
 				ifs.read(reinterpret_cast<char*>(&chunk_exists), sizeof(bool));
 
 				if (not chunk_exists) continue;
 
-				auto& chunk = get_or_create_chunk(cx, cz).value();
+				auto& chunk = get_or_create_chunk(cx, cy).value();
                 std::unique_lock data_lock(chunk.data_mutex);
 
                 chunk.clear();
 
-                ifs.read(reinterpret_cast<char*>(&chunk.blocks[0][0][0]), sizeof(BlockStorage) * Chunk::SIZE_X * Chunk::SIZE_Y * Chunk::SIZE_Z);
+                ifs.read(reinterpret_cast<char*>(&chunk.blocks[0][0][0]), sizeof(BlockStorage) * Chunk::WIDTH * Chunk::HEIGHT * Chunk::WIDTH);
 
                 ifs.read(reinterpret_cast<char*>(&chunk.block_ids_size), sizeof(uint8));
                 ifs.read(reinterpret_cast<char*>(&chunk.block_ids[0]), sizeof(uint32) * 256);
@@ -702,19 +696,19 @@ namespace craftbuild {
         TagRegistry::set_value(TagRegistry::get_id("collision_size"), 1, pack_vec3_mm(Vector3(0.2f, 0.6f, 0.2f)));
         TagRegistry::set_value(TagRegistry::get_id("collision_offset"), 1, pack_vec3_mm(Vector3(0.5f, 0.3f, 0.5f)));
 
-        BlockRegistry::register_block<Air>          ("Air"           , "");
-        BlockRegistry::register_block<Grass>        ("Grass Block"   , "");
-        BlockRegistry::register_block<Dirt>         ("Dirt"          , "");
-        BlockRegistry::register_block<Stone>        ("Stone"         , "");
-        BlockRegistry::register_block<Pebble>       ("Pebble"        , "");
-        BlockRegistry::register_block<OakLog>       ("Oak Log"       , "");
-        BlockRegistry::register_block<OakPlanks>    ("Oak Planks"    , "");
-        BlockRegistry::register_block<OakLeaves>    ("Oak Leaves"    , "");
-        BlockRegistry::register_block<DiamondBlock> ("Diamond Block" , "");
-        BlockRegistry::register_block<DiamondOre>   ("Diamond Ore"   , "");
-        BlockRegistry::register_block<Bedrock>      ("Bedrock"       , "");
+        BlockRegistry::register_block<Air>("Air", "");
+        BlockRegistry::register_block<Grass>("Grass Block", "");
+        BlockRegistry::register_block<Dirt>("Dirt", "");
+        BlockRegistry::register_block<Stone>("Stone", "");
+        BlockRegistry::register_block<Pebble>("Pebble", "");
+        BlockRegistry::register_block<OakLog>("Oak Log", "");
+        BlockRegistry::register_block<OakPlanks>("Oak Planks", "");
+        BlockRegistry::register_block<OakLeaves>("Oak Leaves", "");
+        BlockRegistry::register_block<DiamondBlock>("Diamond Block", "");
+        BlockRegistry::register_block<DiamondOre>("Diamond Ore", "");
+        BlockRegistry::register_block<Bedrock>("Bedrock", "");
         BlockRegistry::register_block<RedstoneBlock>("Redstone Block", "");
-        BlockRegistry::register_block<RedstoneDust> ("Redstone Dust" , "");
+        BlockRegistry::register_block<RedstoneDust>("Redstone Dust", "");
 
         Biome plains;
         plains.base_height = 5.0f;
@@ -761,42 +755,11 @@ namespace craftbuild {
         CaveRegistry::register_cave("Standard Tunnel", { CaveType::SPAGHETTI, 0.45f, 0.05f });
         CaveRegistry::register_cave("Deep Noodle", { CaveType::NOODLE, 0.35f, 0.08f });
 
-        if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
-            log<LogType::ERROR>("WSAStartup failed");
-            return;
-        }
+        tcp_server.instantiate();
+        auto err = tcp_server->listen(8888);
 
-        server_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-        if (server_socket == INVALID_SOCKET) {
-            log<LogType::ERROR>("Socket creation failed");
-            WSACleanup();
-            return;
-        }
-
-        server_addr.sin_family = AF_INET;
-        server_addr.sin_port = htons(8888);
-        server_addr.sin_addr.s_addr = INADDR_ANY;
-
-        if (bind(server_socket, (sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
-            log<LogType::ERROR>("Bind failed");
-            closesocket(server_socket);
-            WSACleanup();
-            return;
-        }
-
-        if (listen(server_socket, SOMAXCONN) == SOCKET_ERROR) {
-            log<LogType::ERROR>("Listen failed");
-            closesocket(server_socket);
-            WSACleanup();
-            return;
-        }
-
-        u_long mode = 1;
-        if (ioctlsocket(server_socket, FIONBIO, &mode) != 0) {
-            log<LogType::ERROR>("Failed to set socket to non-blocking mode");
-            closesocket(server_socket);
-            WSACleanup();
+        if (err != OK) {
+            log<LogType::ERROR>("Failed to start TCP Server on port 8888");
             return;
         }
 
@@ -804,30 +767,24 @@ namespace craftbuild {
     }
 
     void Server::_process(float64 delta) {
-        {
-            sockaddr_in client_addr{};
-            int32 client_len = sizeof(client_addr);
-
-            SOCKET client_socket = accept(server_socket, (sockaddr*)&client_addr, &client_len);
-            if (client_socket != INVALID_SOCKET) {
-                u_long mode = 1;
-                ioctlsocket(client_socket, FIONBIO, &mode);
-
-                clients[client_socket];
-                log<LogType::INFO>(format{} << "Accepted client: " << client_socket);
+        if (tcp_server.is_valid() and tcp_server->is_connection_available()) {
+            auto client_peer = tcp_server->take_connection();
+            if (client_peer.is_valid()) {
+                clients[client_peer];
+                log<LogType::INFO>("Accepted client: "f << client_peer->get_connected_host().utf8() << ":" << client_peer->get_connected_port());
             }
         }
 
-        List<SOCKET> disconnected_clients;
-        for (auto& [client_socket, client] : clients) {
+        std::vector<Ref<StreamPeerTCP>> disconnected_clients;
+        for (auto& [client_peer, client] : clients) {
             List<char> buffer;
-            const auto recv_state = client.receive_queue.receive(client_socket, buffer);
+            const auto recv_state = client.receive_queue.receive(**client_peer, buffer);
 
             if (recv_state == ReceiveState::WAITING) continue;
             if (recv_state == ReceiveState::ERROR) {
-                log<LogType::WARNING>(format{} << "Lost connect to client: " << client_socket);
-                server_ptr.disconnect(client.name);
-                disconnected_clients.append(client_socket);
+                log<LogType::WARNING>("Lost connect to client: "f << client_peer->get_connected_host().utf8() << ":" << client_peer->get_connected_port());
+                server.disconnect(client.name);
+                disconnected_clients.push_back(client_peer);
                 continue;
             }
 
@@ -837,77 +794,78 @@ namespace craftbuild {
             try {
                 if (message.content == "Connect") {
                     Str const& name = message.arguments[0];
-                    server_ptr.connect(name);
+                    server.connect(name);
                     client.name = name;
-					const auto player_pos = server_ptr.players[client.name].pos;
+                    const auto player_pos = server.players[client.name].pos;
                     client.send_queue.store({ "Connected", { std::to_string(player_pos.x), std::to_string(player_pos.y), std::to_string(player_pos.z) } });
                 }
                 else if (message.content == "Chat") {
-                    Str response = server_ptr.chat(message.arguments[0]);
+                    Str response = server.chat(message.arguments[0]);
                     client.send_queue.store({ "Chat response", { response.std_str() } });
                 }
                 else if (message.content == "Get chunk version") {
                     auto cx = std::stoi(message.arguments[0]);
-                    auto cz = std::stoi(message.arguments[1]);
+                    auto cy = std::stoi(message.arguments[1]);
 
-                    if (auto chunk_ptr = server_ptr.get_chunk(cx, cz)) client.send_queue.store({ "Chunk version", { std::to_string(chunk_ptr.value().chunk_version), message.arguments[0], message.arguments[1]}});
+                    if (auto chunk_ptr = server.get_chunk(cx, cy)) client.send_queue.store({ "Chunk version", { std::to_string(chunk_ptr.value().chunk_version), message.arguments[0], message.arguments[1]} });
                     else client.send_queue.store({ "Chunk not ready", { message.arguments[0], message.arguments[1] } });
                 }
                 else if (message.content == "Get chunk data") {
                     auto cx = std::stoi(message.arguments[0]);
-                    auto cz = std::stoi(message.arguments[1]);
+                    auto cy = std::stoi(message.arguments[1]);
 
-                    auto chunk_ptr = server_ptr.get_chunk(cx, cz);
+                    auto chunk_ptr = server.get_chunk(cx, cy);
                     if (chunk_ptr and chunk_ptr.value().generated.load(std::memory_order_acquire)) {
-                        const std::string world_data = server_ptr.serialize_chunk(cx, cz);
+                        const std::string world_data = server.serialize_chunk(cx, cy);
                         client.send_queue.store({ "Chunk data", { world_data, message.arguments[0], message.arguments[1] } });
                     }
                     else client.send_queue.store({ "Chunk not ready", { message.arguments[0], message.arguments[1] } });
                 }
                 else if (message.content == "Set block") {
-                    server_ptr.set_global_block_id(std::stoi(message.arguments[0]), std::stoi(message.arguments[1]), std::stoi(message.arguments[2]), std::stoi(message.arguments[3]));
+                    server.set_global_block_id(std::stoi(message.arguments[0]), std::stoi(message.arguments[1]), std::stoi(message.arguments[2]), std::stoi(message.arguments[3]));
                     client.send_queue.store({ "Block set" });
                 }
                 else if (message.content == "Get players data") {
-                    const std::string players_data = server_ptr.serialize_players();
+                    const std::string players_data = server.serialize_players();
                     client.send_queue.store({ "Players data", { players_data } });
                 }
                 else if (message.content == "Set seed and world name") {
                     int32 seed = std::stoi(message.arguments[0]);
                     Str world_name = message.arguments[1];
-                    server_ptr.set_seed_and_world_name(seed, world_name);
+                    server.set_seed_and_world_name(seed, world_name);
                     client.send_queue.store({ "Set" });
                 }
                 else if (message.content == "Set render distance") {
                     int32 rd = std::stoi(message.arguments[0]);
-                    server_ptr.set_render_distance(rd);
+                    server.set_render_distance(rd);
                     client.send_queue.store({ "Set" });
                 }
                 else if (message.content == "Set sleep time CPU") {
                     int32 stc = std::stoi(message.arguments[0]);
-                    server_ptr.set_cpu_sleep_time(stc);
+                    server.set_cpu_sleep_time(stc);
                     client.send_queue.store({ "Set" });
                 }
                 else if (message.content == "Update player pos") {
-                    Pos3D<real> pos;
-                    pos.x = (real)std::stod(message.arguments[1]);
-                    pos.y = (real)std::stod(message.arguments[2]);
-                    pos.z = (real)std::stod(message.arguments[3]);
-                    server_ptr.update(message.arguments[0], pos);
+                    Pos3D<real> pos{
+                        (real)std::stod(message.arguments[1]),
+                        (real)std::stod(message.arguments[2]),
+                        (real)std::stod(message.arguments[3])
+                    };
+                    server.update(message.arguments[0], pos);
                     client.send_queue.store({ "Updated" });
                 }
                 else client.send_queue.store({ "Invalid message content", { message.content.std_str() } });
             }
             catch (std::exception const& e) {
-                log<LogType::ERROR>(format{} << "Error processing message: " << e.what());
+                log<LogType::ERROR>("Error processing message: "f << message.content << " - " << e.what());
                 client.send_queue.store({ "Error", { e.what() } });
             }
 
-            client.send_queue.send(client_socket);
+            client.send_queue.send(**client_peer);
         }
 
         for (auto const& client : disconnected_clients) {
-            closesocket(client);
+            client->disconnect_from_host();
             clients.erase(client);
         }
 
@@ -915,13 +873,18 @@ namespace craftbuild {
     }
 
     void Server::_exit_tree() {
-        closesocket(server_socket);
-        WSACleanup();
+        if (tcp_server.is_valid() and tcp_server->is_listening()) tcp_server->stop();
+
+        for (auto& [client_peer, client] : clients) {
+            if (not client_peer.is_valid()) continue;
+            client_peer->disconnect_from_host();
+        }
+        clients.clear();
 
         running.store(false, std::memory_order_release);
 
         if (log_thread.joinable()) log_thread.join();
-		if (gc_thread.joinable()) gc_thread.join();
+        if (gc_thread.joinable()) gc_thread.join();
     }
 
     void Server::start_gc_thread() {

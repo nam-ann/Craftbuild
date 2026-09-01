@@ -28,10 +28,10 @@ namespace craftbuild {
 
         Ref<Texture2D> tex = ResourceLoader::get_singleton()->load(full_path);
         if (tex.is_valid()) {
-            log<LogType::VERBOSE>(format{} << "Loaded: \"" << full_path.ascii() << "\"");
+            log<LogType::VERBOSE>("Loaded: \""f << full_path.ascii() << "\"");
             return tex;
         }
-        else log<LogType::ERROR>(format{} << "Failed to load: \"" << full_path.ascii() << "\"");
+        else log<LogType::ERROR>("Failed to load: \""f << full_path.ascii() << "\"");
         return Ref<Texture2D>();
     }
 
@@ -40,14 +40,14 @@ namespace craftbuild {
             return Ref<Texture2D>();
         }
 
-        String full_path = (base_path.std_str() + "dynamic/" + path_suffix).c_str();
+        String full_path = Str(""f << base_path << "dynamic/" << path_suffix).std_str().c_str();
 
         Ref<PackedScene> model = ResourceLoader::get_singleton()->load(full_path);
         if (model.is_valid()) {
-            log<LogType::VERBOSE>(format{} << "Loaded: \"" << full_path.ascii() << "\"");
+            log<LogType::VERBOSE>("Loaded: \""f << full_path.ascii() << "\"");
             return model;
         }
-        else log<LogType::ERROR>(format{} << "Failed to load: \"" << full_path.ascii() << "\"");
+        else log<LogType::ERROR>("Failed to load: \""f << full_path.ascii() << "\"");
         return Ref<PackedScene>();
     }
 }

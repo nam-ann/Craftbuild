@@ -3,12 +3,7 @@ module;
 #include <defs.hpp>
 
 NO_WARNING
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
-
-#pragma comment(lib, "ws2_32.lib")
-#undef ERROR
+#include <godot_cpp/classes/stream_peer_tcp.hpp>
 DO_WARNING
 
 module game.network;
@@ -19,9 +14,10 @@ namespace craftbuild {
         msg.push_back(message);
     }
 
-    void SendQueue::send(SOCKET socket) {
-        std::vector<Message> send_msg;
+    void SendQueue::send(StreamPeerTCP& peer) {
+        if (peer.get_status() != StreamPeerTCP::STATUS_CONNECTED) return;
 
+        std::vector<Message> send_msg;
         {
             std::lock_guard lock(msg_mutex);
             msg.swap(send_msg);
@@ -29,27 +25,59 @@ namespace craftbuild {
 
         for (auto const& message : send_msg) {
             std::string arg = message.content.std_str() + '\2';
+
+            arg.reserve(message.arguments.size());
             for (auto const& E : message.arguments) arg += E + '\1';
             arg += '\0';
 
-            int32 total_payload_sent = 0;
-            while (total_payload_sent < arg.size()) {
-                int32 sent = ::send(socket, arg.data() + total_payload_sent, (int32)(arg.size() - total_payload_sent), 0);
-                if (sent == SOCKET_ERROR) {
-                    if (WSAGetLastError() == WSAEWOULDBLOCK) {
-                        std::this_thread::sleep_for(1ms);
-                        continue;
-                    }
-                    log<LogType::ERROR>(format{} << "Failed to send message: " << message.content);
-                    break;
-                }
-                total_payload_sent += sent;
+            godot::PackedByteArray data;
+            data.resize(static_cast<int64_t>(arg.size()));
+            memcpy(data.ptrw(), arg.data(), arg.size());
+
+            if (Error err = peer.put_data(data); err != godot::OK) {
+                log<LogType::ERROR>("Failed to send message: "f << message.content);
+                break;
             }
         }
     }
 
-    ReceiveState ReceiveQueue::receive(SOCKET socket, List<char>& out_data) {
+    ReceiveState ReceiveQueue::receive(StreamPeerTCP& peer, List<char>& out_data) {
         for (usize i : range<usize>(len(buffer))) {
+            if (buffer.c_ptr()[i] == '\0') {
+                out_data.resize(i);
+                memcpy(out_data.c_ptr(), buffer.c_ptr(), i);
+
+                usize remaining = len(buffer) - (i + 1);
+                if (remaining > 0) {
+                    memmove(buffer.c_ptr(), buffer.c_ptr() + i + 1, remaining);
+                    buffer.resize(remaining);
+                }
+                else buffer.clear();
+                return ReceiveState::COMPLETE;
+            }
+        }
+
+        peer.poll();
+        StreamPeerTCP::Status status = peer.get_status();
+        if (status != StreamPeerTCP::STATUS_CONNECTED) return ReceiveState::ERROR;
+
+        auto available = peer.get_available_bytes();
+        if (available <= 0) return ReceiveState::WAITING;
+
+        auto res = peer.get_partial_data(available);
+        auto err = static_cast<godot::Error>((int)res[0]);
+        if (err != godot::OK) return ReceiveState::ERROR;
+
+        PackedByteArray chunk = res[1];
+        auto read_bytes = chunk.size();
+
+        if (read_bytes <= 0) return ReceiveState::WAITING;
+
+        auto old_len = len(buffer);
+        buffer.resize(old_len + read_bytes);
+        memcpy(buffer.c_ptr() + old_len, chunk.ptr(), read_bytes);
+
+        for (usize i : range<usize>(old_len, len(buffer))) {
             if (buffer.c_ptr()[i] == '\0') {
                 out_data.resize(i);
                 memcpy(out_data.c_ptr(), buffer.c_ptr(), i);
@@ -63,38 +91,7 @@ namespace craftbuild {
                 return ReceiveState::COMPLETE;
             }
         }
-
-        size_t old_len = len(buffer);
-        buffer.resize(old_len + 1024);
-
-        int32 r = recv(socket, buffer.c_ptr() + old_len, 1024, 0);
-
-        if (r > 0) {
-            buffer.resize(old_len + r);
-
-            for (usize i : range<usize>(old_len, len(buffer))) {
-                if (buffer.c_ptr()[i] == '\0') {
-                    out_data.resize(i);
-                    memcpy(out_data.c_ptr(), buffer.c_ptr(), i);
-
-                    size_t remaining = len(buffer) - (i + 1);
-                    if (remaining > 0) {
-                        memmove(buffer.c_ptr(), buffer.c_ptr() + i + 1, remaining);
-                        buffer.resize(remaining);
-                    }
-                    else buffer.clear();
-                    return ReceiveState::COMPLETE;
-                }
-            }
-            return ReceiveState::WAITING;
-        }
-        else if (r == 0) return ReceiveState::ERROR;
-        else {
-            buffer.resize(old_len);
-            int32 err = WSAGetLastError();
-            if (err == WSAEWOULDBLOCK) return ReceiveState::WAITING;
-            return ReceiveState::ERROR;
-        }
+        return ReceiveState::WAITING;
     }
 
     Message ReceiveQueue::parse(List<char> buffer) {

@@ -3,14 +3,10 @@ module;
 #include <defs.hpp>
 
 NO_WARNING
-#include <winsock2.h>
-#include <windows.h>
-
-#pragma comment(lib, "ws2_32.lib")
-#undef ERROR
-
 #include <godot_cpp/classes/node.hpp>
+#include <godot_cpp/classes/tcp_server.hpp>
 #include <godot_cpp/classes/fast_noise_lite.hpp>
+#include <godot_cpp/classes/stream_peer_tcp.hpp>
 DO_WARNING
 
 export module game.server;
@@ -42,8 +38,8 @@ import game.block.normal_blocks;
 using namespace godot;
 
 export namespace craftbuild {
-	class TCPServer {
-        Dict<Pos3D<int32>, Ptr<Chunk>> chunks;
+	class GameEngine {
+        Dict<Pos2D<int32>, Ptr<Chunk>> chunks;
         mutable std::shared_mutex chunks_mutex;
 
         Ref<FastNoiseLite> noise;
@@ -61,7 +57,7 @@ export namespace craftbuild {
         std::thread redstone_thread;
         std::thread scheduler_thread;
         ThreadPool terrain_pool{ 4 };
-        Set<Pos3D<int32>> pending_terrain_jobs;
+        Set<Pos2D<int32>> pending_terrain_jobs;
         mutable std::mutex pending_jobs_mutex;
 
         std::atomic<bool> pausing = true;
@@ -70,13 +66,12 @@ export namespace craftbuild {
         mutable std::mutex loop_mutex;
 
     public:
-        inline static int32 SIZE_X = render_distance * 16;
-        inline static int32 SIZE_Z = render_distance * 16;
+        inline static int32 RANGE = render_distance * 16;
 
         void _get_refs(std::vector<GCObject*>& refs);
 
-        TCPServer();
-        ~TCPServer();
+        GameEngine();
+        ~GameEngine();
         void connect(Str const& player_name);
         void disconnect(Str const& player_name);
         void update(Str const& player_name, Pos3D<real> const& new_pos);
@@ -86,10 +81,10 @@ export namespace craftbuild {
         void submit_jobs(Pos3D<real> const& player);
 
         std::string serialize_players();
-        std::string serialize_chunk(int32 cx, int32 cz);
-        Ptr<Chunk> get_chunk(int32 cx, int32 cz);
-        Ptr<Chunk> get_or_load_chunk(int32 cx, int32 cz);
-        Ptr<Chunk> get_or_create_chunk(int32 cx, int32 cz);
+        std::string serialize_chunk(int32 cx, int32 cy);
+        Ptr<Chunk> get_chunk(int32 cx, int32 cy);
+        Ptr<Chunk> get_or_load_chunk(int32 cx, int32 cy);
+        Ptr<Chunk> get_or_create_chunk(int32 cx, int32 cy);
         uint32 get_global_block_id(int32 wx, int32 wy, int32 wz);
         void set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz);
         void unload_distant_chunks();
@@ -102,8 +97,8 @@ export namespace craftbuild {
 
         void save_world(Str const& path);
         bool load_world(Str const& path);
-        void save_region(Str const& path, int32 rx, int32 rz);
-        bool load_region(Str const& path, int32 rx, int32 rz);
+        void save_region(Str const& path, int32 rx, int32 ry);
+        bool load_region(Str const& path, int32 rx, int32 ry);
 
         friend class Main;
         friend class Server;
@@ -120,11 +115,9 @@ export namespace craftbuild {
     class Server : public Node {
         GDCLASS(Server, Node)
 
-        WSADATA wsa_data;
-        SOCKET server_socket;
-        sockaddr_in server_addr{};
-        TCPServer server_ptr;
-		Dict<SOCKET, Client> clients;
+        Ref<TCPServer> tcp_server;
+        GameEngine server;
+        Dict<Ref<StreamPeerTCP>, Client> clients;
 
 		std::atomic<bool> running = true;
         std::thread gc_thread;

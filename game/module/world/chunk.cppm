@@ -72,9 +72,8 @@ export namespace craftbuild {
 
     class Chunk {
     public:
-        inline static constexpr uint8 SIZE_X = 16;
-        inline static constexpr uint8 SIZE_Y = 255;
-        inline static constexpr uint8 SIZE_Z = 16;
+        inline static constexpr uint8 WIDTH  = 16;
+        inline static constexpr uint8 HEIGHT = 255;
 
         uint32 block_ids[256];
         std::pair<uint32, uint64> tag_ids[256];
@@ -85,9 +84,9 @@ export namespace craftbuild {
         Dict<std::pair<uint32, uint64>, uint8> id2tag;
 
         Dict<Pos3D<uint8>, BlockStorageFull> complex_blocks;
-        BlockStorage blocks[SIZE_X][SIZE_Y][SIZE_Z] = {};
+        BlockStorage blocks[WIDTH][HEIGHT][WIDTH] = {};
 
-        Pos3D<int32> chunk_pos;
+        Pos2D<int32> chunk_pos;
         TrapezoidHeight height_provider{ VerticalAnchor::absolute(18), VerticalAnchor::absolute(38), 8 };
         std::atomic<bool> generated = false;
         std::atomic<bool> dirty = true;

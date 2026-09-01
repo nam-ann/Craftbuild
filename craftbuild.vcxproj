@@ -143,6 +143,7 @@
       <AdditionalIncludeDirectories>.\;.\godot-cpp\gen\include;.\godot-cpp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/vmg %(AdditionalOptions)</AdditionalOptions>
       <CompileAs>Default</CompileAs>
+      <DisableSpecificWarnings>4455</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -157,6 +158,7 @@
   <ItemGroup>
     <ClCompile Include="game\module\block\redstone.cppm" />
     <ClCompile Include="game\source\block\restone.cpp" />
+    <ClCompile Include="game\source\bridge.cpp" />
     <ClCompile Include="game\source\command.cpp" />
     <ClCompile Include="game\module\command.cppm" />
     <ClCompile Include="game\module\core.cppm" />
@@ -224,7 +226,6 @@
     <ClInclude Include="defs.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="game\source\player\player.cpp" />
     <ClCompile Include="game\source\main.cpp" />
   </ItemGroup>

@@ -8,12 +8,12 @@ import misc.pos;
 import misc.number;
 import misc.format;
 import game.core;
-import game.environment;
 import game.main;
 import game.server;
 import game.player;
 import game.logger;
 import game.thread;
+import game.environment;
 
 using namespace godot;
 using namespace craftbuild;
@@ -22,7 +22,7 @@ void initialize_module(ModuleInitializationLevel p_level) {
     if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
 
     log<LogType::VERBOSE>("Hello from the DLL!");
-    log<LogType::VERBOSE>(format{} << "Game version: " << full_version);
+    log<LogType::VERBOSE>("Game version: "f << full_version);
 
     ClassDB::register_class<Main>();
     ClassDB::register_class<Player>();
@@ -34,8 +34,8 @@ void initialize_server(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
 
 	log<LogType::VERBOSE>("Hello from the Server DLL!");
-	log<LogType::VERBOSE>(format{} << "Game version: " << full_version);
-
+    log<LogType::VERBOSE>("Game version: "f << full_version);
+    
 	ClassDB::register_class<Server>();
 }
 

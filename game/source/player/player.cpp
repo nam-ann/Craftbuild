@@ -37,11 +37,11 @@ namespace craftbuild {
     bool SkinManager::load_skin(Player& player, char const* path) {
         Ref<Texture2D> skin_tex = ResourceLoader::get_singleton()->load(path);
         if (skin_tex.is_null()) {
-            log<LogType::ERROR>(format{} << "Failed to load skin: " << path);
+            log<LogType::ERROR>("Failed to load skin: "f << path);
             return false;
         }
 
-        log<LogType::INFO>(format{} << "Skin loaded: " << path);
+        log<LogType::INFO>("Skin loaded: "f << path);
 
         MeshInstance3D* player_model = player.get_node<MeshInstance3D>("Mesh");
         if (player_model) SkinManager::apply_skin_to_model(player_model, skin_tex);
@@ -157,8 +157,8 @@ namespace craftbuild {
             const float32 blend = has_input ? accel : decel;
 
             const Vector3 target_xz = wish_dir * current_speed;
-            velocity.x = velocity.x + (target_xz.x - velocity.x) * (real)std::min(blend * delta, 1.0);
-            velocity.z = velocity.z + (target_xz.z - velocity.z) * (real)std::min(blend * delta, 1.0);
+            velocity.x = velocity.x + (target_xz.x - velocity.x) * real(std::min(blend * delta, 1.0));
+            velocity.z = velocity.z + (target_xz.z - velocity.z) * real(std::min(blend * delta, 1.0));
 
             if (is_grounded) {
                 if (velocity.y < 0.0f) velocity.y = -0.1f;
@@ -173,15 +173,15 @@ namespace craftbuild {
                     can_fly = true;
                     velocity.y = 0.0f;
                 }
-                else velocity.y -= gravity * delta;
+                else velocity.y -= real(gravity * delta);
             }
         }
         else {
             const bool has_h_input = wish_dir.length_squared() > 0.0f;
             const float32 h_blend = has_h_input ? accel : decel;
             const Vector3 target_xz = wish_dir * current_speed;
-            velocity.x = velocity.x + (target_xz.x - velocity.x) * std::min(h_blend * delta, 1.0);
-            velocity.z = velocity.z + (target_xz.z - velocity.z) * std::min(h_blend * delta, 1.0);
+            velocity.x = velocity.x + (target_xz.x - velocity.x) * real(std::min(h_blend * delta, 1.0));
+            velocity.z = velocity.z + (target_xz.z - velocity.z) * real(std::min(h_blend * delta, 1.0));
 
             float32 wish_y = 0.0f;
             if (key_space) wish_y = speed;
@@ -189,7 +189,7 @@ namespace craftbuild {
 
             const bool has_v_input = (wish_y != 0.0f);
             const float32 v_blend = has_v_input ? accel : decel;
-            velocity.y = velocity.y + (wish_y - velocity.y) * std::min(v_blend * delta, 1.0);
+            velocity.y = velocity.y + (wish_y - velocity.y) * real(std::min(v_blend * delta, 1.0));
 
             if (is_grounded and not key_space) can_fly = false;
         }
@@ -235,8 +235,8 @@ namespace craftbuild {
                     Vector3i block_pos = Vector3i(pos_float.floor());
 
                     uint32 target_block_id = world->get_global_block_id(block_pos.x, block_pos.y, block_pos.z);
-                    log<LogType::VERBOSE>(format{} << "Looking at block id: " << target_block_id << " at (" << block_pos.x << ", " << block_pos.y << ", " << block_pos.z << ")");
-                    
+                    log<LogType::VERBOSE>("Looking at block id: "f << target_block_id << " at (" << block_pos.x << ", " << block_pos.y << ", " << block_pos.z << ")");
+
                     if (mid and gamemode == Gamemode::CREATIVE) hotbar[selected_slot] = target_block_id;
 
                     if (left or right) {
@@ -258,15 +258,15 @@ namespace craftbuild {
                             if (not would_collide_with_player(block_pos)) world->set_global_block_id(block, block_pos.x, block_pos.y, block_pos.z);
                         }
 
-                        const int32 cx = static_cast<int32>(std::floor((float32)block_pos.x / Chunk::SIZE_X));
-                        const int32 cz = static_cast<int32>(std::floor((float32)block_pos.z / Chunk::SIZE_Z));
-                        if (auto chunk = world->get_chunk(cx, cz)) {
+                        const auto cx = int32(std::floor(float32(block_pos.x) / Chunk::WIDTH));
+                        const auto cy = int32(std::floor(float32(block_pos.z) / Chunk::WIDTH));
+                        if (auto chunk = world->get_chunk(cx, cy)) {
                             chunk.value().dirty.store(true, std::memory_order_release);
 
-                            if (block_pos.x >= 0 or block_pos.z >= 0 or block_pos.x < Chunk::SIZE_X or block_pos.z < Chunk::SIZE_Z) {
-                                Pos3D<int32> neighbor_offsets[4] = { {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1} };
+                            if (block_pos.x >= 0 or block_pos.z >= 0 or block_pos.x < Chunk::WIDTH or block_pos.z < Chunk::WIDTH) {
+                                Pos2D<int32> neighbor_offsets[4] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
                                 for (auto const& offset : neighbor_offsets) {
-                                    if (auto neighbor = world->get_chunk(cx + offset.x, cz + offset.z)) neighbor.value().dirty.store(true, std::memory_order_release);
+                                    if (auto neighbor = world->get_chunk(cx + offset.x, cy + offset.y)) neighbor.value().dirty.store(true, std::memory_order_release);
                                 }
                             }
                         }
@@ -281,7 +281,7 @@ namespace craftbuild {
             if (input->is_pressed() and input->get_keycode() == KEY_F4 and is_f3_held) {
                 if (not gamemode_toggled) {
                     gamemode = (Gamemode)(((uint8_t)gamemode + 1) % 4);
-                    log<LogType::INFO>(format{} << "Changed gamemode to " << (int32)gamemode);
+                    log<LogType::INFO>("Changed gamemode to "f << (int32)gamemode);
                     can_fly = false;
                     gamemode_toggled = true;
                 }
@@ -310,12 +310,12 @@ namespace craftbuild {
         real min_z = player_pos.z - 0.3f;
         real max_z = player_pos.z + 0.3f;
 
-        real block_min_x = block_pos.x;
-        real block_max_x = block_pos.x + 1.0f;
-        real block_min_y = block_pos.y;
-        real block_max_y = block_pos.y + 0.8f;
-        real block_min_z = block_pos.z;
-        real block_max_z = block_pos.z + 1.0f;
+        real block_min_x = real(block_pos.x);
+        real block_max_x = real(block_pos.x + 1.0);
+        real block_min_y = real(block_pos.y);
+        real block_max_y = real(block_pos.y + 0.8);
+        real block_min_z = real(block_pos.z);
+        real block_max_z = real(block_pos.z + 1.0);
 
         return (max_x > block_min_x and min_x < block_max_x and max_y > block_min_y and min_y < block_max_y and max_z > block_min_z and min_z < block_max_z);
     }
@@ -335,9 +335,9 @@ namespace craftbuild {
                 String shader_code = file->get_as_text();
                 shader->set_code(shader_code);
             }
-            else log<LogType::ERROR>(format{} << "Failed to open shader file at: " << shader_path.utf8());
+            else log<LogType::ERROR>("Failed to open shader file at: "f << shader_path.utf8());
         }
-        else log<LogType::ERROR>(format{} << "Shader file not found at: " << shader_path.utf8());
+        else log<LogType::ERROR>("Shader file not found at: "f << shader_path.utf8());
 
         mat->set_shader(shader);
         return mat;
@@ -371,7 +371,7 @@ namespace craftbuild {
 
     void Player::cycle_hotbar(int32 dir) {
         selected_slot = (selected_slot + dir + HOTBAR_SIZE) % HOTBAR_SIZE;
-        log<LogType::INFO>(format{} << "Selected slot: " << selected_slot + 1);
+        log<LogType::INFO>("Selected slot: "f << selected_slot + 1);
     }
 
     void Player::select_slot(int32 slot) {

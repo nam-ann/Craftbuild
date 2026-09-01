@@ -28,7 +28,7 @@ inline std::u32string ptr_to_hex(void const* ptr) noexcept {
     return &buffer[i];
 }
 
-inline std::u32string to_u32(std::string const& s) {
+inline std::u32string to_u32(std::string_view s) {
     std::u32string out;
     usize i = 0;
 
@@ -178,6 +178,7 @@ export namespace craftbuild {
         Str(char const* s) { encode(to_u32(s)); }
         Str(std::u32string const& s) { encode(s); }
         Str(std::string const& s) { encode(to_u32(s)); }
+        Str(std::string_view s) { encode(to_u32(s)); }
         Str(Str const& s) : __value__(new uint8[s.__len__]), __len__(s.__len__), __space__(s.__len__) { std::memcpy(__value__, s.__value__, __len__); }
         Str(Str&& s) noexcept : __value__(s.__value__), __len__(s.__len__), __space__(s.__space__) {
             s.__value__ = nullptr;
@@ -194,6 +195,7 @@ export namespace craftbuild {
             return *this;
         }
         Str& operator=(std::string const& s) { *this = to_u32(s); return *this; }
+        Str& operator=(std::string_view s) { *this = to_u32(s); return *this; }
         Str& operator=(Str const& s) {
             if (this == &s) return *this;
             clear();
@@ -216,9 +218,10 @@ export namespace craftbuild {
         }
 
         Str& operator+=(byte32 const* c) { *this += std::u32string(c); return *this; }
-        Str& operator+=(char const* c) { *this += std::string(c); return *this; }
+        Str& operator+=(char const* c) { *this += std::string_view(c); return *this; }
         Str& operator+=(std::u32string const& s) { encode(s); return *this; }
         Str& operator+=(std::string const& s) { encode(to_u32(s)); return *this; }
+        Str& operator+=(std::string_view s) { encode(to_u32(s)); return *this; }
         Str& operator+=(Str const& s) {
             expect(s.__len__);
             std::memcpy(&__value__[__len__], s.__value__, s.__len__);
@@ -252,6 +255,7 @@ export namespace craftbuild {
         Str operator+(char const* c) const { Str cache(*this); return cache += c; }
         Str operator+(std::u32string const& s) const { Str cache(*this); cache += s; return cache; }
         Str operator+(std::string const& s) const { Str cache(*this); cache += s; return cache; }
+        Str operator+(std::string_view s) const { Str cache(*this); cache += s; return cache; }
         Str operator+(Str const& s) const { Str cache(*this); cache += s; return cache; }
         Str operator+(Str&& s) const noexcept { Str cache(*this); cache += s; return cache; }
 
@@ -365,6 +369,7 @@ export namespace craftbuild {
         friend Str operator+(byte32 const* c, Str const& s) { return Str(c) + s; }
         friend Str operator+(char const* c, Str const& s) { return Str(c) + s; }
         friend Str operator+(std::string const& std_s, Str const& s) { return Str(std_s) + s; }
+        friend Str operator+(std::string_view std_s, Str const& s) { return Str(std_s) + s; }
         friend Str operator+(std::u32string const& std_s, Str const& s) { return Str(std_s) + s; }
 
         friend struct Hasher<Str>;

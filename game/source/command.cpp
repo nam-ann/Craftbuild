@@ -51,7 +51,7 @@ namespace craftbuild {
     }
 
 	bool CommandInterpreter::is_valid_coordinate(int64 x, int64 y, int64 z) {
-        return (x >= -TCPServer::SIZE_X and x <= TCPServer::SIZE_X and y >= 0 and y <= Chunk::SIZE_Y and z >= -TCPServer::SIZE_Z and z <= TCPServer::SIZE_Z);
+        return (x >= -GameEngine::RANGE and x <= GameEngine::RANGE and y >= 0 and y <= Chunk::HEIGHT and z >= -GameEngine::RANGE and z <= GameEngine::RANGE);
     }
 
     bool CommandInterpreter::is_valid_block_type(Str const& block_type) {
@@ -69,14 +69,14 @@ namespace craftbuild {
         else if (parts[0] == "fill") return execute_fill(parts);
         else if (parts[0] == "give") return execute_give(parts);
         else {
-            Str output = format{} << "Invalid command: " << parts[0];
+            Str output ="Invalid command: "f << parts[0];
             log<LogType::ERROR>(output);
             return output;
         }
     }
 
     Str CommandInterpreter::execute_set_block(std::vector<Str> const& args) {
-        TCPServer* world = static_cast<TCPServer*>(world_ptr);
+        GameEngine* world = static_cast<GameEngine*>(world_ptr);
         if (not world) return "";
         Str output;
 
@@ -93,19 +93,19 @@ namespace craftbuild {
             Str block_type = args[4];
 
             if (not is_valid_coordinate(x, y, z)) {
-                output = format{} << "(" << x << "," << y << "," << z << ") outs of bounds";
+                output = ""f << Pos3D(x, y, z) << " outs of bounds";
                 log<LogType::ERROR>(output);
                 return output;
             }
 
             if (not is_valid_block_type(block_type)) {
-                output = format{} << "Invalid block: '" << block_type;
+                output = "Invalid block: '"f << block_type << "'";
                 log<LogType::ERROR>(output);
                 return output;
             }
 
             world->set_global_block_id(BlockRegistry::get_id(block_type), x, y, z);
-            output = format{} << "Set block " << block_type << " at (" << x << "," << y << "," << z << ")";
+            output = "Set block "f << block_type << " at " << Pos3D(x, y, z);
             log<LogType::INFO>(output);
         }
         catch (std::exception const&) {
@@ -116,7 +116,7 @@ namespace craftbuild {
     }
 
     Str CommandInterpreter::execute_fill(std::vector<Str> const& args) {
-        TCPServer* world = static_cast<TCPServer*>(world_ptr);
+        GameEngine* world = static_cast<GameEngine*>(world_ptr);
         if (not world) return "";
         Str output;
 
@@ -136,7 +136,7 @@ namespace craftbuild {
             Str block_type = args[7];
 
             if (not is_valid_block_type(block_type)) {
-                output = format{} << "Invalid block: '" << block_type;
+                output = "Invalid block: '"f << block_type << "'";
                 log<LogType::ERROR>(output);
                 return output;
             }
@@ -149,7 +149,7 @@ namespace craftbuild {
             int32 max_z = std::max(z1, z2);
 
             if (not is_valid_coordinate(min_x, min_y, min_z) or not is_valid_coordinate(max_x, max_y, max_z)) {
-                output = format{} << "(" << min_x << "," << min_x << "," << min_z << ") or (" << max_x << ", " << max_y << ", " << max_z << ") outs of bounds";
+                output = ""f << Pos3D(min_x, min_y, min_z) << " or " << Pos3D(max_x, max_y, max_z) << " outs of bounds";
                 log<LogType::ERROR>(output);
                 return output;
             }
@@ -163,7 +163,7 @@ namespace craftbuild {
                     }
                 }
             }
-            output = format{} << "Filled " << block_count << " block " << block_type << " from (" << min_x << "," << min_y << "," << min_z << ") to (" << max_x << "," << max_y << "," << max_z << ")";
+            output = "Filled "f << block_count << " block " << block_type << " from " << Pos3D(min_x, min_y, min_z) << " to " << Pos3D(max_x, max_y, max_z);
             log<LogType::INFO>(output);
         }
         catch (std::exception const&) {
@@ -174,7 +174,7 @@ namespace craftbuild {
     }
 
     Str CommandInterpreter::execute_give(std::vector<Str> const& args) {
-        TCPServer* world = static_cast<TCPServer*>(world_ptr);
+        GameEngine* world = static_cast<GameEngine*>(world_ptr);
         if (not world) return "";
         Str output;
 
@@ -206,7 +206,7 @@ namespace craftbuild {
         }
 
         if (not is_valid_block_type(args[2])) {
-            output = format{} << "Invalid block: '" << args[2];
+            output = "Invalid block: '"f << args[2] << "'";
             log<LogType::ERROR>(output);
             return output;
         }
@@ -214,7 +214,7 @@ namespace craftbuild {
         PlayerData& player = world->players[args[1]];
         player.hotbar[player.selected_slot] = BlockRegistry::get_id(args[2]);
 
-        output += format{} << "Gave " << args[1] << " " << amount << " " << args[2] << "(s)";
+        output = "Gave "f << args[1] << " " << amount << " " << args[2] << "(s)";
         log<LogType::INFO>(output);
         return output;
     }
