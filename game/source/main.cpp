@@ -38,6 +38,8 @@ namespace craftbuild {
     void Main::_ready() {
         start_gc_thread();
         start_log_thread();
+
+        MetaRegistry::register_metadata("transparent");
         
         BlockRegistry::register_block<Air>          ("Air"           , "");
         BlockRegistry::register_block<Grass>        ("Grass Block"   , "grass_block.png");
@@ -522,17 +524,13 @@ namespace craftbuild {
                             is.read(reinterpret_cast<char*>(&meta_storages_size), sizeof(uint64));
 
                             for (auto k : range(meta_storages_size)) {
-                                uint64 name_size = 0;
+                                auto& meta_storage = meta_storages.emplace_back();
+                                is.read(reinterpret_cast<char*>(&meta_storage.id), sizeof(uint64));
+
                                 uint64 data_size = 0;
-                                is.read(reinterpret_cast<char*>(&name_size), sizeof(uint64));
                                 is.read(reinterpret_cast<char*>(&data_size), sizeof(uint64));
 
-                                auto& meta_storage = meta_storages.emplace_back();
-
-                                meta_storage.name.resize(name_size);
                                 meta_storage.data.resize(data_size);
-
-                                is.read(reinterpret_cast<char*>(meta_storage.name.data()), name_size);
                                 is.read(reinterpret_cast<char*>(meta_storage.data.data()), data_size);
                             }
                         }

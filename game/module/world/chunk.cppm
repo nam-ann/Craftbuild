@@ -28,6 +28,7 @@ import game.logger;
 import game.world.cave;
 import game.world.biome;
 import game.world.terrain;
+import game.block.metadata;
 
 using namespace godot;
 
@@ -104,7 +105,10 @@ export namespace craftbuild {
         void set_block(Pos3D<uint8> const& pos, uint32 block_id);
 
         void tag_block(Pos3D<uint8> const& pos, Str const& tag, Str const& tag_data = "");
+        void tag_block(Pos3D<uint8> const& pos, uint64 tag_id, Str const& tag_data = "");
+
         bool has_tag(Pos3D<uint8> const& pos, Str const& tag, Str const& tag_data = "") const;
+        bool has_tag(Pos3D<uint8> const& pos, uint64 tag_id, Str const& tag_data = "") const;
 
         uint32 get_block(Pos3D<uint8> const& pos) const;
         MetaStorage get_tag(Pos3D<uint8> const& pos) const;

@@ -156,7 +156,9 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="game\module\block\metadata.cppm" />
     <ClCompile Include="game\module\block\redstone.cppm" />
+    <ClCompile Include="game\source\block\metadata.cpp" />
     <ClCompile Include="game\source\block\restone.cpp" />
     <ClCompile Include="game\source\bridge.cpp" />
     <ClCompile Include="game\source\command.cpp" />

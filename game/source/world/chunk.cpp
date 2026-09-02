@@ -123,18 +123,24 @@ namespace craftbuild {
     }
 
     void Chunk::tag_block(Pos3D<uint8> const& pos, Str const& tag, Str const& tag_data) {
-        auto const tag_storage = MetaStorage(tag, tag_data);
+		return tag_block(pos, MetaRegistry::get_id(tag), tag_data);
+    }
+    void Chunk::tag_block(Pos3D<uint8> const& pos, uint64 tag_id, Str const& tag_data) {
+        auto const tag_storage = MetaStorage(tag_id, tag_data);
 
         std::unique_lock lock(data_mutex);
-		meta_ids[pos].emplace_back(tag_storage);
+        meta_ids[pos].emplace_back(tag_storage);
     }
 
     bool Chunk::has_tag(Pos3D<uint8> const& pos, Str const& tag, Str const& tag_data) const {
+		return has_tag(pos, MetaRegistry::get_id(tag), tag_data);
+    }
+    bool Chunk::has_tag(Pos3D<uint8> const& pos, uint64 tag_id, Str const& tag_data) const {
         std::shared_lock lock(data_mutex);
         if (pos.x >= WIDTH or pos.y >= HEIGHT or pos.z >= WIDTH) return false;
 
-		return meta_ids.contains(pos) and std::ranges::any_of(meta_ids.at(pos), [&tag, &tag_data](MetaStorage const& meta) {
-			return meta.name == tag and meta.data == tag_data;
+		return meta_ids.contains(pos) and std::ranges::any_of(meta_ids.at(pos), [tag_id, &tag_data](MetaStorage const& meta) {
+			return meta.id == tag_id and meta.data == tag_data;
 		});
     }
 
@@ -145,8 +151,8 @@ namespace craftbuild {
     }
 
     MetaStorage Chunk::get_tag(Pos3D<uint8> const& pos) const {
-        if (pos.x >= WIDTH or pos.y >= HEIGHT or pos.z >= WIDTH) return MetaStorage("", "");
-		return meta_ids.contains(pos) and not meta_ids.at(pos).empty() ? meta_ids.at(pos).front() : MetaStorage("", "");
+        if (pos.x >= WIDTH or pos.y >= HEIGHT or pos.z >= WIDTH) return MetaStorage(0, "");
+		return meta_ids.contains(pos) and not meta_ids.at(pos).empty() ? meta_ids.at(pos).front() : MetaStorage(0, "");
     }
 
     void Chunk::generate_terrain(int32 seed, Ref<FastNoiseLite> noise) {
@@ -274,7 +280,8 @@ namespace craftbuild {
         auto& collision_faces = data.collision_faces;
 
         uint32 const AIR = BlockRegistry::get_id("Air");
-        static Str const STR_TRANSPARENT = "transparent";
+        uint64 const TRANSPARENT = MetaRegistry::get_id("transparent");
+
         static Str const STR_TRUE = "True";
 
         vertices.expect(4096);
@@ -284,15 +291,17 @@ namespace craftbuild {
         indices.expect(6144);
         collision_faces.expect(6144);
 
-        std::vector<std::shared_mutex*> mutexes_to_lock;
-        mutexes_to_lock.push_back(&data_mutex);
-        for (auto i : range<int32>(4)) if (neighbors[i]) mutexes_to_lock.push_back(&neighbors[i].value().data_mutex);
+        List<std::shared_mutex*> mutexes_to_lock;
+        mutexes_to_lock.append(&data_mutex);
+        for (auto i : range<int32>(4)) if (neighbors[i]) mutexes_to_lock.append(&neighbors[i].value().data_mutex);
 
-        std::sort(mutexes_to_lock.begin(), mutexes_to_lock.end());
-        mutexes_to_lock.erase(std::unique(mutexes_to_lock.begin(), mutexes_to_lock.end()), mutexes_to_lock.end());
+        std::ranges::sort(mutexes_to_lock);
 
-        std::vector<std::unique_ptr<std::shared_lock<std::shared_mutex>>> locks;
-        for (auto* m : mutexes_to_lock) locks.push_back(std::make_unique<std::shared_lock<std::shared_mutex>>(*m));
+        auto result = std::ranges::unique(mutexes_to_lock);
+        mutexes_to_lock.resize(result.begin() - mutexes_to_lock.begin());
+
+        std::vector<std::shared_lock<std::shared_mutex>> locks;
+        for (auto* m : mutexes_to_lock) locks.emplace_back(std::shared_lock<std::shared_mutex>(*m));
 
         auto is_complex_block = [this, AIR](uint32 id) -> bool {
             auto& block = BlockRegistry::get_block(id);
@@ -300,7 +309,7 @@ namespace craftbuild {
             return block.value().get_texture_layer(Face::TOP) == -1;
         };
 
-        auto transparent_or_air = [this, &neighbors, AIR, &is_complex_block](int32 bx, int32 by, int32 bz) -> bool {
+        auto transparent_or_air = [this, &neighbors, AIR, TRANSPARENT, &is_complex_block](int32 bx, int32 by, int32 bz) -> bool {
             if (by < 0 or by >= Chunk::HEIGHT) return true;
 
             if (bx < Chunk::WIDTH and bx >= 0 and bz < Chunk::WIDTH and bz >= 0) {
@@ -308,7 +317,7 @@ namespace craftbuild {
                 if (id == AIR or is_complex_block(id)) return true;
 
                 auto tag = get_tag({ uint8(bx), uint8(by), uint8(bz) });
-                return tag.name == STR_TRANSPARENT and tag.data == STR_TRUE;
+                return tag.id == TRANSPARENT and tag.data == STR_TRUE;
             }
 
             uint8 nid = 0;
@@ -330,7 +339,7 @@ namespace craftbuild {
             if (id == AIR or is_complex_block(id)) return true;
 
             auto tag = neighbor.get_tag({ lx, uint8(by), lz });
-            return tag.name == STR_TRANSPARENT and tag.data == STR_TRUE;
+            return tag.id == TRANSPARENT and tag.data == STR_TRUE;
         };
 
         auto get_block_layer = [this, AIR, &is_complex_block](int32 bx, int32 by, int32 bz, Face face) -> int32 {
@@ -350,8 +359,8 @@ namespace craftbuild {
 
         uint64 vertex_offset = 0;
         for (auto d : range<int32>(3)) {
-            const int32 u = (d + 1) % 3;
-            const int32 v = (d + 2) % 3;
+            int32 const u = (d + 1) % 3;
+            int32 const v = (d + 2) % 3;
 
             int32 x[3] = {};
             int32 q[3] = {};

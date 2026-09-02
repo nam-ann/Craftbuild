@@ -14,7 +14,7 @@ export namespace craftbuild {
 	struct Pebble : public Block1F {};
 	struct OakLog : public Block3F {};
 	struct OakPlanks : public Block1F {};
-	struct OakLeaves : public Block1F { std::vector<MetaStorage> init_tags() override { return { { "transparent", "True" }}; } };
+	struct OakLeaves : public Block1F { std::vector<MetaStorage> init_tags() override { return { { MetaRegistry::get_id("transparent"), "True" }}; } };
 	struct DiamondBlock : public Block1F {};
 	struct DiamondOre : public Block1F {};
 	struct Bedrock : public Block1F {};

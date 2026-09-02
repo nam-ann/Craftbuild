@@ -24,6 +24,7 @@ import misc.number;
 import misc.pos;
 import game.core;
 import game.logger;
+import game.block.metadata;
 import game.texture.asset_loader;
 
 using namespace godot;
@@ -31,11 +32,6 @@ using namespace godot;
 export namespace craftbuild {
     inline constexpr uint8 FACE_LEN = 6;
     enum class Face : uint8 { TOP, BOTTOM, RIGHT, LEFT, FRONT, BACK };
-
-    struct MetaStorage {
-        Str name;
-        Str data;
-    };
 
     class Block {
     protected:

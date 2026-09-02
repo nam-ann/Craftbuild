@@ -264,12 +264,10 @@ namespace craftbuild {
             uint64 meta_storages_size = meta_storages.size();
             os.write(reinterpret_cast<char const*>(&meta_storages_size), sizeof(uint64));
             for (auto const& meta_storage : meta_storages) {
-                uint64 name_size = len(meta_storage.name);
-                uint64 data_size = len(meta_storage.data);
-                os.write(reinterpret_cast<char const*>(&name_size), sizeof(uint64));
-                os.write(reinterpret_cast<char const*>(&data_size), sizeof(uint64));
+                os.write(reinterpret_cast<char const*>(&meta_storage.id), sizeof(uint64));
 
-                os.write(reinterpret_cast<char const*>(meta_storage.name.data()), name_size);
+                uint64 data_size = len(meta_storage.data);
+                os.write(reinterpret_cast<char const*>(&data_size), sizeof(uint64));
                 os.write(reinterpret_cast<char const*>(meta_storage.data.data()), data_size);
             }
         }
@@ -601,12 +599,10 @@ namespace craftbuild {
                     uint64 meta_storages_size = meta_storages.size();
                     ofs.write(reinterpret_cast<char const*>(&meta_storages_size), sizeof(uint64));
                     for (auto const& meta_storage : meta_storages) {
-                        uint64 name_size = len(meta_storage.name);
-                        uint64 data_size = len(meta_storage.data);
-                        ofs.write(reinterpret_cast<char const*>(&name_size), sizeof(uint64));
-                        ofs.write(reinterpret_cast<char const*>(&data_size), sizeof(uint64));
+                        ofs.write(reinterpret_cast<char const*>(&meta_storage.id), sizeof(uint64));
 
-                        ofs.write(reinterpret_cast<char const*>(meta_storage.name.data()), name_size);
+                        uint64 data_size = len(meta_storage.data);
+                        ofs.write(reinterpret_cast<char const*>(&data_size), sizeof(uint64));
                         ofs.write(reinterpret_cast<char const*>(meta_storage.data.data()), data_size);
                     }
                 }
@@ -676,17 +672,13 @@ namespace craftbuild {
                     ifs.read(reinterpret_cast<char*>(&meta_storages_size), sizeof(uint64));
 
                     for (auto k : range(meta_storages_size)) {
-                        uint64 name_size = 0;
+                        auto& meta_storage = meta_storages.emplace_back();
+                        ifs.read(reinterpret_cast<char*>(&meta_storage.id), sizeof(uint64));
+
                         uint64 data_size = 0;
-                        ifs.read(reinterpret_cast<char*>(&name_size), sizeof(uint64));
                         ifs.read(reinterpret_cast<char*>(&data_size), sizeof(uint64));
 
-                        auto& meta_storage = meta_storages.emplace_back();
-
-                        meta_storage.name.resize(name_size);
                         meta_storage.data.resize(data_size);
-
-                        ifs.read(reinterpret_cast<char*>(meta_storage.name.data()), name_size);
                         ifs.read(reinterpret_cast<char*>(meta_storage.data.data()), data_size);
                     }
                 }
@@ -716,6 +708,8 @@ namespace craftbuild {
     void Server::_ready() {
         start_gc_thread();
         start_log_thread();
+
+        MetaRegistry::register_metadata("transparent");
 
         BlockRegistry::register_block<Air>("Air", "");
         BlockRegistry::register_block<Grass>("Grass Block", "");

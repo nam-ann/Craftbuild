@@ -15,23 +15,6 @@ export namespace craftbuild {
         usize __len__ = 0;
         usize __space__ = 0;
 
-        struct Iterator {
-            T* __ptr__;
-
-            Iterator(T* p) : __ptr__(p) {}
-
-            T& operator*() {
-                return *__ptr__;
-            }
-            Iterator& operator++() {
-                __ptr__++;
-                return *this;
-            }
-            bool operator!=(Iterator const& other) const {
-                return __ptr__ != other.__ptr__;
-            }
-        };
-
     public:
         List() noexcept {}
         List(std::initializer_list<T> const& l) : __value__(new T[l.size()]), __space__(l.size()), __len__(l.size()) { std::memcpy(__value__, l.data(), __len__ * sizeof(T)); }
@@ -111,9 +94,58 @@ export namespace craftbuild {
 
         List operator*(usize n) const { List cache(*this); return cache *= n; }
 
-        T& operator[](usize pos) {
+        T& operator[](int64 pos) {
             if (pos >= __len__) throw std::out_of_range("List index out of range");
-            return __value__[pos];
+            return __value__[pos < 0 ? __len__ + pos : pos];
+        }
+
+		T const& operator[](int64 pos) const {
+			if (pos >= __len__) throw std::out_of_range("List index out of range");
+			return __value__[pos < 0 ? __len__ + pos : pos];
+		}
+
+        void operator[](int64 start, int64 end, int64 step) {
+            if (step == 0) throw std::invalid_argument("List slice step cannot be zero");
+
+            int64 const n = int64(__len__);
+            auto normalize = [n](int64 index) -> int64 {
+                if (index < 0) index += n;
+                return index;
+            };
+
+            start = normalize(start);
+            end = normalize(end);
+            List result;
+
+            if (step > 0) {
+                start = std::clamp<int64>(start, 0, n);
+                end = std::clamp<int64>(end, 0, n);
+                
+                if (start >= end) return result;
+                usize count = usize((end - start + step - 1) / step);
+                result.archive(count);
+                result.__len__ = count;
+                
+                usize j = 0;
+                for (int64 i : range(start, end, step)) result.__value__[j++] = __value__[i]; 
+            }
+            else {
+                start = std::clamp<int64>(start, -1, n - 1);
+                end = std::clamp<int64>(end, -1, n - 1);
+                
+                if (start <= end) return result;
+                
+                int64 const abs_step = -step;
+                usize count = usize((start - end + abs_step - 1) / abs_step);
+                
+                result.archive(count);
+                result.__len__ = count;
+                usize j = 0;
+                
+                for (int64 i : range(start, end, step)) result.__value__[j++] = __value__[i];
+            }
+            
+            return result;
         }
 
         operator bool() const {
@@ -198,10 +230,10 @@ export namespace craftbuild {
             return __value__;
         }
 
-        Iterator begin() { return Iterator(__value__); }
-        Iterator end() { return Iterator(__value__ + __len__); }
-        Iterator begin() const { return Iterator(__value__); }
-        Iterator end() const { return Iterator(__value__ + __len__); }
+        auto begin() noexcept { return __value__; }
+        auto end() noexcept { return __value__ + __len__; }
+        auto begin() const noexcept { return __value__; }
+        auto end() const noexcept { return __value__ + __len__; }
 
         friend usize len(List const& s) { return s.__len__; }
         friend List operator+(std::initializer_list<T>& l, List const& s) { return List(l) + s; }

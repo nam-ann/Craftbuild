@@ -37,6 +37,7 @@ import game.world.cave;
 import game.world.chunk;
 import game.world.biome;
 import game.block.redstone;
+import game.block.metadata;
 import game.player.player_data;
 import game.block.normal_blocks;
 import game.texture.atlas_texture;
