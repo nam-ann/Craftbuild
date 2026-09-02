@@ -35,7 +35,6 @@ using namespace godot;
 export namespace craftbuild {
     struct ComplexBlockInstance {
         uint32 block_id;
-        uint64 tag_data;
         Pos3D<uint8> local_pos;
     };
 

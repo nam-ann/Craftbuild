@@ -491,10 +491,9 @@ namespace craftbuild {
             for (uint16 y : range(Chunk::HEIGHT)) {
                 for (uint8 z : range(Chunk::WIDTH)) {
                     uint32 const id = get_block({ x, uint8(y), z });
-                    if (is_complex_block(id)) {
-                        auto tag_info = get_tag({ x, uint8(y), z });
-                        data.complex_instance.append({ id, tag_info.data, {x, uint8(y), z} });
-                    }
+
+                    if (not is_complex_block(id)) continue;
+                    data.complex_instance.append({ id, {x, uint8(y), z} });
                 }
             }
         }
