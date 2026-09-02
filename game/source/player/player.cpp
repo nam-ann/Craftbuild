@@ -2,7 +2,7 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/input.hpp>
 #include <godot_cpp/classes/shader.hpp>
 #include <godot_cpp/classes/window.hpp>
@@ -26,7 +26,7 @@ NO_WARNING
 #include <godot_cpp/variant/vector3.hpp>
 #include <godot_cpp/variant/vector3i.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 module game.player;
 

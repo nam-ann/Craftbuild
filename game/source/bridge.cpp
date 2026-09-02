@@ -1,8 +1,8 @@
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/engine.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 import misc.pos;
 import misc.number;

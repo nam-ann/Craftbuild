@@ -2,9 +2,9 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/core/math_defs.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 export module misc.number;
 

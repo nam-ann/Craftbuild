@@ -2,12 +2,12 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/directional_light3d.hpp>
 #include <godot_cpp/classes/environment.hpp>
 #include <godot_cpp/classes/procedural_sky_material.hpp>
 #include <godot_cpp/classes/world_environment.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 export module game.environment;
 

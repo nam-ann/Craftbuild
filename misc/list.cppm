@@ -191,10 +191,10 @@ export namespace craftbuild {
             return result += "]";
         }
 
-        T* c_ptr() {
+        T* data() {
             return __value__;
         }
-        T const* c_ptr() const {
+        T const* data() const {
             return __value__;
         }
 

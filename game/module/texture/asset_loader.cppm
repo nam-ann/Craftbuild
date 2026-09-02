@@ -2,10 +2,10 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/classes/packed_scene.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 export module game.texture.asset_loader;
 

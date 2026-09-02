@@ -23,8 +23,9 @@ export namespace craftbuild {
 
 	class format {
 		Str __buffer__;
+
 	public:
-		constexpr format(std::string_view s) : __buffer__(s) {}
+		format(std::string_view s) : __buffer__(s) {}
 		operator Str() const noexcept { return __buffer__; }
 
 		friend format&& operator<<(format&& f, Str const& s) {
@@ -64,7 +65,7 @@ export namespace craftbuild {
 			return std::move(f);
 		}
 		friend format&& operator<<(format&& f, bool b) {
-			f.__buffer__ += b ? "true" : "false";
+			f.__buffer__ += b ? "True" : "False";
 			return std::move(f);
 		}
 		friend format&& operator<<(format&& f, void const* v) {
@@ -92,5 +93,5 @@ export namespace craftbuild {
 		}
 	};
 
-	constexpr format&& operator""f(char const* c, usize) { return format(c); }
+	auto operator""f(char const* c, usize s) { return format(std::string_view(c, s)); }
 }

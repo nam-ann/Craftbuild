@@ -2,7 +2,7 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/input.hpp>
 #include <godot_cpp/classes/node3d.hpp>
 #include <godot_cpp/classes/world3d.hpp>
@@ -25,7 +25,7 @@ NO_WARNING
 #include <godot_cpp/classes/multi_mesh_instance3d.hpp>
 #include <godot_cpp/classes/concave_polygon_shape3d.hpp>
 #include <godot_cpp/variant/node_path.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 module game.main;
 
@@ -38,16 +38,6 @@ namespace craftbuild {
     void Main::_ready() {
         start_gc_thread();
         start_log_thread();
-        
-        TagRegistry::register_tag("face");
-        TagRegistry::register_tag("transparent");
-        TagRegistry::register_tag("collision_size");
-        TagRegistry::register_tag("collision_offset");
-
-        TagRegistry::set_value(TagRegistry::get_id("transparent"), 1, true);
-        TagRegistry::set_value(TagRegistry::get_id("has_collision"), 1, true);
-        TagRegistry::set_value(TagRegistry::get_id("collision_size"), 1, pack_vec3_mm(Pos3D<real>(0.2f, 0.6f, 0.2f)));
-        TagRegistry::set_value(TagRegistry::get_id("collision_offset"), 1, pack_vec3_mm(Pos3D<real>(0.5f, 0.3f, 0.5f)));
         
         BlockRegistry::register_block<Air>          ("Air"           , "");
         BlockRegistry::register_block<Grass>        ("Grass Block"   , "grass_block.png");
@@ -196,12 +186,12 @@ namespace craftbuild {
                     uvs_layer.resize(len(data.uvs_layer));
                     collision_faces.resize(len(data.collision_faces));
 
-                    std::memcpy(vertices.ptrw(), data.vertices.c_ptr(), len(data.vertices) * sizeof(Pos3D<float32>));
-                    std::memcpy(normals.ptrw(), data.normals.c_ptr(), len(data.normals) * sizeof(Pos3D<float32>));
-                    std::memcpy(indices.ptrw(), data.indices.c_ptr(), len(data.indices) * sizeof(int32));
-                    std::memcpy(uvs.ptrw(), data.uvs.c_ptr(), len(data.uvs) * sizeof(Pos2D<float32>));
-                    std::memcpy(uvs_layer.ptrw(), data.uvs_layer.c_ptr(), len(data.uvs_layer) * sizeof(Pos2D<float32>));
-                    std::memcpy(collision_faces.ptrw(), data.collision_faces.c_ptr(), len(data.collision_faces) * sizeof(Pos3D<float32>));
+                    std::memcpy(vertices.ptrw(), data.vertices.data(), len(data.vertices) * sizeof(Pos3D<float32>));
+                    std::memcpy(normals.ptrw(), data.normals.data(), len(data.normals) * sizeof(Pos3D<float32>));
+                    std::memcpy(indices.ptrw(), data.indices.data(), len(data.indices) * sizeof(int32));
+                    std::memcpy(uvs.ptrw(), data.uvs.data(), len(data.uvs) * sizeof(Pos2D<float32>));
+                    std::memcpy(uvs_layer.ptrw(), data.uvs_layer.data(), len(data.uvs_layer) * sizeof(Pos2D<float32>));
+                    std::memcpy(collision_faces.ptrw(), data.collision_faces.data(), len(data.collision_faces) * sizeof(Pos3D<float32>));
 
                     Array arrays;
                     arrays.resize(Mesh::ARRAY_MAX);
@@ -220,7 +210,7 @@ namespace craftbuild {
                     create_chunk_collision(chunk_render, collision_faces);
                 }
 
-                if (not data.dyn_instances) {
+                if (not data.complex_instance) {
                     ++updates_this_frame;
                     continue;
                 }
@@ -236,8 +226,8 @@ namespace craftbuild {
                     child->queue_free();
                 }
 
-                Dict<uint32, std::vector<DynBlockInstance>> grouped_instances;
-                for (auto&& inst : data.dyn_instances) {
+                Dict<uint32, std::vector<ComplexBlockInstance>> grouped_instances;
+                for (auto&& inst : data.complex_instance) {
                     Ref<BoxShape3D> box;
                     box.instantiate();
                     box->set_size(Vector3(1.0f, 0.1f, 1.0f));
@@ -501,8 +491,8 @@ namespace craftbuild {
                         std::unique_lock data_lock(chunk.data_mutex);
                         chunk.clear();
 
-                        is.read(reinterpret_cast<char*>(&chunk.blocks[0][0][0]), (uint64)Chunk::WIDTH * Chunk::HEIGHT * Chunk::WIDTH * sizeof(BlockStorage));
-                        log<LogType::VERBOSE>(""f << chunk.blocks[0][0][0].block_id);
+                        is.read(reinterpret_cast<char*>(&chunk.blocks[0][0][0]), uint64(Chunk::WIDTH * Chunk::HEIGHT * Chunk::WIDTH * sizeof(uint8)));
+                        log<LogType::VERBOSE>(""f << chunk.blocks[0][0][0]);
 
                         is.read(reinterpret_cast<char*>(&chunk.block_ids_size), sizeof(uint8));
                         is.read(reinterpret_cast<char*>(&chunk.block_ids), sizeof(uint32) * 256);
@@ -516,34 +506,48 @@ namespace craftbuild {
                             is.read(reinterpret_cast<char*>(&chunk.id2block[global_id]), sizeof(uint8));
                         }
 
-                        is.read(reinterpret_cast<char*>(&chunk.tag_ids_size), sizeof(uint8));
-                        is.read(reinterpret_cast<char*>(&chunk.tag_ids), sizeof(std::pair<uint32, uint64>) * 256);
+                        uint64 meta_size = 0;
+                        is.read(reinterpret_cast<char*>(&meta_size), sizeof(uint64));
 
-                        uint8 id2tag_size = 0;
-                        is.read(reinterpret_cast<char*>(&id2tag_size), sizeof(uint8));
-                        chunk.id2tag.reserve(id2tag_size);
-                        for (auto j : range<uint8>(id2tag_size)) {
-                            std::pair<uint32, uint64> global_id;
-                            is.read(reinterpret_cast<char*>(&global_id.first), sizeof(uint32));
-                            is.read(reinterpret_cast<char*>(&global_id.second), sizeof(uint64));
-                            is.read(reinterpret_cast<char*>(&chunk.id2tag[global_id]), sizeof(uint8));
+                        for (auto j : range(meta_size)) {
+                            Pos3D<uint8> pos;
+
+                            is.read(reinterpret_cast<char*>(&pos.x), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&pos.y), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&pos.z), sizeof(uint8));
+
+                            auto& meta_storages = chunk.meta_ids[pos];
+
+                            uint64 meta_storages_size = 0;
+                            is.read(reinterpret_cast<char*>(&meta_storages_size), sizeof(uint64));
+
+                            for (auto k : range(meta_storages_size)) {
+                                uint64 name_size = 0;
+                                uint64 data_size = 0;
+                                is.read(reinterpret_cast<char*>(&name_size), sizeof(uint64));
+                                is.read(reinterpret_cast<char*>(&data_size), sizeof(uint64));
+
+                                auto& meta_storage = meta_storages.emplace_back();
+
+                                meta_storage.name.resize(name_size);
+                                meta_storage.data.resize(data_size);
+
+                                is.read(reinterpret_cast<char*>(meta_storage.name.data()), name_size);
+                                is.read(reinterpret_cast<char*>(meta_storage.data.data()), data_size);
+                            }
                         }
 
-                        uint32 complex_size = 0;
-                        is.read(reinterpret_cast<char*>(&complex_size), sizeof(uint32));
-                        chunk.complex_blocks.reserve(complex_size);
-                        for (auto j : range<uint32>(complex_size)) {
-                            Pos3D<uint8> key{};
-                            BlockStorageFull value{};
+                        uint64 extended_block_size = 0;
+                        is.read(reinterpret_cast<char*>(&extended_block_size), sizeof(uint64));
 
-                            is.read(reinterpret_cast<char*>(&key.x), sizeof(uint8));
-                            is.read(reinterpret_cast<char*>(&key.y), sizeof(uint8));
-                            is.read(reinterpret_cast<char*>(&key.z), sizeof(uint8));
+                        for (auto j : range(extended_block_size)) {
+                            Pos3D<uint8> pos;
 
-                            is.read(reinterpret_cast<char*>(&value.block_id), sizeof(uint32));
-                            is.read(reinterpret_cast<char*>(&value.tag), sizeof(uint32));
+                            is.read(reinterpret_cast<char*>(&pos.x), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&pos.y), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&pos.z), sizeof(uint8));
 
-                            chunk.complex_blocks.emplace(key, value);
+                            is.read(reinterpret_cast<char*>(&chunk.extended_block_id[pos]), sizeof(uint32));
                         }
 
                         is.read(reinterpret_cast<char*>(&chunk.chunk_version), sizeof(uint8));
@@ -577,7 +581,7 @@ namespace craftbuild {
 
                             is.read(reinterpret_cast<char*>(&name_len), sizeof(uint64));
                             name.resize(name_len);
-                            is.read(reinterpret_cast<char*>(name.c_ptr()), name_len);
+                            is.read(reinterpret_cast<char*>(name.data()), name_len);
                             is.read(reinterpret_cast<char*>(&player_data.hp), sizeof(uint8));
                             is.read(reinterpret_cast<char*>(&player_data.pos), sizeof(Pos3D<real>));
                             is.read(reinterpret_cast<char*>(&player_data.hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);

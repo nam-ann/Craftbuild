@@ -134,7 +134,7 @@ export namespace craftbuild {
 			return ""f << __value__;
 		}
 
-		inline T* c_ptr() const noexcept {
+		inline T* data() const noexcept {
 			return __value__ ? static_cast<T*>(__value__->__data__) : nullptr;
 		}
 

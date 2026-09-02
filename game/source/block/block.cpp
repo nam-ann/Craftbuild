@@ -2,50 +2,17 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/variant/vector2.hpp>
 #include <godot_cpp/variant/vector3.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 module game.block;
 
 namespace craftbuild {
-    TagEntry::TagEntry() = default;
-	TagEntry::TagEntry(Str  const& n) : name(n) {};
-
-	uint32 TagRegistry::register_tag(Str const& name) {
-        tag.push_back(name);
-        const uint32 tag_size = (uint32)(tag.size() - 1);
-        tag2id[name] = tag_size;
-        return tag_size;
-    }
-
-    uint64 TagRegistry::add_value(uint32 tag_id, uint64 value) {
-        if (tag_id >= tag.size()) return 0;
-        auto& values = tag[tag_id].value;
-        values.append(value);
-        return len(values) - 1;
-    }
-
-    void TagRegistry::set_value(uint32 tag_id, uint64 index, uint64 value) {
-        if (tag_id >= tag.size()) return;
-        auto& values = tag[tag_id].value;
-        if (index >= len(values)) add_value(tag_id, value);
-        else values[index] = value;
-    }
-
-    List<uint64>& TagRegistry::get_value(uint32 tag_id) { return tag[tag_id].value; }
-    uint64& TagRegistry::get_value(uint32 tag_id, uint64 index) { return tag[tag_id].value[index]; }
-    Str TagRegistry::get_name(uint32 tag_id) { return tag[tag_id].name; }
-
-    uint32 TagRegistry::get_id(Str const& tag_name) {
-        if (tag2id.find(tag_name) == tag2id.end()) return 0;
-        return tag2id[tag_name];
-    }
-
     Block::~Block() = default;
-    std::vector<std::pair<Str, uint64>> Block::init_tags() { return {}; }
+    std::vector<MetaStorage> Block::init_tags() { return {}; }
 
     int32 Block1F::get_texture_layer(Face face) const {
         return base_texture_layer;

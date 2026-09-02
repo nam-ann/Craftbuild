@@ -2,13 +2,13 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/camera3d.hpp>
 #include <godot_cpp/classes/input_event.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
 #include <godot_cpp/classes/character_body3d.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 export module game.player;
 

@@ -105,9 +105,7 @@ export namespace craftbuild {
 
             Iterator(uint8* p) : __ptr__(p) {}
 
-            uint8& operator*() {
-                return *__ptr__;
-            }
+            uint8& operator*() { return *__ptr__; }
             Iterator& operator++() {
                 __ptr__++;
                 return *this;
@@ -129,7 +127,7 @@ export namespace craftbuild {
                 return;
             }
 
-            uint8 chunks[5];
+            uint8 chunks[5] = {};
             uint8 n = 0;
 
             while (cp > 0) {
@@ -153,7 +151,7 @@ export namespace craftbuild {
         }
 
         // DECODE: UEF-8 -> codepoint
-        uint32 decode_one(size_t& i) const {
+        uint32 decode_one(usize& i) const {
             uint32 result = 0;
 
             while (i < __len__) {
@@ -352,17 +350,13 @@ export namespace craftbuild {
             std::swap(__space__, other.__space__);
         }
 
-        uint8* c_ptr() { return __value__; }
-        uint8 const* c_ptr() const { return __value__; }
+        uint8* data() { return __value__; }
+        uint8 const* data() const { return __value__; }
 
         Iterator begin() { return Iterator(__value__); }
         Iterator end() { return Iterator(__value__ + __len__); }
         Iterator begin() const { return Iterator(__value__); }
         Iterator end() const { return Iterator(__value__ + __len__); }
-
-        friend std::ostream& operator<<(std::ostream& os, Str const& s) noexcept {
-            return os << s.std_str();
-        }
 
         friend usize len(Str const& s) { return s.__len__; }
 

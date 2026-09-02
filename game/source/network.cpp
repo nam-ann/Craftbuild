@@ -2,9 +2,9 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/stream_peer_tcp.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 module game.network;
 
@@ -43,13 +43,13 @@ namespace craftbuild {
 
     ReceiveState ReceiveQueue::receive(StreamPeerTCP& peer, List<char>& out_data) {
         for (usize i : range<usize>(len(buffer))) {
-            if (buffer.c_ptr()[i] == '\0') {
+            if (buffer.data()[i] == '\0') {
                 out_data.resize(i);
-                memcpy(out_data.c_ptr(), buffer.c_ptr(), i);
+                memcpy(out_data.data(), buffer.data(), i);
 
                 usize remaining = len(buffer) - (i + 1);
                 if (remaining > 0) {
-                    memmove(buffer.c_ptr(), buffer.c_ptr() + i + 1, remaining);
+                    memmove(buffer.data(), buffer.data() + i + 1, remaining);
                     buffer.resize(remaining);
                 }
                 else buffer.clear();
@@ -75,16 +75,16 @@ namespace craftbuild {
 
         auto old_len = len(buffer);
         buffer.resize(old_len + read_bytes);
-        memcpy(buffer.c_ptr() + old_len, chunk.ptr(), read_bytes);
+        memcpy(buffer.data() + old_len, chunk.ptr(), read_bytes);
 
         for (usize i : range<usize>(old_len, len(buffer))) {
-            if (buffer.c_ptr()[i] == '\0') {
+            if (buffer.data()[i] == '\0') {
                 out_data.resize(i);
-                memcpy(out_data.c_ptr(), buffer.c_ptr(), i);
+                memcpy(out_data.data(), buffer.data(), i);
 
                 size_t remaining = len(buffer) - (i + 1);
                 if (remaining > 0) {
-                    memmove(buffer.c_ptr(), buffer.c_ptr() + i + 1, remaining);
+                    memmove(buffer.data(), buffer.data() + i + 1, remaining);
                     buffer.resize(remaining);
                 }
                 else buffer.clear();
@@ -95,7 +95,7 @@ namespace craftbuild {
     }
 
     Message ReceiveQueue::parse(List<char> buffer) {
-        std::string str(buffer.c_ptr(), len(buffer));
+        std::string str(buffer.data(), len(buffer));
 
         usize pos = str.find('\2');
         if (pos == std::string::npos) return { Str(str), {} };

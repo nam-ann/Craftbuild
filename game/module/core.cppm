@@ -2,10 +2,10 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/classes/wrapped.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 #define VERSION "26.8"
 
@@ -30,17 +30,4 @@ export namespace craftbuild {
 
     inline constexpr real MATH_PI = (real)Math_PI;
     inline constexpr real MAXIMUM_CAMERA_ANGLE = (real)2.0000002384185791015625f;
-
-    inline uint64 pack_vec3_mm(Pos3D<real> const& v) {
-        return (uint64)(uint16)(v.x * 1000.0f)
-            | ((uint64)(uint16)(v.y * 1000.0f) << 16)
-            | ((uint64)(uint16)(v.z * 1000.0f) << 32);
-    }
-
-    inline Pos3D<real> unpack_vec3_mm(uint64 packed) {
-        uint16 x = packed & 0xFFFF;
-        uint16 y = (packed >> 16) & 0xFFFF;
-        uint16 z = (packed >> 32) & 0xFFFF;
-        return Pos3D<real>(x / 1000.0f, y / 1000.0f, z / 1000.0f);
-    }
 }

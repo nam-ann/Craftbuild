@@ -2,13 +2,13 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/classes/dir_access.hpp>
 #include <godot_cpp/classes/packed_scene.hpp>
 #include <godot_cpp/classes/resource_loader.hpp>
 #include <godot_cpp/classes/texture2d_array.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 module game.texture.asset_loader;
 

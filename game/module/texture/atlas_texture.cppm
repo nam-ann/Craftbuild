@@ -2,9 +2,9 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/texture2d_array.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 export module game.texture.atlas_texture;
 

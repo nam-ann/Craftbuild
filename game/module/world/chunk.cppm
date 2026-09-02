@@ -2,14 +2,14 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/static_body3d.hpp>
 #include <godot_cpp/classes/fast_noise_lite.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/collision_shape3d.hpp>
 #include <godot_cpp/classes/multi_mesh_instance3d.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 export module game.world.chunk;
 
@@ -32,7 +32,7 @@ import game.world.terrain;
 using namespace godot;
 
 export namespace craftbuild {
-    struct DynBlockInstance {
+    struct ComplexBlockInstance {
         uint32 block_id;
         uint64 tag_data;
         Pos3D<uint8> local_pos;
@@ -45,7 +45,7 @@ export namespace craftbuild {
         List<Pos2D<real>> uvs;
         List<Pos2D<real>> uvs_layer;
         List<Pos3D<real>> collision_faces;
-        List<DynBlockInstance> dyn_instances;
+        List<ComplexBlockInstance> complex_instance;
     };
 
     struct FaceMask {
@@ -76,15 +76,13 @@ export namespace craftbuild {
         inline static constexpr uint8 HEIGHT = 255;
 
         uint32 block_ids[256];
-        std::pair<uint32, uint64> tag_ids[256];
         uint8 block_ids_size = 0;
-        uint8 tag_ids_size = 0;
 
         Dict<uint32, uint8> id2block;
-        Dict<std::pair<uint32, uint64>, uint8> id2tag;
 
-        Dict<Pos3D<uint8>, BlockStorageFull> complex_blocks;
-        BlockStorage blocks[WIDTH][HEIGHT][WIDTH] = {};
+        Dict<Pos3D<uint8>, std::vector<MetaStorage>> meta_ids;
+        Dict<Pos3D<uint8>, uint32> extended_block_id;
+        uint8 blocks[WIDTH][HEIGHT][WIDTH] = {};
 
         Pos2D<int32> chunk_pos;
         TrapezoidHeight height_provider{ VerticalAnchor::absolute(18), VerticalAnchor::absolute(38), 8 };
@@ -102,17 +100,14 @@ export namespace craftbuild {
         static Biome select_biome_at(int32 wx, int32 wz, Ref<FastNoiseLite> noise, usize biome_count);
         static Biome get_blended_biome(int32 wx, int32 wz, Ref<FastNoiseLite> noise, usize biome_count);
 
-        void set_block(Pos3D<uint8>& pos, Str const& block);
+        void set_block(Pos3D<uint8> const& pos, Str const& block);
         void set_block(Pos3D<uint8> const& pos, uint32 block_id);
 
-        void tag_block(Pos3D<uint8>& pos, Str const& tag, usize tag_data = 0);
-        void tag_block(Pos3D<uint8> const& pos, uint32 tag_id, usize tag_data = 0);
-
-        bool has_tag(Pos3D<uint8>& pos, Str const& tag, usize tag_data = 0) const;
-        bool has_tag(Pos3D<uint8> const& pos, uint32 tag_id, usize tag_data = 0) const;
+        void tag_block(Pos3D<uint8> const& pos, Str const& tag, Str const& tag_data = "");
+        bool has_tag(Pos3D<uint8> const& pos, Str const& tag, Str const& tag_data = "") const;
 
         uint32 get_block(Pos3D<uint8> const& pos) const;
-        std::pair<uint32, uint64> get_tag(Pos3D<uint8> const& pos) const;
+        MetaStorage get_tag(Pos3D<uint8> const& pos) const;
 
         void generate_terrain(int32 seed, Ref<FastNoiseLite> noise);
         void generate_mesh(ChunkRender& mesh, Ptr<Chunk> neighbors[4]);

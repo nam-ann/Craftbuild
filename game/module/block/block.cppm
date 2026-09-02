@@ -2,7 +2,7 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/mesh.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/classes/packed_scene.hpp>
@@ -10,7 +10,7 @@ NO_WARNING
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 #include <godot_cpp/variant/vector3.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 export module game.block;
 
@@ -32,25 +32,9 @@ export namespace craftbuild {
     inline constexpr uint8 FACE_LEN = 6;
     enum class Face : uint8 { TOP, BOTTOM, RIGHT, LEFT, FRONT, BACK };
 
-    struct TagEntry {
+    struct MetaStorage {
         Str name;
-        List<uint64> value;
-
-        TagEntry();
-        TagEntry(Str const& n);
-    };
-
-    struct TagRegistry {
-        inline static std::vector<TagEntry> tag;
-        inline static Dict<Str, uint32> tag2id;
-
-        static uint32 register_tag(Str const& name);
-        static uint64 add_value(uint32 tag_id, uint64 value);
-        static void set_value(uint32 tag_id, uint64 index, uint64 value);
-        static List<uint64>& get_value(uint32 tag_id);
-        static uint64& get_value(uint32 tag_id, uint64 index);
-        static Str get_name(uint32 tag_id);
-        static uint32 get_id(Str const& tag_name);
+        Str data;
     };
 
     class Block {
@@ -60,7 +44,7 @@ export namespace craftbuild {
     public:
         virtual ~Block();
         virtual int32 get_texture_layer(Face face) const = 0;
-        virtual std::vector<std::pair<Str, uint64>> init_tags();
+        virtual std::vector<MetaStorage> init_tags();
 
         friend class AtlasTexture;
     };
@@ -88,7 +72,6 @@ export namespace craftbuild {
         template <typename T>
         requires std::derived_from<T, Block>
         static void register_block(Str const& name, char const* path) {
-            Ptr<Block> block = new Obj<T>();
             Ref<Texture2D> texture = nullptr;
             Ref<Mesh> mesh = nullptr;
 
@@ -111,23 +94,13 @@ export namespace craftbuild {
                 mesh = mesh_inst->get_mesh();
             }
 
-            registry.emplace_back(std::move(block), name, texture, mesh);
-            name2id[name] = (uint32)(registry.size() - 1);
+            registry.emplace_back(new Obj<T>(), name, texture, mesh);
+            name2id[name] = uint32(registry.size() - 1);
         }
 
         static Ptr<Block>& get_block(uint32 block_id);
         static Str get_name(uint32 block_id);
         static uint32 get_id(Str const& block_name);
         static bool has_block(Str const& block_name);
-    };
-
-    struct BlockStorage {
-        uint8 block_id;
-        uint8 tag;
-    };
-    struct BlockStorageFull {
-        uint32 block_id;
-        uint32 tag;
-        uint64 tag_data;
     };
 }

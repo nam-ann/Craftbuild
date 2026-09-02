@@ -2,11 +2,11 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/classes/standard_material3d.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 export module game.player.skin_manager;
 

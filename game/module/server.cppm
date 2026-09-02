@@ -2,12 +2,12 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/node.hpp>
 #include <godot_cpp/classes/tcp_server.hpp>
 #include <godot_cpp/classes/fast_noise_lite.hpp>
 #include <godot_cpp/classes/stream_peer_tcp.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 export module game.server;
 

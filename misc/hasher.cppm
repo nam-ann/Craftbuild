@@ -2,9 +2,9 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/ref.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 export module misc.hasher;
 
@@ -57,6 +57,17 @@ export namespace craftbuild {
     template <typename T>
     struct Hasher<godot::Ref<T>> {
         usize operator()(godot::Ref<T> const& value) const { return usize(*value); }
+    };
+
+    template <typename T>
+    struct Hasher<std::vector<T>> {
+        usize operator()(std::vector<T> const& value) const {
+            usize hash = 0;
+            for (const auto& elem : value) {
+                hash ^= Hasher<T>{}(elem) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+            }
+            return hash;
+        }
     };
 
     template <typename T>

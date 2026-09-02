@@ -2,10 +2,10 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 #define LOC_PARAM std::source_location __loc__
 

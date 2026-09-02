@@ -2,7 +2,7 @@ module;
 
 #include <defs.hpp>
 
-NO_WARNING
+DISABLE_WARNING
 #include <godot_cpp/classes/input.hpp>
 #include <godot_cpp/classes/node3d.hpp>
 #include <godot_cpp/classes/array_mesh.hpp>
@@ -10,7 +10,7 @@ NO_WARNING
 #include <godot_cpp/classes/static_body3d.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
-DO_WARNING
+ENABLE_WARNING
 
 export module game.main;
 
