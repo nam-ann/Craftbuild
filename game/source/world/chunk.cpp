@@ -295,7 +295,7 @@ namespace craftbuild {
         ++chunk_version;
     }
 
-    static int32 get_submesh_index(int32 y) { return std::clamp(y / (Chunk::HEIGHT / 4), 0, 3); }
+    static uint8 get_submesh_index(uint8 y) { return std::clamp(y / (Chunk::HEIGHT / 4), 0, 3); }
 
     void Chunk::generate_mesh(ChunkRender& mesh, Ptr<Chunk> neighbors[4]) {
         Ptr<MeshesData> chunk_data_ptr = new Obj<MeshesData>();
@@ -445,8 +445,8 @@ namespace craftbuild {
                         start[u] = float32(i);
                         start[v] = float32(j);
 
-                        int32 avg_y = int32(start[1]);
-                        int32 s_idx = get_submesh_index(avg_y);
+                        uint8 avg_y = uint8(start[1]);
+                        uint8 s_idx = get_submesh_index(avg_y);
 
                         auto& data = chunk_data[s_idx];
                         uint64& vertex_offset = vertex_offsets[s_idx];
