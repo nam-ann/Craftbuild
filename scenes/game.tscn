@@ -7,20 +7,21 @@
 [ext_resource type="Script" uid="uid://c0ceo8cbu6ogd" path="res://assets/scripts/main/LeaveBtn.gd" id="5_0tnpc"]
 [ext_resource type="Texture2D" uid="uid://c1bmb8ftneuq8" path="res://assets/crosshair.png" id="6_p57ef"]
 [ext_resource type="Script" uid="uid://dd5j3xi5xp6gc" path="res://assets/scripts/main/FPSLabel.gd" id="7_u5sy4"]
+[ext_resource type="Script" uid="uid://ckf5eg0awt4ut" path="res://assets/scripts/main/PlayerPosLabel.gd" id="8_gee14"]
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_u5sy4"]
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_gee14"]
 radius = 0.3
 height = 1.8
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gee14"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0tnpc"]
 transparency = 4
 albedo_texture = ExtResource("2_p57ef")
 albedo_texture_force_srgb = true
 
-[sub_resource type="BoxMesh" id="BoxMesh_0tnpc"]
+[sub_resource type="BoxMesh" id="BoxMesh_vtaks"]
 size = Vector3(0.6, 2, 0.3)
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_vtaks"]
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_kvpfn"]
 sky_top_color = Color(0, 0.85, 0.9, 1)
 sky_horizon_color = Color(0.45, 1, 1, 1)
 sky_curve = 0.18
@@ -32,14 +33,14 @@ ground_energy_multiplier = 0.18
 sun_angle_max = 14.0
 sun_curve = 0.08
 
-[sub_resource type="Sky" id="Sky_kvpfn"]
-sky_material = SubResource("ProceduralSkyMaterial_vtaks")
+[sub_resource type="Sky" id="Sky_dinhu"]
+sky_material = SubResource("ProceduralSkyMaterial_kvpfn")
 process_mode = 3
 
-[sub_resource type="Environment" id="Environment_dinhu"]
+[sub_resource type="Environment" id="Environment_kvuet"]
 background_mode = 2
 background_energy_multiplier = 0.7
-sky = SubResource("Sky_kvpfn")
+sky = SubResource("Sky_dinhu")
 ambient_light_source = 3
 ambient_light_energy = 0.25
 reflected_light_source = 2
@@ -55,7 +56,7 @@ velocity = Vector3(0, 0, 5)
 
 [node name="Shape" type="CollisionShape3D" parent="Player" unique_id=1808141800]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-shape = SubResource("CapsuleShape3D_u5sy4")
+shape = SubResource("CapsuleShape3D_gee14")
 
 [node name="Camera" type="Camera3D" parent="Player" unique_id=282328567]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
@@ -63,8 +64,8 @@ current = true
 
 [node name="Mesh" type="MeshInstance3D" parent="Player" unique_id=1273041936]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-material_override = SubResource("StandardMaterial3D_gee14")
-mesh = SubResource("BoxMesh_0tnpc")
+material_override = SubResource("StandardMaterial3D_0tnpc")
+mesh = SubResource("BoxMesh_vtaks")
 
 [node name="ResumeBtn" type="Button" parent="." unique_id=1180982376]
 anchors_preset = 4
@@ -214,7 +215,7 @@ grow_horizontal = 2
 grow_vertical = 0
 
 [node name="Sun" type="Sun" parent="." unique_id=954182571]
-transform = Transform3D(0.73168886, 0.472194, -0.4915934, 0, 0.7211934, 0.6927335, 0.6816388, -0.5068654, 0.52768916, 0, 0, 0)
+transform = Transform3D(0.73168886, 0.48867673, -0.47521177, 0, 0.6971607, 0.71691453, 0.6816388, -0.5245583, 0.5101047, 0, 0, 0)
 light_color = Color(1, 0.93, 0.78, 1)
 light_energy = 1.2
 light_indirect_energy = 0.55
@@ -222,7 +223,7 @@ shadow_enabled = true
 directional_shadow_max_distance = 512.0
 
 [node name="CraftSky" type="CraftSky" parent="." unique_id=117233425]
-environment = SubResource("Environment_dinhu")
+environment = SubResource("Environment_kvuet")
 
 [node name="Crosshair" type="TextureRect" parent="." unique_id=171843478]
 anchors_preset = 8
@@ -256,6 +257,14 @@ offset_bottom = 23.0
 theme_override_font_sizes/font_size = 20
 text = "0 FPS"
 script = ExtResource("7_u5sy4")
+
+[node name="PlayerPos" type="Label" parent="." unique_id=1797956028]
+offset_top = 25.0
+offset_right = 435.0
+offset_bottom = 48.0
+theme_override_font_sizes/font_size = 20
+text = "Player position: (x: 0, y: 0, z: 0)"
+script = ExtResource("8_gee14")
 
 [node name="ChatBox" type="TextEdit" parent="." unique_id=1400547662]
 anchors_preset = 2

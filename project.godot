@@ -19,6 +19,10 @@ config/icon="res://icon.svg"
 
 Global="*uid://bimyx0qqdtngj"
 
+[gui]
+
+theme/custom_font="uid://gsn1fxnlkpa1"
+
 [input]
 
 enter={
@@ -48,4 +52,5 @@ view_history={
 textures/canvas_textures/default_texture_filter=0
 rendering_device/driver.windows="d3d12"
 textures/default_filters/texture_mipmap_bias=-2.0
+environment/defaults/default_clear_color=Color(0.039215688, 0.039215688, 0.039215688, 1)
 anti_aliasing/quality/use_taa=true
