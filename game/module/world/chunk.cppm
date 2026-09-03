@@ -49,6 +49,13 @@ export namespace craftbuild {
         List<ComplexBlockInstance> complex_instance;
     };
 
+    class MeshesData {
+        MeshData sub[4];
+
+    public:
+		auto& operator[](uint8 idx) { return sub[idx]; }
+    };
+
     struct FaceMask {
         int32 layer = -1;
         bool back_face = false;
@@ -57,14 +64,14 @@ export namespace craftbuild {
     };
 
     struct ChunkRender {
-        MeshInstance3D* mesh_instance = nullptr;
+        MeshInstance3D* mesh_instances[4] = {};
         StaticBody3D* collision_body = nullptr;
         CollisionShape3D* collision_shape = nullptr;
 
         MultiMeshInstance3D* multi_mesh_instance = nullptr;
         StaticBody3D* dynamic_body = nullptr;
 
-        Ptr<MeshData> pending_mesh_data = nullptr;
+        Ptr<MeshesData> pending_meshes_data = nullptr;
         mutable std::shared_mutex mesh_mutex;
 
         ~ChunkRender() noexcept;

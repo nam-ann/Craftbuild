@@ -158,9 +158,10 @@ namespace craftbuild {
             PackedInt32Array indices;
             PackedVector2Array uvs;
             PackedVector2Array uvs_layer;
-            PackedVector3Array collision_faces;
 
-            constexpr auto max_updates = 8;
+            PackedVector3Array total_collision_faces;
+
+            static constexpr auto max_updates = 8;
             int32 updates_this_frame = 0;
 
             for (auto& chunk_pos : chunks_to_upload) {
@@ -171,99 +172,108 @@ namespace craftbuild {
 
                 auto& chunk_render = ref_mesh(chunk_pos.x, chunk_pos.y);
 
-                Ptr<MeshData> data_ptr = nullptr;
+                Ptr<MeshesData> chunk_data_ptr = nullptr;
                 {
                     std::lock_guard lock(chunk_render.mesh_mutex);
-                    if (chunk_render.pending_mesh_data) data_ptr.swap(chunk_render.pending_mesh_data);
+                    if (chunk_render.pending_meshes_data) chunk_data_ptr.swap(chunk_render.pending_meshes_data);
                 }
 
-                if (not data_ptr) continue;
-                auto& data = data_ptr.value();
+                if (not chunk_data_ptr) continue;
+                auto& chunk_data = chunk_data_ptr.value();
 
-                if (data.vertices) {
-                    vertices.resize(len(data.vertices));
-                    normals.resize(len(data.normals));
-                    indices.resize(len(data.indices));
-                    uvs.resize(len(data.uvs));
-                    uvs_layer.resize(len(data.uvs_layer));
-                    collision_faces.resize(len(data.collision_faces));
+                for (uint8 sub_idx : range<uint8>(4)) {
+                    auto& data = chunk_data[sub_idx];
 
-                    std::memcpy(vertices.ptrw(), data.vertices.data(), len(data.vertices) * sizeof(Pos3D<float32>));
-                    std::memcpy(normals.ptrw(), data.normals.data(), len(data.normals) * sizeof(Pos3D<float32>));
-                    std::memcpy(indices.ptrw(), data.indices.data(), len(data.indices) * sizeof(int32));
-                    std::memcpy(uvs.ptrw(), data.uvs.data(), len(data.uvs) * sizeof(Pos2D<float32>));
-                    std::memcpy(uvs_layer.ptrw(), data.uvs_layer.data(), len(data.uvs_layer) * sizeof(Pos2D<float32>));
-                    std::memcpy(collision_faces.ptrw(), data.collision_faces.data(), len(data.collision_faces) * sizeof(Pos3D<float32>));
+                    if (data.vertices) {
+                        vertices.resize(len(data.vertices));
+                        normals.resize(len(data.normals));
+                        indices.resize(len(data.indices));
+                        uvs.resize(len(data.uvs));
+                        uvs_layer.resize(len(data.uvs_layer));
 
-                    Array arrays;
-                    arrays.resize(Mesh::ARRAY_MAX);
+                        std::memcpy(vertices.ptrw(), data.vertices.data(), len(data.vertices) * sizeof(Pos3D<float32>));
+                        std::memcpy(normals.ptrw(), data.normals.data(), len(data.normals) * sizeof(Pos3D<float32>));
+                        std::memcpy(indices.ptrw(), data.indices.data(), len(data.indices) * sizeof(int32));
+                        std::memcpy(uvs.ptrw(), data.uvs.data(), len(data.uvs) * sizeof(Pos2D<float32>));
+                        std::memcpy(uvs_layer.ptrw(), data.uvs_layer.data(), len(data.uvs_layer) * sizeof(Pos2D<float32>));
 
-                    arrays[Mesh::ARRAY_VERTEX] = vertices;
-                    arrays[Mesh::ARRAY_NORMAL] = normals;
-                    arrays[Mesh::ARRAY_INDEX] = indices;
-                    arrays[Mesh::ARRAY_TEX_UV] = uvs;
-                    arrays[Mesh::ARRAY_TEX_UV2] = uvs_layer;
+                        Array arrays;
+                        arrays.resize(Mesh::ARRAY_MAX);
 
-                    Ref<ArrayMesh> mesh;
-                    mesh.instantiate();
+                        arrays[Mesh::ARRAY_VERTEX] = vertices;
+                        arrays[Mesh::ARRAY_NORMAL] = normals;
+                        arrays[Mesh::ARRAY_INDEX] = indices;
+                        arrays[Mesh::ARRAY_TEX_UV] = uvs;
+                        arrays[Mesh::ARRAY_TEX_UV2] = uvs_layer;
 
-                    mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
-                    update_chunk_mesh(chunk_render, chunk_pos, mesh);
-                    create_chunk_collision(chunk_render, collision_faces);
-                }
+                        Ref<ArrayMesh> mesh;
+                        mesh.instantiate();
 
-                if (not data.complex_instance) {
-                    ++updates_this_frame;
-                    continue;
-                }
+                        mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
+                        update_chunk_mesh(chunk_render, chunk_pos, mesh, sub_idx);
 
-                if (not chunk_render.mesh_instance) update_chunk_mesh(chunk_render, chunk_pos, nullptr);
-                if (not chunk_render.dynamic_body) {
-                    chunk_render.dynamic_body = memnew(StaticBody3D);
-                    chunk_render.mesh_instance->add_child(chunk_render.dynamic_body);
-                }
-                else while (chunk_render.dynamic_body->get_child_count() > 0) {
-                    Node* child = chunk_render.dynamic_body->get_child(0);
-                    chunk_render.dynamic_body->remove_child(child);
-                    child->queue_free();
-                }
-
-                Dict<uint32, std::vector<ComplexBlockInstance>> grouped_instances;
-                for (auto&& inst : data.complex_instance) {
-                    Ref<BoxShape3D> box;
-                    box.instantiate();
-                    box->set_size(Vector3(1.0f, 0.1f, 1.0f));
-
-                    CollisionShape3D* col_shape = memnew(CollisionShape3D);
-                    col_shape->set_shape(box);
-                    col_shape->set_position(Vector3(inst.local_pos.x + 0.5f, inst.local_pos.y + 0.5f, inst.local_pos.z + 0.5f));
-
-                    chunk_render.dynamic_body->add_child(col_shape);
-                    grouped_instances[inst.block_id].emplace_back(std::move(inst));
-                }
-
-                for (auto const& [id, instances] : grouped_instances) {
-                    if (id >= BlockRegistry::registry.size()) continue;
-
-                    Ref<MultiMesh> multimesh;
-                    multimesh.instantiate();
-                    multimesh->set_transform_format(MultiMesh::TRANSFORM_3D);
-                    multimesh->set_mesh(BlockRegistry::registry[id].mesh);
-                    multimesh->set_instance_count((int32)instances.size());
-
-                    for (usize i : range<usize>(instances.size())) {
-                        auto const& inst = instances[i];
-                        Transform3D transform;
-                        transform.origin = Vector3(inst.local_pos.x, inst.local_pos.y + 0.01f, inst.local_pos.z);
-                        multimesh->set_instance_transform((int32)i, transform);
+                        int32 const current_size = total_collision_faces.size();
+                        total_collision_faces.resize(current_size + len(data.collision_faces));
+                        std::memcpy(total_collision_faces.ptrw() + current_size, data.collision_faces.data(), len(data.collision_faces) * sizeof(Pos3D<float32>));
                     }
 
-                    if (not chunk_render.multi_mesh_instance) {
-                        chunk_render.multi_mesh_instance = memnew(MultiMeshInstance3D);
-                        chunk_render.mesh_instance->add_child(chunk_render.multi_mesh_instance);
+                    if (not data.complex_instance) {
+                        ++updates_this_frame;
+                        continue;
                     }
 
-                    chunk_render.multi_mesh_instance->set_multimesh(multimesh);
+                    if (not chunk_render.mesh_instances[sub_idx]) update_chunk_mesh(chunk_render, chunk_pos, nullptr, sub_idx);
+                    if (not chunk_render.dynamic_body) {
+                        chunk_render.dynamic_body = memnew(StaticBody3D);
+                        chunk_render.mesh_instances[sub_idx]->add_child(chunk_render.dynamic_body);
+                    }
+                    else while (chunk_render.dynamic_body->get_child_count() > 0) {
+                        Node* child = chunk_render.dynamic_body->get_child(0);
+                        chunk_render.dynamic_body->remove_child(child);
+                        child->queue_free();
+                    }
+
+                    Dict<uint32, std::vector<ComplexBlockInstance>> grouped_instances;
+                    for (auto&& inst : data.complex_instance) {
+                        Ref<BoxShape3D> box;
+                        box.instantiate();
+                        box->set_size(Vector3(1.0f, 0.1f, 1.0f));
+
+                        CollisionShape3D* col_shape = memnew(CollisionShape3D);
+                        col_shape->set_shape(box);
+                        col_shape->set_position(Vector3(inst.local_pos.x + 0.5f, inst.local_pos.y + 0.5f, inst.local_pos.z + 0.5f));
+
+                        chunk_render.dynamic_body->add_child(col_shape);
+                        grouped_instances[inst.block_id].emplace_back(std::move(inst));
+                    }
+
+                    for (auto const& [id, instances] : grouped_instances) {
+                        if (id >= BlockRegistry::registry.size()) continue;
+
+                        Ref<MultiMesh> multimesh;
+                        multimesh.instantiate();
+                        multimesh->set_transform_format(MultiMesh::TRANSFORM_3D);
+                        multimesh->set_mesh(BlockRegistry::registry[id].mesh);
+                        multimesh->set_instance_count((int32)instances.size());
+
+                        for (usize i : range<usize>(instances.size())) {
+                            auto const& inst = instances[i];
+                            Transform3D transform;
+                            transform.origin = Vector3(inst.local_pos.x, inst.local_pos.y + 0.01f, inst.local_pos.z);
+                            multimesh->set_instance_transform((int32)i, transform);
+                        }
+
+                        if (not chunk_render.multi_mesh_instance) {
+                            chunk_render.multi_mesh_instance = memnew(MultiMeshInstance3D);
+                            chunk_render.mesh_instances[sub_idx]->add_child(chunk_render.multi_mesh_instance);
+                        }
+
+                        chunk_render.multi_mesh_instance->set_multimesh(multimesh);
+                    }
+                }
+
+                if (not total_collision_faces.is_empty()) {
+                    create_chunk_collision(chunk_render, total_collision_faces);
                 }
 
                 ++updates_this_frame;
@@ -723,9 +733,9 @@ namespace craftbuild {
     }
 
     void Main::create_chunk_collision(ChunkRender& chunk_render, PackedVector3Array const& collision_faces) {
-        if (not chunk_render.mesh_instance) return;
+        if (not chunk_render.mesh_instances[0]) return;
 
-        Ref<ArrayMesh> mesh = chunk_render.mesh_instance->get_mesh();
+        Ref<ArrayMesh> mesh = chunk_render.mesh_instances[0]->get_mesh();
         if (mesh.is_null() or mesh->get_surface_count() == 0) return;
         if (collision_faces.size() == 0) return;
 
@@ -736,7 +746,7 @@ namespace craftbuild {
 
         if (not chunk_render.collision_body) {
             chunk_render.collision_body = memnew(StaticBody3D);
-            chunk_render.mesh_instance->add_child(chunk_render.collision_body);
+            chunk_render.mesh_instances[0]->add_child(chunk_render.collision_body);
         }
 
         if (not chunk_render.collision_shape) {
@@ -751,16 +761,16 @@ namespace craftbuild {
         chunk_render.collision_shape->set_shape(concave);
     }
 
-    void Main::update_chunk_mesh(ChunkRender& chunk_render, Pos2D<int32>& pos, Ref<ArrayMesh> const& mesh) {
-        if (not chunk_render.mesh_instance) {
+    void Main::update_chunk_mesh(ChunkRender& chunk_render, Pos2D<int32>& pos, Ref<ArrayMesh> const& mesh, int32 submesh_idx) {
+        if (not chunk_render.mesh_instances[submesh_idx]) {
             MeshInstance3D* mi = memnew(MeshInstance3D);
             mi->set_position(Vector3(real(pos.x * Chunk::WIDTH), 0, real(pos.y * Chunk::WIDTH)));
             mi->set_material_override(world_material);
             add_child(mi);
-            chunk_render.mesh_instance = mi;
+            chunk_render.mesh_instances[submesh_idx] = mi;
         }
 
-        chunk_render.mesh_instance->set_mesh(mesh);
+        chunk_render.mesh_instances[submesh_idx]->set_mesh(mesh);
     }
 
     void Main::unload_distant_chunks() {

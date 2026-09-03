@@ -104,7 +104,7 @@ export namespace craftbuild {
         void start_scheduler_thread();
         void submit_jobs();
         void create_chunk_collision(ChunkRender& chunk_render, PackedVector3Array const& collision_faces);
-        void update_chunk_mesh(ChunkRender& chunk_render, Pos2D<int32>& pos, Ref<ArrayMesh> const& mesh);
+        void update_chunk_mesh(ChunkRender& chunk_render, Pos2D<int32>& pos, Ref<ArrayMesh> const& mesh, int32 submesh_idx);
         void unload_distant_chunks();
 
         Ptr<Chunk> get_chunk(int32 cx, int32 cy);

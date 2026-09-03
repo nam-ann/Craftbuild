@@ -19,7 +19,9 @@ namespace craftbuild {
     ChunkRender::~ChunkRender() noexcept { clear(); }
 
     void ChunkRender::clear() {
-        if (mesh_instance) mesh_instance->queue_free();
+        for (auto& mesh_instance : mesh_instances) {
+            if (mesh_instance) mesh_instance->queue_free();
+        }
         if (collision_body) collision_body->queue_free();
         if (collision_shape) collision_shape->queue_free();
         if (multi_mesh_instance) multi_mesh_instance->queue_free();
@@ -293,26 +295,25 @@ namespace craftbuild {
         ++chunk_version;
     }
 
-    void Chunk::generate_mesh(ChunkRender& mesh, Ptr<Chunk> neighbors[4]) {
-        Ptr<MeshData> data_ptr = new Obj<MeshData>();
-        auto& data = data_ptr.value();
+    static int32 get_submesh_index(int32 y) { return std::clamp(y / (Chunk::HEIGHT / 4), 0, 3); }
 
-        auto& vertices        = data.vertices;
-        auto& normals         = data.normals;
-        auto& indices         = data.indices;
-        auto& uvs             = data.uvs;
-        auto& uvs_layer       = data.uvs_layer;
-        auto& collision_faces = data.collision_faces;
+    void Chunk::generate_mesh(ChunkRender& mesh, Ptr<Chunk> neighbors[4]) {
+        Ptr<MeshesData> chunk_data_ptr = new Obj<MeshesData>();
+        auto& chunk_data = chunk_data_ptr.value();
+
+        for (auto i : range<uint8>(4)) {
+            auto& data = chunk_data[i];
+
+            data.vertices.expect(1024);
+            data.normals.expect(1024);
+            data.indices.expect(1536);
+            data.uvs.expect(1024);
+            data.uvs_layer.expect(1024);
+            data.collision_faces.expect(1536);
+        }
 
         uint32 const AIR = BlockRegistry::get_id("Air");
-        uint64 const TRANSPARENT = TagRegistry::get_id("transparent");
-
-        vertices.expect(4096);
-        normals.expect(4096);
-        uvs.expect(4096);
-        uvs_layer.expect(4096);
-        indices.expect(6144);
-        collision_faces.expect(6144);
+        uint32 const TRANSPARENT = TagRegistry::get_id("transparent");
 
         List<std::shared_mutex*> mutexes_to_lock;
         mutexes_to_lock.append(&data_mutex);
@@ -380,7 +381,7 @@ namespace craftbuild {
         List<FaceMask> mask;
         mask.resize(Chunk::HEIGHT * std::max(Chunk::WIDTH, Chunk::WIDTH));
 
-        uint64 vertex_offset = 0;
+        uint64 vertex_offsets[4] = {};
         for (auto d : range<int32>(3)) {
             int32 const u = (d + 1) % 3;
             int32 const v = (d + 2) % 3;
@@ -444,6 +445,12 @@ namespace craftbuild {
                         start[u] = float32(i);
                         start[v] = float32(j);
 
+                        int32 avg_y = int32(start[1]);
+                        int32 s_idx = get_submesh_index(avg_y);
+
+                        auto& data = chunk_data[s_idx];
+                        uint64& vertex_offset = vertex_offsets[s_idx];
+
                         Pos3D p0(start[0], start[1], start[2]);
                         Pos3D p1(start[0] + du[0], start[1] + du[1], start[2] + du[2]);
                         Pos3D p2(start[0] + du[0] + dv[0], start[1] + du[1] + dv[1], start[2] + du[2] + dv[2]);
@@ -458,6 +465,13 @@ namespace craftbuild {
                             else if (d == 1) return Pos2D(dx, current_face.back_face ? height - dz : dz);
                             else             return Pos2D(current_face.back_face ? width - dx : dx, height - dy);
                         };
+
+                        auto& vertices        = data.vertices;
+                        auto& normals         = data.normals;
+                        auto& indices         = data.indices;
+                        auto& uvs             = data.uvs;
+                        auto& uvs_layer       = data.uvs_layer;
+                        auto& collision_faces = data.collision_faces;
 
                         if (not current_face.back_face) {
                             vertices.append(p0); vertices.append(p1);
@@ -478,8 +492,8 @@ namespace craftbuild {
                             uvs.append(get_uv(p1));
                         }
 
-                        Pos3D normal(0, 0, 0);
-                        if (d == 0) normal.x = current_face.back_face ? -1.0f : 1.0f;
+                        Pos3D<real> normal(0, 0, 0);
+                        if (d == 0)      normal.x = current_face.back_face ? -1.0f : 1.0f;
                         else if (d == 1) normal.y = current_face.back_face ? -1.0f : 1.0f;
                         else if (d == 2) normal.z = current_face.back_face ? -1.0f : 1.0f;
 
@@ -516,14 +530,14 @@ namespace craftbuild {
                     uint32 const id = get_block({ x, uint8(y), z });
 
                     if (not is_complex_block(id)) continue;
-                    data.complex_instance.append({ id, {x, uint8(y), z} });
+                    chunk_data[get_submesh_index(y)].complex_instance.append({ id, {x, uint8(y), z} });
                 }
             }
         }
 
         {
             std::unique_lock lock(mesh.mesh_mutex);
-            mesh.pending_mesh_data.swap(data_ptr);
+            mesh.pending_meshes_data.swap(chunk_data_ptr);
         }
 
         dirty.store(false, std::memory_order_release);
