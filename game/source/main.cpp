@@ -212,7 +212,7 @@ namespace craftbuild {
                         mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
                         update_chunk_mesh(chunk_render, chunk_pos, mesh, sub_idx);
 
-                        int32 const current_size = total_collision_faces.size();
+                        int32 const current_size = int32(total_collision_faces.size());
                         total_collision_faces.resize(current_size + len(data.collision_faces));
                         std::memcpy(total_collision_faces.ptrw() + current_size, data.collision_faces.data(), len(data.collision_faces) * sizeof(Pos3D<float32>));
                     }
@@ -946,6 +946,10 @@ namespace craftbuild {
         chatting.store(false, std::memory_order_relaxed);
     }
 
+	Vector3 Main::get_player_position() {
+        return { player_x.load(std::memory_order_relaxed), player_y.load(std::memory_order_relaxed), player_z.load(std::memory_order_relaxed) };
+	}
+
     void Main::set_seed_and_world_name(int32 seed, const String name) {
         if (not server_ptr) send_queue.store({ "Set seed and world name", { std::to_string(seed), (std::string)name.utf8() } });
         else server_ptr.value().set_seed_and_world_name(seed, (std::string)name.utf8());
@@ -971,6 +975,7 @@ namespace craftbuild {
         ClassDB::bind_method(D_METHOD("resume_game"), &Main::resume);
         ClassDB::bind_method(D_METHOD("start_chat"), &Main::start_chat);
         ClassDB::bind_method(D_METHOD("chat", "msg"), &Main::chat);
+        ClassDB::bind_method(D_METHOD("get_player_position"), &Main::get_player_position);
         ClassDB::bind_method(D_METHOD("set_seed_and_world_name", "seed", "name"), &Main::set_seed_and_world_name);
         ClassDB::bind_method(D_METHOD("set_render_distance", "rd"), &Main::set_render_distance);
         ClassDB::bind_method(D_METHOD("set_cpu_sleep_time", "stc"), &Main::set_cpu_sleep_time);

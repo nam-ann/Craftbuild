@@ -123,8 +123,7 @@ export namespace craftbuild {
 
         void chat(const String msg);
 
-        void get_seed();
-        void get_world_name();
+        Vector3 get_player_position();
         void set_seed_and_world_name(int32 seed, const String name);
         void set_render_distance(int32 rd);
         void set_cpu_sleep_time(int32 stc);
