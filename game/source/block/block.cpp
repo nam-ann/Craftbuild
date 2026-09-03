@@ -12,7 +12,8 @@ module game.block;
 
 namespace craftbuild {
     Block::~Block() = default;
-    std::vector<MetaStorage> Block::init_tags() { return {}; }
+    Set<uint32> Block::init_tags() { return {}; }
+    Dict<uint32, Str> Block::init_metadatas() { return {}; }
 
     int32 Block1F::get_texture_layer(Face face) const {
         return base_texture_layer;

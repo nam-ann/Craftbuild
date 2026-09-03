@@ -167,10 +167,10 @@
     <ClCompile Include="game\source\bridge.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\module\block\metadata.cppm">
+    <ClCompile Include="game\module\block\block_data.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="game\source\block\metadata.cpp">
+    <ClCompile Include="game\source\block\block_data.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

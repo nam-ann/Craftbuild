@@ -118,30 +118,47 @@ namespace craftbuild {
         id2block[block_id] = block_ids_size;
         block_ids[block_ids_size++] = block_id;
 
+        auto const& default_metadatas = BlockRegistry::get_block(block_id).value().init_metadatas();
+        for (auto const& [meta, data] : default_metadatas) set_block_metadata(pos, meta, data);
+
         auto const& default_tags = BlockRegistry::get_block(block_id).value().init_tags();
-        for (auto const& [tag, data] : default_tags) tag_block(pos, tag, data);
+        for (auto tag : default_tags) tag_block(pos, tag);
     }
 
-    void Chunk::tag_block(Pos3D<uint8> const& pos, Str const& tag, Str const& tag_data) {
-		return tag_block(pos, MetaRegistry::get_id(tag), tag_data);
+    void Chunk::tag_block(Pos3D<uint8> const& pos, Str const& tag) {
+		return tag_block(pos, TagRegistry::get_id(tag));
     }
-    void Chunk::tag_block(Pos3D<uint8> const& pos, uint64 tag_id, Str const& tag_data) {
-        auto const tag_storage = MetaStorage(tag_id, tag_data);
-
+    void Chunk::tag_block(Pos3D<uint8> const& pos, uint32 tag_id) {
         std::unique_lock lock(data_mutex);
-        meta_ids[pos].emplace_back(tag_storage);
+        tag_ids[pos].emplace(tag_id);
     }
 
-    bool Chunk::has_tag(Pos3D<uint8> const& pos, Str const& tag, Str const& tag_data) const {
-		return has_tag(pos, MetaRegistry::get_id(tag), tag_data);
+    void Chunk::set_block_metadata(Pos3D<uint8> const& pos, Str const& meta, Str const& meta_data) {
+        return set_block_metadata(pos, MetaRegistry::get_id(meta), meta_data);
     }
-    bool Chunk::has_tag(Pos3D<uint8> const& pos, uint64 tag_id, Str const& tag_data) const {
+    void Chunk::set_block_metadata(Pos3D<uint8> const& pos, uint32 meta_id, Str const& meta_data) {
+        std::unique_lock lock(data_mutex);
+        meta_ids[pos][meta_id] = meta_data;
+    }
+
+    bool Chunk::has_tag(Pos3D<uint8> const& pos, Str const& tag) const {
+		return has_tag(pos, TagRegistry::get_id(tag));
+    }
+    bool Chunk::has_tag(Pos3D<uint8> const& pos, uint32 tag_id) const {
         std::shared_lock lock(data_mutex);
         if (pos.x >= WIDTH or pos.y >= HEIGHT or pos.z >= WIDTH) return false;
 
-		return meta_ids.contains(pos) and std::ranges::any_of(meta_ids.at(pos), [tag_id, &tag_data](MetaStorage const& meta) {
-			return meta.id == tag_id and meta.data == tag_data;
-		});
+        return tag_ids.contains(pos) and tag_ids.at(pos).contains(tag_id);
+    }
+
+    bool Chunk::has_metadata(Pos3D<uint8> const& pos, Str const& meta, Str const& meta_data) const {
+        return has_metadata(pos, MetaRegistry::get_id(meta), meta_data);
+    }
+    bool Chunk::has_metadata(Pos3D<uint8> const& pos, uint32 tag_id, Str const& tag_data) const {
+        std::shared_lock lock(data_mutex);
+        if (pos.x >= WIDTH or pos.y >= HEIGHT or pos.z >= WIDTH) return false;
+
+        return meta_ids.contains(pos) and meta_ids.at(pos).contains(tag_id);
     }
 
     uint32 Chunk::get_block(Pos3D<uint8> const& pos) const {
@@ -150,17 +167,22 @@ namespace craftbuild {
         return block_ids[blocks[pos.x][pos.y][pos.z]];
     }
 
-    MetaStorage Chunk::get_tag(Pos3D<uint8> const& pos) const {
-        if (pos.x >= WIDTH or pos.y >= HEIGHT or pos.z >= WIDTH) return MetaStorage(0, "");
-		return meta_ids.contains(pos) and not meta_ids.at(pos).empty() ? meta_ids.at(pos).front() : MetaStorage(0, "");
+    Set<uint32> const* Chunk::get_tag(Pos3D<uint8> const& pos) const {
+        if (pos.x >= WIDTH or pos.y >= HEIGHT or pos.z >= WIDTH) return nullptr;
+        return tag_ids.contains(pos) ? &tag_ids.at(pos) : nullptr;
+    }
+
+    Dict<uint32, Str> const* Chunk::get_metadata(Pos3D<uint8> const& pos) const {
+        if (pos.x >= WIDTH or pos.y >= HEIGHT or pos.z >= WIDTH) return nullptr;
+        return meta_ids.contains(pos) ? &meta_ids.at(pos) : nullptr;
     }
 
     void Chunk::generate_terrain(int32 seed, Ref<FastNoiseLite> noise) {
-        auto const AIR = BlockRegistry::get_id("Air");
-        auto const DIRT = BlockRegistry::get_id("Dirt");
-        auto const WATER = BlockRegistry::get_id("Air");
-        auto const GRASS = BlockRegistry::get_id("Grass Block");
-        auto const STONE = BlockRegistry::get_id("Stone");
+        auto const AIR     = BlockRegistry::get_id("Air");
+        auto const DIRT    = BlockRegistry::get_id("Dirt");
+        auto const WATER   = BlockRegistry::get_id("Air");
+        auto const GRASS   = BlockRegistry::get_id("Grass Block");
+        auto const STONE   = BlockRegistry::get_id("Stone");
         auto const BEDROCK = BlockRegistry::get_id("Bedrock");
         auto const CHEESE_CAVE = CaveRegistry::get_cave(CaveRegistry::get_id("Large Cavern"));
 
@@ -186,8 +208,11 @@ namespace craftbuild {
             new_id2block[block_id] = new_block_ids_size;
             new_block_ids[new_block_ids_size++] = block_id;
 
+            auto const& default_metadatas = BlockRegistry::get_block(block_id).value().init_metadatas();
+            for (auto const& [meta, data] : default_metadatas) set_block_metadata(pos, meta, data);
+
             auto const& default_tags = BlockRegistry::get_block(block_id).value().init_tags();
-            for (auto const& [tag, data] : default_tags) tag_block(pos, tag, data);
+            for (auto tag : default_tags) tag_block(pos, tag);
         };
 
         usize const biome_count = BiomeRegistry::registry.size();
@@ -280,9 +305,7 @@ namespace craftbuild {
         auto& collision_faces = data.collision_faces;
 
         uint32 const AIR = BlockRegistry::get_id("Air");
-        uint64 const TRANSPARENT = MetaRegistry::get_id("transparent");
-
-        static Str const STR_TRUE = "True";
+        uint64 const TRANSPARENT = TagRegistry::get_id("transparent");
 
         vertices.expect(4096);
         normals.expect(4096);
@@ -316,8 +339,8 @@ namespace craftbuild {
                 auto id = get_block({ uint8(bx), uint8(by), uint8(bz) });
                 if (id == AIR or is_complex_block(id)) return true;
 
-                auto tag = get_tag({ uint8(bx), uint8(by), uint8(bz) });
-                return tag.id == TRANSPARENT and tag.data == STR_TRUE;
+                auto tag_ptr = get_tag({ uint8(bx), uint8(by), uint8(bz) });
+                return tag_ptr and tag_ptr->contains(TRANSPARENT);
             }
 
             uint8 nid = 0;
@@ -338,8 +361,8 @@ namespace craftbuild {
             auto id = neighbor.get_block({ lx, uint8(by), lz });
             if (id == AIR or is_complex_block(id)) return true;
 
-            auto tag = neighbor.get_tag({ lx, uint8(by), lz });
-            return tag.id == TRANSPARENT and tag.data == STR_TRUE;
+			auto tag_ptr = neighbor.get_tag({ lx, uint8(by), lz });
+            return tag_ptr and tag_ptr->contains(TRANSPARENT);
         };
 
         auto get_block_layer = [this, AIR, &is_complex_block](int32 bx, int32 by, int32 bz, Face face) -> int32 {

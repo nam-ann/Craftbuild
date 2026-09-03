@@ -510,9 +510,8 @@ namespace craftbuild {
 
                         uint64 meta_size = 0;
                         is.read(reinterpret_cast<char*>(&meta_size), sizeof(uint64));
-
                         for (auto j : range(meta_size)) {
-                            Pos3D<uint8> pos;
+                            Pos3D<uint8> pos = {};
 
                             is.read(reinterpret_cast<char*>(&pos.x), sizeof(uint8));
                             is.read(reinterpret_cast<char*>(&pos.y), sizeof(uint8));
@@ -522,16 +521,35 @@ namespace craftbuild {
 
                             uint64 meta_storages_size = 0;
                             is.read(reinterpret_cast<char*>(&meta_storages_size), sizeof(uint64));
-
                             for (auto k : range(meta_storages_size)) {
-                                auto& meta_storage = meta_storages.emplace_back();
-                                is.read(reinterpret_cast<char*>(&meta_storage.id), sizeof(uint64));
+                                uint32 key = 0;
+                                is.read(reinterpret_cast<char*>(&key), sizeof(uint32));
 
-                                uint64 data_size = 0;
+								auto& value = meta_storages[key];
+
+                                uint64 data_size = len(value);
                                 is.read(reinterpret_cast<char*>(&data_size), sizeof(uint64));
+                                is.read(reinterpret_cast<char*>(value.data()), data_size);
+                            }
+                        }
 
-                                meta_storage.data.resize(data_size);
-                                is.read(reinterpret_cast<char*>(meta_storage.data.data()), data_size);
+                        uint64 tag_size = 0;
+                        is.read(reinterpret_cast<char*>(&tag_size), sizeof(uint64));
+                        for (auto j : range(tag_size)) {
+                            Pos3D<uint8> pos = {};
+
+                            is.read(reinterpret_cast<char*>(&pos.x), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&pos.y), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&pos.z), sizeof(uint8));
+
+                            auto& tag_storages = chunk.tag_ids[pos];
+
+                            uint64 tag_storages_size = 0;
+                            is.read(reinterpret_cast<char*>(&tag_storages_size), sizeof(uint64));
+                            for (auto k : range(tag_storages_size)) {
+                                uint32 key = 0;
+                                is.read(reinterpret_cast<char*>(&key), sizeof(uint32));
+                                tag_storages.insert(key);
                             }
                         }
 

@@ -18,13 +18,14 @@ import std;
 
 import misc.ptr;
 import misc.str;
+import misc.set;
 import misc.dict;
 import misc.list;
 import misc.number;
 import misc.pos;
 import game.core;
 import game.logger;
-import game.block.metadata;
+import game.block.block_data;
 import game.texture.asset_loader;
 
 using namespace godot;
@@ -40,7 +41,8 @@ export namespace craftbuild {
     public:
         virtual ~Block();
         virtual int32 get_texture_layer(Face face) const = 0;
-        virtual std::vector<MetaStorage> init_tags();
+        virtual Set<uint32> init_tags();
+        virtual Dict<uint32, Str> init_metadatas();
 
         friend class AtlasTexture;
     };

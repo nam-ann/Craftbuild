@@ -18,6 +18,7 @@ import std;
 import misc.gc;
 import misc.ptr;
 import misc.str;
+import misc.set;
 import misc.dict;
 import misc.list;
 import misc.range;
@@ -28,7 +29,7 @@ import game.logger;
 import game.world.cave;
 import game.world.biome;
 import game.world.terrain;
-import game.block.metadata;
+import game.block.block_data;
 
 using namespace godot;
 
@@ -80,7 +81,8 @@ export namespace craftbuild {
 
         Dict<uint32, uint8> id2block;
 
-        Dict<Pos3D<uint8>, std::vector<MetaStorage>> meta_ids;
+        Dict<Pos3D<uint8>, Set<uint32>> tag_ids;
+        Dict<Pos3D<uint8>, Dict<uint32, Str>> meta_ids;
         Dict<Pos3D<uint8>, uint32> extended_block_id;
         uint8 blocks[WIDTH][HEIGHT][WIDTH] = {};
 
@@ -103,14 +105,21 @@ export namespace craftbuild {
         void set_block(Pos3D<uint8> const& pos, Str const& block);
         void set_block(Pos3D<uint8> const& pos, uint32 block_id);
 
-        void tag_block(Pos3D<uint8> const& pos, Str const& tag, Str const& tag_data = "");
-        void tag_block(Pos3D<uint8> const& pos, uint64 tag_id, Str const& tag_data = "");
+        void tag_block(Pos3D<uint8> const& pos, Str const& tag);
+        void tag_block(Pos3D<uint8> const& pos, uint32 tag_id);
 
-        bool has_tag(Pos3D<uint8> const& pos, Str const& tag, Str const& tag_data = "") const;
-        bool has_tag(Pos3D<uint8> const& pos, uint64 tag_id, Str const& tag_data = "") const;
+        void set_block_metadata(Pos3D<uint8> const& pos, Str const& meta, Str const& meta_data = "");
+        void set_block_metadata(Pos3D<uint8> const& pos, uint32 meta_id, Str const& meta_data = "");
+
+        bool has_tag(Pos3D<uint8> const& pos, Str const& tag) const;
+        bool has_tag(Pos3D<uint8> const& pos, uint32 tag_id) const;
+
+        bool has_metadata(Pos3D<uint8> const& pos, Str const& meta, Str const& meta_data = "") const;
+        bool has_metadata(Pos3D<uint8> const& pos, uint32 meta_id, Str const& meta_data = "") const;
 
         uint32 get_block(Pos3D<uint8> const& pos) const;
-        MetaStorage get_tag(Pos3D<uint8> const& pos) const;
+        Set<uint32> const* get_tag(Pos3D<uint8> const& pos) const;
+        Dict<uint32, Str> const* get_metadata(Pos3D<uint8> const& pos) const;
 
         void generate_terrain(int32 seed, Ref<FastNoiseLite> noise);
         void generate_mesh(ChunkRender& mesh, Ptr<Chunk> neighbors[4]);
