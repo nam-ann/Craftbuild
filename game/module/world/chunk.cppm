@@ -56,9 +56,17 @@ export namespace craftbuild {
 		auto& operator[](uint8 idx) { return sub[idx]; }
     };
 
-    struct FaceMask {
-        int32 layer = -1;
-        bool back_face = false;
+    class FaceMask {
+        uint32 value = 0;
+
+    public:
+        static constexpr uint32 BACK_FACE_BIT = 0x80000000u;
+
+        constexpr FaceMask();
+        constexpr FaceMask(int32 layer, bool back_face);
+
+        int32 layer() const;
+        bool back_face() const;
 
         bool operator==(FaceMask const& other) const;
     };

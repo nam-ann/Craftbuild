@@ -12,8 +12,19 @@ ENABLE_WARNING
 module game.world.chunk;
 
 namespace craftbuild {
+    constexpr FaceMask::FaceMask() {}
+    constexpr FaceMask::FaceMask(int32 layer, bool back_face) : value((layer + 1) | (back_face ? BACK_FACE_BIT : 0)) {}
+
+    int32 FaceMask::layer() const {
+        return (value & ~BACK_FACE_BIT) - 1;
+    }
+
+    bool FaceMask::back_face() const {
+        return (uint32(value) & BACK_FACE_BIT) != 0;
+    }
+
     bool FaceMask::operator==(FaceMask const& other) const {
-        return layer == other.layer and back_face == other.back_face;
+        return layer() == other.layer() and back_face() == other.back_face();
     }
 
     ChunkRender::~ChunkRender() noexcept { clear(); }
@@ -30,6 +41,10 @@ namespace craftbuild {
 
     void Chunk::clear() {
         memset(block_ids, 0, sizeof(uint32) * 256);
+        memset(blocks, 0, sizeof(uint8) * WIDTH * HEIGHT * WIDTH);
+        block_ids_size = 0;
+
+        tag_ids.clear();
         meta_ids.clear();
         id2block.clear();
         extended_block_id.clear();
@@ -325,7 +340,7 @@ namespace craftbuild {
         mutexes_to_lock.resize(result.begin() - mutexes_to_lock.begin());
 
         std::vector<std::shared_lock<std::shared_mutex>> locks;
-        for (auto* m : mutexes_to_lock) locks.emplace_back(std::shared_lock<std::shared_mutex>(*m));
+        for (auto* m : mutexes_to_lock) locks.emplace_back(std::shared_lock(*m));
 
         auto is_complex_block = [this, AIR](uint32 id) -> bool {
             auto& block = BlockRegistry::get_block(id);
@@ -374,12 +389,12 @@ namespace craftbuild {
             return block.value().get_texture_layer(face);
         };
 
-        const int64 dims[3] = { Chunk::WIDTH, Chunk::HEIGHT, Chunk::WIDTH };
-        const Face front_faces[3] = { Face::RIGHT, Face::TOP,    Face::FRONT };
-        const Face back_faces[3] = { Face::LEFT,  Face::BOTTOM, Face::BACK };
+        static constexpr int64 dims[3] = { Chunk::WIDTH, Chunk::HEIGHT, Chunk::WIDTH };
+        static constexpr Face front_faces[3] = { Face::RIGHT, Face::TOP,    Face::FRONT };
+        static constexpr Face back_faces[3] = { Face::LEFT,  Face::BOTTOM, Face::BACK };
 
         List<FaceMask> mask;
-        mask.resize(Chunk::HEIGHT * std::max(Chunk::WIDTH, Chunk::WIDTH));
+        mask.resize(Chunk::HEIGHT * Chunk::WIDTH);
 
         uint64 vertex_offsets[4] = {};
         for (auto d : range<int32>(3)) {
@@ -416,7 +431,7 @@ namespace craftbuild {
                     int64 i = 0;
                     while (i < dims[u]) {
                         FaceMask current_face = mask[i + j * dims[u]];
-                        if (current_face.layer < 0) {
+                        if (current_face.layer() < 0) {
                             ++i;
                             continue;
                         }
@@ -461,9 +476,9 @@ namespace craftbuild {
                             float32 const dy = p.y - p0.y;
                             float32 const dz = p.z - p0.z;
 
-                            if (d == 0)      return Pos2D(current_face.back_face ? height - dz : dz, width - dy);
-                            else if (d == 1) return Pos2D(dx, current_face.back_face ? height - dz : dz);
-                            else             return Pos2D(current_face.back_face ? width - dx : dx, height - dy);
+                            if (d == 0)      return Pos2D(current_face.back_face() ? height - dz : dz, width - dy);
+                            else if (d == 1) return Pos2D(dx, current_face.back_face() ? height - dz : dz);
+                            else             return Pos2D(current_face.back_face() ? width - dx : dx, height - dy);
                         };
 
                         auto& vertices        = data.vertices;
@@ -473,7 +488,7 @@ namespace craftbuild {
                         auto& uvs_layer       = data.uvs_layer;
                         auto& collision_faces = data.collision_faces;
 
-                        if (not current_face.back_face) {
+                        if (not current_face.back_face()) {
                             vertices.append(p0); vertices.append(p1);
                             vertices.append(p2); vertices.append(p3);
 
@@ -493,13 +508,13 @@ namespace craftbuild {
                         }
 
                         Pos3D<real> normal(0, 0, 0);
-                        if (d == 0)      normal.x = current_face.back_face ? -1.0f : 1.0f;
-                        else if (d == 1) normal.y = current_face.back_face ? -1.0f : 1.0f;
-                        else if (d == 2) normal.z = current_face.back_face ? -1.0f : 1.0f;
+                        if (d == 0)      normal.x = current_face.back_face() ? -1.0f : 1.0f;
+                        else if (d == 1) normal.y = current_face.back_face() ? -1.0f : 1.0f;
+                        else if (d == 2) normal.z = current_face.back_face() ? -1.0f : 1.0f;
 
                         for (auto n : range<int32>(4)) normals.append(normal);
 
-                        Pos2D layer_uv(float32(current_face.layer), 0.0f);
+                        Pos2D layer_uv(float32(current_face.layer()), 0.0f);
                         for (auto n : range<int32>(4)) uvs_layer.append(layer_uv);
 
                         indices.append(int32(vertex_offset)); indices.append(int32(vertex_offset + 2)); indices.append(int32(vertex_offset + 1));
