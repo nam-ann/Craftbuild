@@ -3,12 +3,13 @@ export module game.block.block_data;
 import std;
 
 import misc.str;
+import misc.list;
 import misc.dict;
 import misc.number;
 
 export namespace craftbuild {
 	struct MetaRegistry {
-		inline static std::vector<Str> registry;
+		inline static List<Str> registry;
 		inline static Dict<Str, uint32> name2id;
 
 		static void register_metadata(Str const& name);
@@ -18,7 +19,7 @@ export namespace craftbuild {
 	};
 
 	struct TagRegistry {
-		inline static std::vector<Str> registry;
+		inline static List<Str> registry;
 		inline static Dict<Str, uint32> name2id;
 
 		static void register_tag(Str const& name);

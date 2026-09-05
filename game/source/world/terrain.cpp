@@ -102,13 +102,13 @@ namespace craftbuild {
 
     HeightProviderType TrapezoidHeight::get_type() const { return HeightProviderType::TRAPEZOID; }
 
-    WeightedListHeight::WeightedListHeight(std::vector<Entry> distribution) : distribution(std::move(distribution)) {
+    WeightedListHeight::WeightedListHeight(List<Entry> distribution) : distribution(std::move(distribution)) {
         for (Entry const& entry : this->distribution) {
             if (entry.provider and entry.weight > 0) total_weight += entry.weight;
         }
     }
 
-    HeightProviderPtr WeightedListHeight::of(std::vector<Entry> distribution) { return new Obj<WeightedListHeight>(std::move(distribution)); }
+    HeightProviderPtr WeightedListHeight::of(List<Entry> distribution) { return new Obj<WeightedListHeight>(std::move(distribution)); }
 
     int32 WeightedListHeight::sample(RandomSource& random, WorldGenerationContext const& context) const {
         if (total_weight <= 0) return 0;

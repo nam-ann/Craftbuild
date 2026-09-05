@@ -11,27 +11,28 @@ module game.network;
 namespace craftbuild {
     void SendQueue::store(Message const& message) {
         std::lock_guard lock(msg_mutex);
-        msg.push_back(message);
+        msg.append(message);
     }
 
     void SendQueue::send(StreamPeerTCP& peer) {
         if (peer.get_status() != StreamPeerTCP::STATUS_CONNECTED) return;
 
-        std::vector<Message> send_msg;
+        List<Message> send_msg;
         {
             std::lock_guard lock(msg_mutex);
             msg.swap(send_msg);
         }
 
         for (auto const& message : send_msg) {
+            if (not message.content) continue;
             std::string arg = message.content.std_str() + '\2';
 
-            arg.reserve(message.arguments.size());
+            arg.reserve(len(message.arguments));
             for (auto const& E : message.arguments) arg += E + '\1';
             arg += '\0';
 
             godot::PackedByteArray data;
-            data.resize(static_cast<int64_t>(arg.size()));
+            data.resize(int64(arg.size()));
             memcpy(data.ptrw(), arg.data(), arg.size());
 
             if (Error err = peer.put_data(data); err != godot::OK) {
@@ -82,7 +83,7 @@ namespace craftbuild {
                 out_data.resize(i);
                 memcpy(out_data.data(), buffer.data(), i);
 
-                size_t remaining = len(buffer) - (i + 1);
+                usize remaining = len(buffer) - (i + 1);
                 if (remaining > 0) {
                     memmove(buffer.data(), buffer.data() + i + 1, remaining);
                     buffer.resize(remaining);
@@ -110,10 +111,10 @@ namespace craftbuild {
             usize end = args_str.find('\1', start);
             if (end == std::string::npos) {
                 std::string last_arg = args_str.substr(start);
-                if (not last_arg.empty()) message.arguments.push_back(last_arg);
+                if (not last_arg.empty()) message.arguments.append(last_arg);
                 break;
             }
-            message.arguments.push_back(args_str.substr(start, end - start));
+            message.arguments.append(args_str.substr(start, end - start));
             start = end + 1;
         }
 

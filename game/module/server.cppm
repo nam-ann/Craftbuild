@@ -39,7 +39,7 @@ import game.block.normal_blocks;
 using namespace godot;
 
 export namespace craftbuild {
-	class GameEngine {
+	class World {
         Dict<Pos2D<int32>, Ptr<Chunk>> chunks;
         mutable std::shared_mutex chunks_mutex;
 
@@ -55,8 +55,8 @@ export namespace craftbuild {
         mutable std::mutex current_player_mutex;
 
         std::atomic<bool> running = true;
-        std::thread redstone_thread;
-        std::thread scheduler_thread;
+        std::jthread redstone_thread;
+        std::jthread scheduler_thread;
         ThreadPool terrain_pool{ 4 };
         Set<Pos2D<int32>> pending_terrain_jobs;
         mutable std::mutex pending_jobs_mutex;
@@ -69,10 +69,10 @@ export namespace craftbuild {
     public:
         inline static int32 RANGE = render_distance * 16;
 
-        void _get_refs(std::vector<GCObject*>& refs);
+        void _get_refs(List<GCObject*>& refs);
 
-        GameEngine();
-        ~GameEngine();
+        World();
+        ~World();
         void connect(Str const& player_name);
         void disconnect(Str const& player_name);
         void update(Str const& player_name, Pos3D<real> const& new_pos);
@@ -111,18 +111,19 @@ export namespace craftbuild {
         ReceiveQueue receive_queue;
         SendQueue send_queue;
         Str name;
+        Str ip_addr;
     };
 
     class Server : public Node {
         GDCLASS(Server, Node)
 
         Ref<TCPServer> tcp_server;
-        GameEngine server;
+        World server;
         Dict<Ref<StreamPeerTCP>, Client> clients;
 
 		std::atomic<bool> running = true;
-        std::thread gc_thread;
-        std::thread log_thread;
+        std::jthread gc_thread;
+        std::jthread log_thread;
 
     public:
         void _ready() override;

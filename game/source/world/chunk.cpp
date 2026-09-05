@@ -24,7 +24,7 @@ namespace craftbuild {
     }
 
     bool FaceMask::operator==(FaceMask const& other) const {
-        return layer() == other.layer() and back_face() == other.back_face();
+        return value == other.value;
     }
 
     ChunkRender::~ChunkRender() noexcept { clear(); }
@@ -232,7 +232,7 @@ namespace craftbuild {
             for (auto tag : default_tags) tag_block(pos, tag);
         };
 
-        usize const biome_count = BiomeRegistry::registry.size();
+        usize const biome_count = len(BiomeRegistry::registry);
         for (auto x : range<uint8>(WIDTH)) {
             for (auto z : range<uint8>(WIDTH)) {
                 int32 global_x = chunk_pos.x * WIDTH + x;
@@ -339,8 +339,8 @@ namespace craftbuild {
         auto result = std::ranges::unique(mutexes_to_lock);
         mutexes_to_lock.resize(result.begin() - mutexes_to_lock.begin());
 
-        std::vector<std::shared_lock<std::shared_mutex>> locks;
-        for (auto* m : mutexes_to_lock) locks.emplace_back(std::shared_lock(*m));
+        List<std::shared_lock<std::shared_mutex>> locks;
+        for (auto* m : mutexes_to_lock) locks.emplace(std::shared_lock(*m));
 
         auto is_complex_block = [this, AIR](uint32 id) -> bool {
             auto& block = BlockRegistry::get_block(id);
@@ -391,13 +391,13 @@ namespace craftbuild {
 
         static constexpr int64 dims[3] = { Chunk::WIDTH, Chunk::HEIGHT, Chunk::WIDTH };
         static constexpr Face front_faces[3] = { Face::RIGHT, Face::TOP,    Face::FRONT };
-        static constexpr Face back_faces[3] = { Face::LEFT,  Face::BOTTOM, Face::BACK };
+        static constexpr Face back_faces[3] =  { Face::LEFT,  Face::BOTTOM, Face::BACK  };
 
         List<FaceMask> mask;
         mask.resize(Chunk::HEIGHT * Chunk::WIDTH);
 
         uint64 vertex_offsets[4] = {};
-        for (auto d : range<int32>(3)) {
+        for (int32 d : range(3)) {
             int32 const u = (d + 1) % 3;
             int32 const v = (d + 2) % 3;
 
@@ -410,17 +410,14 @@ namespace craftbuild {
 
                 for (x[v] = 0; x[v] < dims[v]; ++x[v]) {
                     for (x[u] = 0; x[u] < dims[u]; ++x[u]) {
-                        const bool a_inside = (x[d] >= 0);
-                        const bool b_inside = (x[d] + 1 < dims[d]);
+                        bool const a_trans = transparent_or_air(x[0], x[1], x[2]);
+                        bool const b_trans = transparent_or_air(x[0] + q[0], x[1] + q[1], x[2] + q[2]);
 
-                        const bool a_trans = transparent_or_air(x[0], x[1], x[2]);
-                        const bool b_trans = transparent_or_air(x[0] + q[0], x[1] + q[1], x[2] + q[2]);
-
-                        if (a_inside and (not a_trans) and b_trans) {
+                        if (x[d] >= 0 and not a_trans and b_trans) {
                             int32 layer = get_block_layer(x[0], x[1], x[2], front_faces[d]);
                             if (layer >= 0) mask[x[u] + x[v] * dims[u]] = { layer, false };
                         }
-                        else if (b_inside and a_trans and (not b_trans)) {
+                        else if (x[d] + 1 < dims[d] and a_trans and not b_trans) {
                             int32 layer = get_block_layer(x[0] + q[0], x[1] + q[1], x[2] + q[2], back_faces[d]);
                             if (layer >= 0) mask[x[u] + x[v] * dims[u]] = { layer, true };
                         }
@@ -471,7 +468,7 @@ namespace craftbuild {
                         Pos3D p2(start[0] + du[0] + dv[0], start[1] + du[1] + dv[1], start[2] + du[2] + dv[2]);
                         Pos3D p3(start[0] + dv[0], start[1] + dv[1], start[2] + dv[2]);
 
-                        auto get_uv = [&p0, &current_face, width, height, d](Pos3D<float32> const& p) -> Pos2D<real> {
+                        auto get_uv = [&p0, current_face, width, height, d](Pos3D<float32> const& p) -> Pos2D<real> {
                             float32 const dx = p.x - p0.x;
                             float32 const dy = p.y - p0.y;
                             float32 const dz = p.z - p0.z;
@@ -529,8 +526,8 @@ namespace craftbuild {
 
                         vertex_offset += 4;
 
-                        for (auto v_idx : range<int32>(height))
-                            for (auto u_idx : range<int32>(width))
+                        for (int32 v_idx : range(height))
+                            for (int32 u_idx : range(width))
                                 mask[(i + u_idx) + (j + v_idx) * dims[u]] = { -1, false };
 
                         i += width;
@@ -540,12 +537,12 @@ namespace craftbuild {
         }
 
         for (uint8 x : range(Chunk::WIDTH)) {
-            for (uint16 y : range(Chunk::HEIGHT)) {
+            for (uint8 y : range(Chunk::HEIGHT)) {
                 for (uint8 z : range(Chunk::WIDTH)) {
-                    uint32 const id = get_block({ x, uint8(y), z });
+                    uint32 const id = get_block({ x, y, z });
 
                     if (not is_complex_block(id)) continue;
-                    chunk_data[get_submesh_index(y)].complex_instance.append({ id, {x, uint8(y), z} });
+                    chunk_data[get_submesh_index(y)].complex_instance.append({ id, {x, y, z} });
                 }
             }
         }

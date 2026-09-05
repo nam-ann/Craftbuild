@@ -2,17 +2,17 @@ module game.world.cave;
 
 namespace craftbuild {
     void CaveRegistry::register_cave(Str const& name, Cave cave) {
-        name2id[name] = registry.size();
-        registry.emplace_back(name, cave);
+        name2id[name] = len(registry);
+        registry.emplace(name, cave);
     }
 
     Cave CaveRegistry::get_cave(uint64 cave_id) {
-        if (registry.size() <= cave_id) return Cave{};
+        if (len(registry) <= cave_id) return Cave{};
         return registry[cave_id].cave;
     }
 
     Str CaveRegistry::get_name(uint64 cave_id) {
-        if (registry.size() <= cave_id) return "";
+        if (len(registry) <= cave_id) return "";
         return registry[cave_id].name;
     }
 

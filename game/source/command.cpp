@@ -4,7 +4,7 @@ import game.server;
 import game.world.chunk;
 
 namespace craftbuild {
-    inline Str trim(Str const& str) {
+    static inline Str trim(Str const& str) {
         std::string _str = str.std_str();
         usize first = _str.find_first_not_of(" \t\n\r");
         if (first == std::string::npos) return "";
@@ -12,8 +12,8 @@ namespace craftbuild {
         return _str.substr(first, last - first + 1);
     }
 
-    inline std::vector<Str> tokenize_with_quotes(Str const& input) {
-        std::vector<Str> tokens;
+    static inline List<Str> tokenize_with_quotes(Str const& input) {
+        List<Str> tokens;
         Str current_token;
         bool in_quotes = false;
 
@@ -24,34 +24,34 @@ namespace craftbuild {
                 if (in_quotes) {
                     in_quotes = false;
                     if (current_token) {
-                        tokens.push_back(current_token);
+                        tokens.append(current_token);
                         current_token.clear();
                     }
                 }
                 else {
                     in_quotes = true;
                     if (current_token) {
-                        tokens.push_back(current_token);
+                        tokens.append(current_token);
                         current_token.clear();
                     }
                 }
             }
             else if (c == ' ' and not in_quotes) {
                 if (current_token) {
-                    tokens.push_back(current_token);
+                    tokens.append(current_token);
                     current_token.clear();
                 }
             }
             else current_token += std::string(1, c);
         }
 
-        if (current_token) tokens.push_back(current_token);
+        if (current_token) tokens.append(current_token);
 
         return tokens;
     }
 
 	bool CommandInterpreter::is_valid_coordinate(int64 x, int64 y, int64 z) {
-        return (x >= -GameEngine::RANGE and x <= GameEngine::RANGE and y >= 0 and y <= Chunk::HEIGHT and z >= -GameEngine::RANGE and z <= GameEngine::RANGE);
+        return (x >= -World::RANGE and x <= World::RANGE and y >= 0 and y <= Chunk::HEIGHT and z >= -World::RANGE and z <= World::RANGE);
     }
 
     bool CommandInterpreter::is_valid_block_type(Str const& block_type) {
@@ -62,8 +62,8 @@ namespace craftbuild {
         Str cmd = trim(command_line);
         if (not cmd) return "";
 
-        std::vector<Str> parts = tokenize_with_quotes(cmd);
-        if (parts.empty()) return "";
+        List<Str> parts = tokenize_with_quotes(cmd);
+        if (not parts) return "";
 
         if (parts[0] == "set_block") return execute_set_block(parts);
         else if (parts[0] == "fill") return execute_fill(parts);
@@ -75,12 +75,12 @@ namespace craftbuild {
         }
     }
 
-    Str CommandInterpreter::execute_set_block(std::vector<Str> const& args) {
-        GameEngine* world = static_cast<GameEngine*>(world_ptr);
+    Str CommandInterpreter::execute_set_block(List<Str> const& args) {
+        World* world = static_cast<World*>(world_ptr);
         if (not world) return "";
         Str output;
 
-        if (args.size() < 5) {
+        if (len(args) < 5) {
             output = "Must fill atleast (x y z block_type)";
             log<LogType::ERROR>(output);
             return output;
@@ -115,12 +115,12 @@ namespace craftbuild {
         return output;
     }
 
-    Str CommandInterpreter::execute_fill(std::vector<Str> const& args) {
-        GameEngine* world = static_cast<GameEngine*>(world_ptr);
+    Str CommandInterpreter::execute_fill(List<Str> const& args) {
+        World* world = static_cast<World*>(world_ptr);
         if (not world) return "";
         Str output;
 
-        if (args.size() < 8) {
+        if (len(args) < 8) {
             output = "Must fill atleast (x1 y1 z1 x2 y2 z2 block_type)";
             log<LogType::ERROR>(output);
             return output;
@@ -173,19 +173,19 @@ namespace craftbuild {
         return output;
     }
 
-    Str CommandInterpreter::execute_give(std::vector<Str> const& args) {
-        GameEngine* world = static_cast<GameEngine*>(world_ptr);
+    Str CommandInterpreter::execute_give(List<Str> const& args) {
+        World* world = static_cast<World*>(world_ptr);
         if (not world) return "";
         Str output;
 
-        if (args.size() < 3) {
+        if (len(args) < 3) {
             output = "Must fill atleast (player_name item_name)";
             log<LogType::ERROR>(output);
             return output;
         }
 
         int64 amount = 1;
-        if (args.size() >= 4) {
+        if (len(args) >= 4) {
             try {
                 amount = std::stoi(args[3].std_str());
                 if (amount <= 0) {

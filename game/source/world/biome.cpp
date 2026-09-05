@@ -6,17 +6,17 @@ module game.world.biome;
 
 namespace craftbuild {
 	void BiomeRegistry::register_biome(Str const& name, Biome const& biome) {
-		name2id[name] = registry.size();
-		registry.emplace_back(BiomeEntry(name, biome));
+		name2id[name] = len(registry);
+		registry.emplace(BiomeEntry(name, biome));
 	}
 
 	Biome BiomeRegistry::get_biome(uint64 biome_id) {
-		if (registry.size() <= biome_id) return Biome{};
+		if (len(registry) <= biome_id) return Biome{};
 		return registry[biome_id].biome;
 	}
 
 	Str BiomeRegistry::get_name(uint64 biome_id) {
-		if (registry.size() <= biome_id) return "";
+		if (len(registry) <= biome_id) return "";
 		return registry[biome_id].name;
 	}
 

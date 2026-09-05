@@ -37,17 +37,17 @@ namespace craftbuild {
         return base_texture_layer;
     }
 
-    int32 DynBlock::get_texture_layer(Face face) const { return -1; }
+    int32 ComplexBlock::get_texture_layer(Face face) const { return -1; }
 
     BlockEntry::BlockEntry(Ptr<Block>&& b, Str const& n, Ref<Texture2D> const& t, Ref<Mesh> const& m) : block(b), name(n), texture(t), mesh(m) {}
 
     Ptr<Block>& BlockRegistry::get_block(uint32 block_id) {
-        if (registry.size() <= block_id) return registry[get_id("Air")].block;
+        if (len(registry) <= block_id) return registry[get_id("Air")].block;
         return registry[block_id].block;
     }
 
     Str BlockRegistry::get_name(uint32 block_id) {
-        if (registry.size() <= block_id) return "Air";
+        if (len(registry) <= block_id) return "Air";
         return registry[block_id].name;
     }
 

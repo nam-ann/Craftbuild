@@ -183,12 +183,12 @@ export namespace craftbuild {
             s.__len__ = s.__space__ = 0;
         }
 
-        ~Str() { clear(); }
+        ~Str() { delete[] __value__; }
 
         Str& operator=(byte32 const* c) { *this = std::u32string(c); return *this; }
         Str& operator=(char const* c) { *this = to_u32(c); return *this; }
         Str& operator=(std::u32string const& s) {
-            clear();
+            reset();
             encode(s);
             return *this;
         }
@@ -196,7 +196,7 @@ export namespace craftbuild {
         Str& operator=(std::string_view s) { *this = to_u32(s); return *this; }
         Str& operator=(Str const& s) {
             if (this == &s) return *this;
-            clear();
+            reset();
             __value__ = new uint8[s.__len__];
             std::memcpy(__value__, s.__value__, s.__len__);
             __len__ = __space__ = s.__len__;
@@ -204,7 +204,7 @@ export namespace craftbuild {
         }
         Str& operator=(Str&& s) noexcept {
             if (this == &s) return *this;
-            clear();
+            reset();
             __value__ = s.__value__;
             __len__ = s.__len__;
             __space__ = s.__space__;
@@ -231,13 +231,13 @@ export namespace craftbuild {
             expect(s.__len__);
             std::memcpy(&__value__[__len__], s.__value__, s.__len__);
             __len__ += s.__len__;
-            s.clear();
+            s.reset();
             return *this;
         }
 
         Str& operator*=(usize n) {
             if (n == 0) {
-                clear();
+                reset();
                 return *this;
             }
             Str original(*this);
@@ -262,16 +262,19 @@ export namespace craftbuild {
         uint8& operator[](usize pos) { return __value__[pos]; }
         uint8 const& operator[](usize pos) const { return __value__[pos]; }
 
-        operator bool() const { return *this != U""; }
+        operator bool() const {
+            static Str const empty = U"";
+            return __value__ and *this != empty;
+        }
 
         bool operator==(Str const& s) const {
-            return __len__ == s.__len__ and std::memcmp(__value__, s.__value__, __len__) == 0;
+            return (not __value__ and not s.__value__) or (__value__ and s.__value__ and __len__ == s.__len__ and std::memcmp(__value__, s.__value__, __len__) == 0);
         }
 
         // FULL DECODE -> UTF-8 string
         std::string std_str() const {
             std::string out;
-            size_t i = 0;
+            usize i = 0;
 
             while (i < __len__) {
                 uint32 cp = decode_one(i);
@@ -282,6 +285,11 @@ export namespace craftbuild {
         }
 
         void clear() {
+			std::ranges::destroy_n(__value__, __len__);
+            __len__ = 0;
+        }
+
+        void reset() {
             delete[] __value__;
             __value__ = nullptr;
             __len__ = __space__ = 0;
@@ -290,10 +298,10 @@ export namespace craftbuild {
         void expect(usize extra) {
             usize needed = __len__ + extra;
             if (not needed) needed = 8;
-            archive(needed);
+            reserve(needed);
         }
 
-        void archive(usize extra) {
+        void reserve(usize extra) {
             if (__space__ >= extra) return;
 
             uint8* cache = new uint8[extra];
@@ -307,7 +315,7 @@ export namespace craftbuild {
         }
 
         void resize(usize new_len, byte32 fill_value = U' ') {
-            if (new_len > __space__) archive(new_len);
+            if (new_len > __space__) reserve(new_len);
             if (new_len > __len__) for (auto i : range<usize>(__len__, new_len)) encode(fill_value);
             __len__ = new_len;
         }

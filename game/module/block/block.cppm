@@ -19,6 +19,7 @@ import std;
 import misc.ptr;
 import misc.str;
 import misc.set;
+import misc.list;
 import misc.dict;
 import misc.list;
 import misc.number;
@@ -50,7 +51,7 @@ export namespace craftbuild {
     struct Block1F : Block { int32 get_texture_layer(Face face) const override final; };
     struct Block3F : Block { int32 get_texture_layer(Face face) const override final; };
     struct Block6F : Block { int32 get_texture_layer(Face face) const override final; };
-    class DynBlock : public Block {
+    class ComplexBlock : public Block {
         int32 get_texture_layer(Face face) const override final;
     };
 
@@ -64,7 +65,7 @@ export namespace craftbuild {
     };
 
     struct BlockRegistry {
-        inline static std::vector<BlockEntry> registry;
+        inline static List<BlockEntry> registry;
         inline static Dict<Str, uint32> name2id;
 
         template <typename T>
@@ -82,18 +83,20 @@ export namespace craftbuild {
             else if constexpr (std::derived_from<T, Block6F>) {
                 texture = AssetLoader::load_block_texture(path, FaceCount::SIX);
             }
-            else if constexpr (std::derived_from<T, DynBlock>) {
+            else if constexpr (std::derived_from<T, ComplexBlock>) {
                 Ref<PackedScene> glb_model = AssetLoader::load_block_model(path);
 
-                Node* root = glb_model->instantiate();
-                TypedArray<Node> mesh_children = root->find_children("*", "MeshInstance3D", true, false);
-                MeshInstance3D* mesh_inst = mesh_children.is_empty() ? nullptr : Object::cast_to<MeshInstance3D>(mesh_children[0]);
+                if (glb_model.is_valid()) {
+                    Node* root = glb_model->instantiate();
+                    TypedArray<Node> mesh_children = root->find_children("*", "MeshInstance3D", true, false);
+                    MeshInstance3D* mesh_inst = mesh_children.is_empty() ? nullptr : Object::cast_to<MeshInstance3D>(mesh_children[0]);
 
-                mesh = mesh_inst->get_mesh();
+                    mesh = mesh_inst->get_mesh();
+                }
             }
 
-            registry.emplace_back(new Obj<T>(), name, texture, mesh);
-            name2id[name] = uint32(registry.size() - 1);
+            registry.emplace(new Obj<T>(), name, texture, mesh);
+            name2id[name] = uint32(len(registry) - 1);
         }
 
         static Ptr<Block>& get_block(uint32 block_id);

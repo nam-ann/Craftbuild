@@ -6,16 +6,16 @@ namespace craftbuild {
 		threads[std::this_thread::get_id()] = thread_name;
 	}
 
-	Str ThreadRegistry::get_name(std::thread::id const& thread_id) {
+	Str ThreadRegistry::get_name(std::jthread::id const& thread_id) {
 		std::lock_guard lock(threads_mutex);
 		auto it = threads.find(thread_id);
 		if (it == threads.end()) return "Main";
 		return it->second;
 	}
 
-    ThreadPool::ThreadPool(size_t n) : stop(false) {
-        for (size_t i = 0; i < n; ++i) {
-            workers.emplace_back([this]() {
+    ThreadPool::ThreadPool(usize n) : stop(false) {
+        for (usize i : range(n)) {
+            workers.emplace([this]() {
                 while (true) {
                     std::function<void()> task;
                     {
@@ -39,7 +39,5 @@ namespace craftbuild {
             stop = true;
         }
         cv.notify_all();
-
-        for (auto& w : workers) w.join();
     }
 }

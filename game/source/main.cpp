@@ -233,7 +233,7 @@ namespace craftbuild {
                         child->queue_free();
                     }
 
-                    Dict<uint32, std::vector<ComplexBlockInstance>> grouped_instances;
+                    Dict<uint32, List<ComplexBlockInstance>> grouped_instances;
                     for (auto&& inst : data.complex_instance) {
                         Ref<BoxShape3D> box;
                         box.instantiate();
@@ -244,23 +244,23 @@ namespace craftbuild {
                         col_shape->set_position(Vector3(inst.local_pos.x + 0.5f, inst.local_pos.y + 0.5f, inst.local_pos.z + 0.5f));
 
                         chunk_render.dynamic_body->add_child(col_shape);
-                        grouped_instances[inst.block_id].emplace_back(std::move(inst));
+                        grouped_instances[inst.block_id].emplace(std::move(inst));
                     }
 
                     for (auto const& [id, instances] : grouped_instances) {
-                        if (id >= BlockRegistry::registry.size()) continue;
+                        if (id >= len(BlockRegistry::registry)) continue;
 
                         Ref<MultiMesh> multimesh;
                         multimesh.instantiate();
                         multimesh->set_transform_format(MultiMesh::TRANSFORM_3D);
                         multimesh->set_mesh(BlockRegistry::registry[id].mesh);
-                        multimesh->set_instance_count((int32)instances.size());
+                        multimesh->set_instance_count(int32(len(instances)));
 
-                        for (usize i : range<usize>(instances.size())) {
+                        for (usize i : range(len(instances))) {
                             auto const& inst = instances[i];
                             Transform3D transform;
                             transform.origin = Vector3(inst.local_pos.x, inst.local_pos.y + 0.01f, inst.local_pos.z);
-                            multimesh->set_instance_transform((int32)i, transform);
+                            multimesh->set_instance_transform(int32(i), transform);
                         }
 
                         if (not chunk_render.multi_mesh_instance) {
@@ -288,20 +288,14 @@ namespace craftbuild {
 
     void Main::_exit_tree() {
 		running.store(false, std::memory_order_relaxed);
-
         server_ptr.clear();
-        if (gc_thread.joinable()) gc_thread.join();
-        if (log_thread.joinable()) log_thread.join();
-        if (network_thread.joinable()) network_thread.join();
-        if (scheduler_thread.joinable()) scheduler_thread.join();
         loop_cv.notify_all();
-
         save_userdata();
     }
 
     void Main::init_singleplayer() {
         log<LogType::INFO>("Starting local server...");
-        server_ptr = new Obj<GameEngine>();
+        server_ptr = new Obj<World>();
         server_ptr.value().connect(player_name);
 
         if (auto player = static_cast<Player*>(player_ptr)) {
@@ -314,7 +308,6 @@ namespace craftbuild {
 
     void Main::init_multiplayer() {
         start_network_thread();
-        start_scheduler_thread();
     }
 
     void Main::setup_voxel_material() {
@@ -357,7 +350,7 @@ namespace craftbuild {
             GarbageCollector::collect();
         };
 
-        gc_thread = std::thread(worker);
+        gc_thread = std::jthread(worker);
     }
 
     void Main::start_log_thread() {
@@ -375,7 +368,7 @@ namespace craftbuild {
             LogQueue::flush();
         };
 
-        log_thread = std::thread(worker);
+        log_thread = std::jthread(worker);
     }
 
     void Main::start_network_thread() {
@@ -410,39 +403,50 @@ namespace craftbuild {
             }
 
             send_queue.store({ "Connect", { player_name.std_str() } });
-
-            {
-                List<char> buffer;
-                while (running.load(std::memory_order_relaxed)) {
-                    const auto recv_state = receive_queue.receive(**client_peer, buffer);
-
-                    if (recv_state == ReceiveState::WAITING) {
-                        std::this_thread::sleep_for(100ms);
-                        continue;
-                    }
-                    if (recv_state == ReceiveState::ERROR) {
-                        log<LogType::ERROR>("Lost connect to server");
-                        client_peer->disconnect_from_host();
-                        return;
-                    }
-
-                    Message message = ReceiveQueue::parse(buffer);
-
-                    if (message.content == "Connected") {
-                        log<LogType::INFO>("Connected to server");
-                        Pos3D<real> player_pos{ std::stof(message.arguments[0]), std::stof(message.arguments[1]), std::stof(message.arguments[2]) };
-                        if (auto player = static_cast<Player*>(player_ptr)) {
-                            std::unique_lock lock(player_mutex);
-                            player->set_global_position(player_pos);
-                        }
-                        break;
-                    }
-                }
-            }
+            List<char> buffer;
 
             while (running.load(std::memory_order_relaxed)) {
                 send_queue.send(**client_peer);
-                List<char> buffer;
+                buffer.fill(0);
+
+                const auto recv_state = receive_queue.receive(**client_peer, buffer);
+
+                if (recv_state == ReceiveState::WAITING) {
+                    std::this_thread::sleep_for(100ms);
+                    continue;
+                }
+                if (recv_state == ReceiveState::ERROR) {
+                    log<LogType::ERROR>("Lost connect to server");
+                    client_peer->disconnect_from_host();
+                    return;
+                }
+
+                Message message = ReceiveQueue::parse(buffer);
+                if (not message.content) continue;
+
+                if (message.content == "Connected") {
+                    log<LogType::INFO>("Connected to server");
+                    Pos3D<real> player_pos{
+                        real(std::stod(message.arguments[0])),
+                        real(std::stod(message.arguments[1])),
+                        real(std::stod(message.arguments[2]))
+                    };
+
+                    if (auto player = static_cast<Player*>(player_ptr)) {
+                        std::unique_lock lock(player_mutex);
+                        player->call_deferred("set_global_position", Vector3(player_pos));
+                    }
+                    break;
+                }
+                    
+                std::this_thread::sleep_for(10ms);
+            }
+
+            start_scheduler_thread();
+
+            while (running.load(std::memory_order_relaxed)) {
+                send_queue.send(**client_peer);
+                buffer.fill(0);
 
                 const auto recv_state = receive_queue.receive(**client_peer, buffer);
                 if (recv_state == ReceiveState::WAITING) {
@@ -455,6 +459,7 @@ namespace craftbuild {
                 }
 
                 Message message = ReceiveQueue::parse(buffer);
+                if (not message.content) continue;
 
                 try {
                     if (message.content == "Chunk version") {
@@ -634,11 +639,11 @@ namespace craftbuild {
             client_peer->disconnect_from_host();
         };
 
-        network_thread = std::thread(worker);
+        network_thread = std::jthread(worker);
     }
 
     void Main::start_scheduler_thread() {
-        scheduler_thread = std::thread([this]() {
+        auto worker = [this]() {
             ThreadRegistry::register_thread("Mesh");
             log<LogType::INFO>("Mesh thread started");
 
@@ -654,7 +659,9 @@ namespace craftbuild {
                 std::unique_lock<std::mutex> lock(loop_mutex);
                 loop_cv.wait_for(lock, std::chrono::milliseconds(cpu_sleep_time));
             }
-        });
+        };
+
+        scheduler_thread = std::jthread(worker);
     }
 
     void Main::submit_jobs() {

@@ -2,12 +2,12 @@ module game.block.block_data;
 
 namespace craftbuild {
     void MetaRegistry::register_metadata(Str const& name) {
-        registry.emplace_back(name);
-        name2id[name] = uint32(registry.size() - 1);
+        registry.emplace(name);
+        name2id[name] = uint32(len(registry) - 1);
     }
 
     Str& MetaRegistry::get_metadata(uint32 meta_id) {
-        if (registry.size() <= meta_id) return registry[get_id("Air")];
+        if (len(registry) <= meta_id) return registry[get_id("Air")];
         return registry[meta_id];
     }
 
@@ -19,12 +19,12 @@ namespace craftbuild {
     bool MetaRegistry::has_metadata(Str const& meta_name) { return name2id.contains(meta_name); }
 
     void TagRegistry::register_tag(Str const& name) {
-        registry.emplace_back(name);
-        name2id[name] = uint32(registry.size() - 1);
+        registry.emplace(name);
+        name2id[name] = uint32(len(registry) - 1);
     }
 
     Str& TagRegistry::get_tag(uint32 tag_id) {
-        if (registry.size() <= tag_id) return registry[get_id("Air")];
+        if (len(registry) <= tag_id) return registry[get_id("Air")];
         return registry[tag_id];
     }
 

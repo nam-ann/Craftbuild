@@ -60,6 +60,11 @@ export namespace craftbuild {
     };
 
     template <typename T>
+    struct Hasher<T*> {
+        usize operator()(T* value) const { return usize(value); }
+    };
+
+    template <typename T>
     struct Hasher<std::vector<T>> {
         usize operator()(std::vector<T> const& value) const {
             usize hash = 0;

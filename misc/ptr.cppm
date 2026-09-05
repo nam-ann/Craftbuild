@@ -3,12 +3,13 @@ export module misc.ptr;
 import std;
 
 import misc.gc;
+import misc.list;
 import misc.number;
 import misc.format;
 
 export namespace craftbuild {
 	template <typename T>
-	concept Traceable = requires(T t) { t._get_refs(std::declval<std::vector<GCObject*>&>()); };
+	concept Traceable = requires(T t) { t._get_refs(std::declval<List<GCObject*>&>()); };
 
 	template <typename T>
 	struct Obj : GCObject {
@@ -17,7 +18,7 @@ export namespace craftbuild {
 			__data__ = new T(std::forward<Args>(args)...);
 			__deleter__ = [](void* ptr) { delete static_cast<T*>(ptr); };
 			if constexpr (Traceable<T>) {
-				__get_refs__ = [](void* ptr, std::vector<GCObject*>& refs) {
+				__get_refs__ = [](void* ptr, List<GCObject*>& refs) {
 					T* obj = static_cast<T*>(ptr);
 					obj->_get_refs(refs);
 				};

@@ -70,10 +70,10 @@ export namespace craftbuild {
         std::atomic<real> player_x = 0.0;
         std::atomic<real> player_y = 0.0;
         std::atomic<real> player_z = 0.0;
-        std::thread gc_thread;
-        std::thread log_thread;
-        std::thread network_thread;
-        std::thread scheduler_thread;
+        std::jthread gc_thread;
+        std::jthread log_thread;
+        std::jthread network_thread;
+        std::jthread scheduler_thread;
         ThreadPool mesh_pool{ 4 };
         Set<Pos2D<int32>> pending_mesh_jobs;
         std::mutex pending_jobs_mutex;
@@ -87,7 +87,7 @@ export namespace craftbuild {
 
         SendQueue send_queue;
         ReceiveQueue receive_queue;
-		Ptr<GameEngine> server_ptr;
+		Ptr<World> server_ptr;
 
     public:
         void _ready() override;

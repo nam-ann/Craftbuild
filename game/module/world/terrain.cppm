@@ -3,6 +3,7 @@ export module game.world.terrain;
 import std;
 
 import misc.ptr;
+import misc.list;
 import misc.number;
 
 export namespace craftbuild {
@@ -130,13 +131,13 @@ export namespace craftbuild {
         };
 
     private:
-        std::vector<Entry> distribution;
+        List<Entry> distribution;
         int32 total_weight = 0;
 
     public:
-        explicit WeightedListHeight(std::vector<Entry> distribution);
+        explicit WeightedListHeight(List<Entry> distribution);
 
-        static HeightProviderPtr of(std::vector<Entry> distribution);
+        static HeightProviderPtr of(List<Entry> distribution);
 
         int32 sample(RandomSource& random, WorldGenerationContext const& context) const override;
         HeightProviderType get_type() const override;

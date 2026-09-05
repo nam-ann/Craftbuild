@@ -23,11 +23,11 @@ using namespace std::chrono_literals;
 export namespace craftbuild {
     struct Message {
         Str content;
-        std::vector<std::string> arguments;
+        List<std::string> arguments;
     };
 
     struct SendQueue {
-        std::vector<Message> msg;
+        List<Message> msg;
         mutable std::mutex msg_mutex;
 
         void store(Message const& message);

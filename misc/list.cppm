@@ -9,102 +9,129 @@ import misc.hasher;
 
 export namespace craftbuild {
     template <typename T>
-    requires std::is_trivially_copyable_v<T>
     class List {
+        inline static std::allocator<T> allocator;
+
         T* __value__ = nullptr;
         usize __len__ = 0;
         usize __space__ = 0;
 
     public:
         List() noexcept {}
-        List(std::initializer_list<T> const& l) : __value__(new T[l.size()]), __space__(l.size()), __len__(l.size()) { std::memcpy(__value__, l.data(), __len__ * sizeof(T)); }
-        List(List const& s) : __value__(new T[s.__len__]), __len__(s.__len__), __space__(s.__len__) { std::memcpy(__value__, s.__value__, __len__ * sizeof(T)); }
+        List(std::initializer_list<T> const& l) : __space__(l.size()), __len__(l.size()) {
+            if (not __space__) return;
+
+            __value__ = allocator.allocate(__space__);
+            std::ranges::uninitialized_copy(l, *this);
+        }
+        List(List const& s) : __len__(s.__len__), __space__(s.__len__) {
+            if (not __space__) return;
+
+            __value__ = allocator.allocate(__space__);
+            std::ranges::uninitialized_copy(s, *this);
+        }
         List(List&& s) noexcept : __value__(nullptr), __len__(0), __space__(0) {
             std::swap(__value__, s.__value__);
             std::swap(__len__, s.__len__);
             std::swap(__space__, s.__space__);
         }
 
-        ~List() { clear(); }
+        ~List() {
+            std::ranges::destroy_n(__value__, __len__);
+            allocator.deallocate(__value__, __space__);
+        }
 
         List& operator=(std::initializer_list<T> const& l) {
             return *this = List(l);
         }
         List& operator=(List const& s) {
             if (this == &s) return *this;
-            clear();
-            __value__ = new T[s.__len__];
-            std::memcpy(__value__, s.__value__, s.__len__ * sizeof(T));
-            __len__ = __space__ = s.__len__;
+
+            expect(s.__len__);
+            std::ranges::destroy_n(__value__, __len__);
+            std::ranges::uninitialized_copy(s, *this);
+            __len__ = s.__len__;
+
             return *this;
         }
         List& operator=(List&& s) noexcept {
             if (this == &s) return *this;
-            clear();
+
+            reset();
             std::swap(__value__, s.__value__);
             std::swap(__len__, s.__len__);
             std::swap(__space__, s.__space__);
+
             return *this;
         }
 
         List& operator+=(std::initializer_list<T> const& l) {
             expect(l.size());
-            std::memcpy(&__value__[__len__], l.data(), l.size() * sizeof(T));
+            std::ranges::uninitialized_copy(l, end(), end() + l.size());
             __len__ += l.size();
+
             return *this;
         }
         List& operator+=(T const& t) {
             if (__len__ >= __space__) expect(__len__);
-            __value__[__len__++] = t;
+
+            std::construct_at(__value__ + __len__, t);
+            ++__len__;
+
             return *this;
         }
         List& operator+=(List const& s) {
             if (this == &s) return *this += List(s);
+
             expect(s.__len__);
-            std::memcpy(&__value__[__len__], s.__value__, s.__len__ * sizeof(T));
+            std::ranges::uninitialized_copy(s.begin(), s.end(), end(), end() + s.__len__);
             __len__ += s.__len__;
-            return *this;
-        }
-        List& operator+=(List&& s) noexcept {
-            if (this == &s) return *this;
-            expect(s.__len__);
-            std::memcpy(&__value__[__len__], s.__value__, s.__len__ * sizeof(T));
-            __len__ += s.__len__;
-            s.clear();
+
             return *this;
         }
 
         List& operator*=(usize n) {
             if (n == 0) {
-                clear();
+                reset();
                 return *this;
             }
-            const List original(*this);
+
+            List const original(*this);
             expect(__len__ * (n - 1));
+
             for (auto i : range<usize>(n - 1)) {
-                std::memcpy(&__value__[__len__], original.__value__, original.__len__ * sizeof(T));
+                std::ranges::uninitialized_copy(
+                    original.begin(),
+                    original.end(),
+                    end(),
+                    end() + original.__len__
+                );
                 __len__ += original.__len__;
             }
+
             return *this;
         }
 
         List operator+(std::initializer_list<T> const& s) const { List cache(*this); cache += s; return cache; }
         List operator+(List const& s) const { List cache(*this); cache += s; return cache; }
-        List operator+(List&& s) const noexcept { List cache(*this); cache += s; return cache; }
 
         List operator*(usize n) const { List cache(*this); return cache *= n; }
 
-        T& operator[](int64 pos) {
-            if (pos >= __len__) throw std::out_of_range("List index out of range");
-            return __value__[pos < 0 ? __len__ + pos : pos];
+        T& operator[](int64 index) {
+            if (index < 0) index += __len__;
+            if (index < 0 or index >= int64(__len__)) throw std::out_of_range("List index out of range");
+
+            return __value__[index];
         }
 
-		T const& operator[](int64 pos) const {
-			if (pos >= __len__) throw std::out_of_range("List index out of range");
-			return __value__[pos < 0 ? __len__ + pos : pos];
+		T const& operator[](int64 index) const {
+            if (index < 0) index += __len__;
+            if (index < 0 or index >= int64(__len__)) throw std::out_of_range("List index out of range");
+			
+            return __value__[index];
 		}
 
-        void operator[](int64 start, int64 end, int64 step) {
+        List operator[](int64 start, int64 end, int64 step) const {
             if (step == 0) throw std::invalid_argument("List slice step cannot be zero");
 
             int64 const n = int64(__len__);
@@ -123,11 +150,11 @@ export namespace craftbuild {
                 
                 if (start >= end) return result;
                 usize count = usize((end - start + step - 1) / step);
-                result.archive(count);
-                result.__len__ = count;
-                
-                usize j = 0;
-                for (int64 i : range(start, end, step)) result.__value__[j++] = __value__[i]; 
+                result.reserve(count);
+
+                for (int64 i : range(start, end, step)) {
+                    std::construct_at(result.__value__ + result.__len__++, __value__[i]);
+                }
             }
             else {
                 start = std::clamp<int64>(start, -1, n - 1);
@@ -137,12 +164,11 @@ export namespace craftbuild {
                 
                 int64 const abs_step = -step;
                 usize count = usize((start - end + abs_step - 1) / abs_step);
+                result.reserve(count);
                 
-                result.archive(count);
-                result.__len__ = count;
-                usize j = 0;
-                
-                for (int64 i : range(start, end, step)) result.__value__[j++] = __value__[i];
+                for (int64 i : range(start, end, step)) {
+                    std::construct_at(result.__value__ + result.__len__++, __value__[i]);
+                }
             }
             
             return result;
@@ -159,51 +185,160 @@ export namespace craftbuild {
             if (not __value__ or not s.__value__) return false;
             if (__value__ == s.__value__) return true;
 
-            return memcmp(__value__, s.__value__, __len__ * sizeof(T)) == 0;
+            return std::ranges::equal(s, *this);
         }
 
-        List& append(T const& t) {
-            return *this += t;
-        }
-        List& insert(usize index, T const& t) {
-            if (index < __len__) __value__[index] = t;
+        List& emplace(auto&&... args) {
+            if (__len__ >= __space__) expect(__len__);
+            std::construct_at(__value__ + __len__, std::forward<decltype(args)>(args)...);
+            ++__len__;
+
             return *this;
         }
 
+        List& append(T const& t) { return *this += t; }
+        List& append(List const& l) { return *this += l; }
+        List& insert(int64 index, T const& t) {
+            if (index < 0) index += int64(__len__);
+            if (index < 0 or index > __len__) [[unlikely]] throw std::out_of_range("List index out of range");
+
+            if (__len__ >= __space__) expect(__len__);
+
+            if (index == int64(__len__)) {
+                std::construct_at(__value__ + __len__, t);
+            }
+            else {
+                std::construct_at(__value__ + __len__, std::move(__value__[__len__ - 1]));
+
+                std::ranges::move_backward(
+                    __value__ + index,
+                    __value__ + __len__ - 1,
+                    __value__ + __len__
+                );
+
+                __value__[index] = t;
+            }
+
+            ++__len__;
+            return *this;
+        }
+        List& insert(int64 index, List const& l) {
+            if (l.__len__ == 0) return *this;
+            if (index < 0) index += int64(__len__);
+            if (index < 0 or index > int64(__len__)) [[unlikely]] throw std::out_of_range("List index out of range");
+
+            if (this == &l) return insert(index, List(*this));
+
+            usize const count = l.__len__;
+            usize const old_len = __len__;
+            usize const tail = old_len - usize(index);
+
+            expect(count);
+
+            if (count <= tail) {
+                std::ranges::uninitialized_move(
+                    __value__ + old_len - count,
+                    __value__ + old_len,
+                    __value__ + old_len,
+                    __value__ + old_len + count
+                );
+                std::ranges::move_backward(
+                    __value__ + index,
+                    __value__ + old_len - count,
+                    __value__ + old_len
+                );
+                std::ranges::copy(
+                    l.__value__,
+                    l.__value__ + count,
+                    __value__ + index
+                );
+            }
+            else {
+                std::ranges::uninitialized_move(
+                    __value__ + index,
+                    __value__ + old_len,
+                    __value__ + index + count,
+                    __value__ + old_len + count
+                );
+                std::ranges::copy(
+                    l.__value__,
+                    l.__value__ + tail,
+                    __value__ + index
+                );
+                std::ranges::uninitialized_copy(
+                    l.__value__ + tail,
+                    l.__value__ + count,
+                    __value__ + old_len,
+                    __value__ + old_len + (count - tail)
+                );
+            }
+            
+            __len__ += count;
+            return *this;
+        }
+
+		List& pop(int64 index = -1) {
+			if (__len__ == 0) throw std::out_of_range("List is empty");
+			if (index < 0) index += __len__;
+			if (index < 0 or index >= int64(__len__)) throw std::out_of_range("List index out of range");
+			
+            if (index + 1 < int64(__len__)) {
+                std::ranges::move(__value__ + index + 1, end(), __value__ + index);
+            }
+
+            std::destroy_at(__value__ + __len__ - 1);
+
+			--__len__;
+			return *this;
+		}
+
         void clear() {
-            delete[] __value__;
-            __value__ = nullptr;
+            std::ranges::destroy_n(__value__, __len__);
+            __len__ = 0;
+        }
+
+        void reset() {
+            std::ranges::destroy_n(__value__, __len__);
+            allocator.deallocate(__value__, __space__);
+
             __len__ = __space__ = 0;
         }
 
         void expect(usize extra) {
             usize needed = __len__ + extra;
             if (not needed) needed = 8;
-            archive(needed);
+            reserve(needed);
         }
 
-        void archive(usize extra) {
-            if (__space__ >= extra) return;
-            __space__ = extra;
+        void reserve(usize capacity) {
+            if (__space__ >= capacity) return;
 
-            T* cache = new T[extra];
-            if (__value__) {
-                std::memcpy(cache, __value__, __len__ * sizeof(T));
-                delete[] __value__;
-            }
+            T* cache = allocator.allocate(capacity);
+            std::ranges::uninitialized_move(__value__, end(), cache, cache + __len__);
 
+            std::ranges::destroy_n(__value__, __len__);
+            allocator.deallocate(__value__, __space__);
+
+            __space__ = capacity;
             __value__ = cache;
-            cache = nullptr;
         }
 
         void resize(usize new_len, T const& fill_value = T{}) {
-            if (new_len > __space__) archive(new_len);
-            if (new_len > __len__) for (auto i : range<usize>(__len__, new_len)) __value__[i] = fill_value;
+            if (new_len < __len__) {
+                std::ranges::destroy_n(__value__ + new_len, __len__ - new_len);
+            }
+            else if (new_len > __len__) {
+                usize const extra = new_len - __len__;
+
+                expect(extra);
+                std::ranges::uninitialized_fill_n(__value__ + __len__, extra, fill_value);
+            }
+
             __len__ = new_len;
         }
 
         void fill(T const& fill_value) {
-            for (auto i : range<usize>(__len__)) __value__[i] = fill_value;
+			std::ranges::fill(*this, fill_value);
         }
 
         void swap(List& other) noexcept {
@@ -223,12 +358,8 @@ export namespace craftbuild {
             return result += "]";
         }
 
-        T* data() {
-            return __value__;
-        }
-        T const* data() const {
-            return __value__;
-        }
+        T* data() { return __value__; }
+        T const* data() const { return __value__; }
 
         auto begin() noexcept { return __value__; }
         auto end() noexcept { return __value__ + __len__; }
@@ -237,5 +368,16 @@ export namespace craftbuild {
 
         friend usize len(List const& s) { return s.__len__; }
         friend List operator+(std::initializer_list<T>& l, List const& s) { return List(l) + s; }
+    };
+
+    template <typename T>
+    struct Hasher<List<T>> {
+        usize operator()(List<T> const& value) const {
+            usize hash = 0;
+            for (const auto& elem : value) {
+                hash ^= Hasher<T>{}(elem)+0x9e3779b9 + (hash << 6) + (hash >> 2);
+            }
+            return hash;
+        }
     };
 }

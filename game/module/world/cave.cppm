@@ -3,6 +3,7 @@ export module game.world.cave;
 import std;
 
 import misc.str;
+import misc.list;
 import misc.dict;
 import misc.number;
 
@@ -21,7 +22,7 @@ export namespace craftbuild {
     };
 
     struct CaveRegistry {
-        inline static std::vector<CaveEntry> registry;
+        inline static List<CaveEntry> registry;
         inline static Dict<Str, uint64> name2id;
 
         static void register_cave(Str const& name, Cave cave);

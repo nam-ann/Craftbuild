@@ -105,10 +105,10 @@ namespace craftbuild {
         }
         if (selection_box->get_parent() != world) world->add_child(selection_box);
 
-        const Vector3 hit_pos = hit["position"];
-        const Vector3 normal = hit["normal"];
+        Vector3 const hit_pos = hit["position"];
+        Vector3 const normal = hit["normal"];
 
-        const Vector3 pos_float = hit_pos - (normal * 0.001f);
+        Vector3 const pos_float = hit_pos - (normal * 0.001f);
         Pos3D<real> block_pos = pos_float.floor();
 
         selection_box->set_position(Vector3(block_pos.x, block_pos.y, block_pos.z) + Vector3(0.5, 0.5, 0.5));
@@ -124,19 +124,19 @@ namespace craftbuild {
         Vector3 velocity = get_velocity();
         Input* input = Input::get_singleton();
 
-        const bool chatting = world->chatting.load(std::memory_order_relaxed);
-        const bool key_space = chatting ? false : input->is_key_pressed(KEY_SPACE);
-        const bool key_shift = chatting ? false : input->is_key_pressed(KEY_SHIFT);
-        const bool key_ctrl = chatting ? false : input->is_key_pressed(KEY_CTRL);
-        const bool key_w = chatting ? false : input->is_key_pressed(KEY_W);
-        const bool key_d = chatting ? false : input->is_key_pressed(KEY_D);
-        const bool key_s = chatting ? false : input->is_key_pressed(KEY_S);
-        const bool key_a = chatting ? false : input->is_key_pressed(KEY_A);
+        bool const chatting = world->chatting.load(std::memory_order_relaxed);
+        bool const key_space = chatting ? false : input->is_key_pressed(KEY_SPACE);
+        bool const key_shift = chatting ? false : input->is_key_pressed(KEY_SHIFT);
+        bool const key_ctrl = chatting ? false : input->is_key_pressed(KEY_CTRL);
+        bool const key_w = chatting ? false : input->is_key_pressed(KEY_W);
+        bool const key_d = chatting ? false : input->is_key_pressed(KEY_D);
+        bool const key_s = chatting ? false : input->is_key_pressed(KEY_S);
+        bool const key_a = chatting ? false : input->is_key_pressed(KEY_A);
 
         is_grounded = is_on_floor();
 
         running = key_w and (key_ctrl or running);
-        const float32 current_speed = running ? speed * 2.0f : speed;
+        float32 const current_speed = running ? speed * 2.0f : speed;
 
         Vector3 forward = -camera->get_global_transform().basis.get_column(2);
         Vector3 right = camera->get_global_transform().basis.get_column(0);
@@ -148,15 +148,15 @@ namespace craftbuild {
         wish_dir.y = 0;
         if (wish_dir.length() > 0) wish_dir = wish_dir.normalized();
 
-        const float32 accel = is_grounded ? 18.0f : 6.0f;
-        const float32 decel = is_grounded ? 22.0f : 2.0f;
+        float32 const accel = is_grounded ? 18.0f : 6.0f;
+        float32 const decel = is_grounded ? 22.0f : 2.0f;
 
         // Gravity & Jump
         if (not can_fly) {
-            const bool has_input = wish_dir.length_squared() > 0.0f;
-            const float32 blend = has_input ? accel : decel;
+            bool const has_input = wish_dir.length_squared() > 0.0f;
+            float32 const blend = has_input ? accel : decel;
 
-            const Vector3 target_xz = wish_dir * current_speed;
+            Vector3 const target_xz = wish_dir * current_speed;
             velocity.x = velocity.x + (target_xz.x - velocity.x) * real(std::min(blend * delta, 1.0));
             velocity.z = velocity.z + (target_xz.z - velocity.z) * real(std::min(blend * delta, 1.0));
 
@@ -177,9 +177,9 @@ namespace craftbuild {
             }
         }
         else {
-            const bool has_h_input = wish_dir.length_squared() > 0.0f;
-            const float32 h_blend = has_h_input ? accel : decel;
-            const Vector3 target_xz = wish_dir * current_speed;
+            bool const has_h_input = wish_dir.length_squared() > 0.0f;
+            float32 const h_blend = has_h_input ? accel : decel;
+            Vector3 const target_xz = wish_dir * current_speed;
             velocity.x = velocity.x + (target_xz.x - velocity.x) * real(std::min(h_blend * delta, 1.0));
             velocity.z = velocity.z + (target_xz.z - velocity.z) * real(std::min(h_blend * delta, 1.0));
 
@@ -187,8 +187,8 @@ namespace craftbuild {
             if (key_space) wish_y = speed;
             if (key_shift) wish_y = -speed;
 
-            const bool has_v_input = (wish_y != 0.0f);
-            const float32 v_blend = has_v_input ? accel : decel;
+            bool const has_v_input = (wish_y != 0.0f);
+            float32 const v_blend = has_v_input ? accel : decel;
             velocity.y = velocity.y + (wish_y - velocity.y) * real(std::min(v_blend * delta, 1.0));
 
             if (is_grounded and not key_space) can_fly = false;
@@ -228,10 +228,10 @@ namespace craftbuild {
                 bool right = mb->get_button_index() == MOUSE_BUTTON_RIGHT;
 
                 if (not hit.is_empty()) {
-                    const Vector3 hit_pos = hit["position"];
-                    const Vector3 normal = hit["normal"];
+                    Vector3 const hit_pos = hit["position"];
+                    Vector3 const normal = hit["normal"];
 
-                    const Vector3 pos_float = hit_pos - (normal * 0.001f);
+                    Vector3 const pos_float = hit_pos - (normal * 0.001f);
                     Vector3i block_pos = Vector3i(pos_float.floor());
 
                     uint32 target_block_id = world->get_global_block_id(block_pos.x, block_pos.y, block_pos.z);

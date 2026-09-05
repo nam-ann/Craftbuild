@@ -3,20 +3,22 @@ export module game.thread;
 import std;
 
 import misc.str;
+import misc.list;
 import misc.dict;
+import misc.range;
 import misc.number;
 
 export namespace craftbuild {
 	struct ThreadRegistry {
-		inline static std::unordered_map<std::thread::id, Str> threads;
+		inline static std::unordered_map<std::jthread::id, Str> threads;
 		inline static std::mutex threads_mutex;
 
         static void register_thread(Str const& thread_name);
-        static Str get_name(std::thread::id const& thread_id);
+        static Str get_name(std::jthread::id const& thread_id);
 	};
 
     class ThreadPool {
-        std::vector<std::thread> workers;
+        List<std::jthread> workers;
         std::queue<std::function<void()>> tasks;
 
         std::mutex mutex;
@@ -24,7 +26,7 @@ export namespace craftbuild {
         bool stop;
 
     public:
-        ThreadPool(size_t n);
+        ThreadPool(usize n);
         ~ThreadPool();
 
         template<class F>

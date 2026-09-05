@@ -17,14 +17,14 @@ import game.command;
 using namespace std::chrono_literals;
 
 namespace craftbuild {
-    void GameEngine::_get_refs(std::vector<GCObject*>&refs) {
+    void World::_get_refs(List<GCObject*>&refs) {
 		std::shared_lock lock(chunks_mutex);
 		for (auto const& [_, chunk_ptr] : chunks) {
-			if (chunk_ptr) refs.push_back(chunk_ptr.object());
+			if (chunk_ptr) refs.append(chunk_ptr.object());
 		}
     }
 
-    GameEngine::GameEngine() {
+    World::World() {
         command_ptr = new CommandInterpreter(this);
 
         noise.instantiate();
@@ -49,17 +49,13 @@ namespace craftbuild {
         log<LogType::INFO>("Server initialized");
     }
 
-    GameEngine::~GameEngine() {
+    World::~World() {
 		running.store(false, std::memory_order_relaxed);
-
-		if (redstone_thread.joinable()) redstone_thread.join();
-		if (scheduler_thread.joinable()) scheduler_thread.join();
         loop_cv.notify_all();
-
         save_world("user://game/saves/"f << world_name);
     }
 
-    void GameEngine::disconnect(Str const& player_name) {
+    void World::disconnect(Str const& player_name) {
         if (not players.contains(player_name)) return;
 
         std::unique_lock lock(player_mutex);
@@ -73,7 +69,7 @@ namespace craftbuild {
         log<LogType::INFO>("Player disconnected: "f << player_name);
     }
 
-	void GameEngine::connect(Str const& player_name) {
+	void World::connect(Str const& player_name) {
         std::unique_lock lock(player_mutex);
         online_players[player_name];
 
@@ -88,12 +84,12 @@ namespace craftbuild {
 		log<LogType::INFO>("Player connected: "f << player_name);
 	}
 
-	void GameEngine::update(Str const& player_name, Pos3D<real> const& new_pos) {
+	void World::update(Str const& player_name, Pos3D<real> const& new_pos) {
 		std::unique_lock lock(player_mutex);
         players[player_name].pos = new_pos;
 	}
 
-    void GameEngine::start_redstone_thread() {
+    void World::start_redstone_thread() {
         if (redstone_thread.joinable()) return;
 
         auto worker = [this]() {
@@ -105,11 +101,11 @@ namespace craftbuild {
             }
         };
 
-        redstone_thread = std::thread(worker);
+        redstone_thread = std::jthread(worker);
     }
 
-    void GameEngine::start_scheduler_thread() {
-        scheduler_thread = std::thread([this]() {
+    void World::start_scheduler_thread() {
+        auto worker = [this]() {
             ThreadRegistry::register_thread("Terrain");
             log<LogType::INFO>("Terrain thread started");
 
@@ -146,10 +142,12 @@ namespace craftbuild {
                 std::unique_lock<std::mutex> lock(loop_mutex);
                 loop_cv.wait_for(lock, std::chrono::milliseconds(cpu_sleep_time));
             }
-        });
+        };
+
+        scheduler_thread = std::jthread(worker);
     }
 
-    void GameEngine::submit_jobs(Pos3D<real> const& player) {
+    void World::submit_jobs(Pos3D<real> const& player) {
         int32 px = static_cast<int32>(std::floor(player.x / Chunk::WIDTH));
         int32 pz = static_cast<int32>(std::floor(player.z / Chunk::WIDTH));
 
@@ -209,7 +207,7 @@ namespace craftbuild {
         }
     }
 
-    std::string GameEngine::serialize_players() {
+    std::string World::serialize_players() {
         std::stringstream os;
 
         {
@@ -232,7 +230,7 @@ namespace craftbuild {
         return os.str();
     }
 
-    std::string GameEngine::serialize_chunk(int32 cx, int32 cy) {
+    std::string World::serialize_chunk(int32 cx, int32 cy) {
         std::stringstream os(std::ios::binary | std::ios::out);
 
 		// Get & serialize chunk data
@@ -320,7 +318,7 @@ namespace craftbuild {
         return (std::string)base64_godot_str.utf8();
     }
 
-    Ptr<Chunk> GameEngine::get_chunk(int32 cx, int32 cy) {
+    Ptr<Chunk> World::get_chunk(int32 cx, int32 cy) {
         Pos2D<int32> cpos(cx, cy);
 
         std::shared_lock lock(chunks_mutex);
@@ -330,7 +328,7 @@ namespace craftbuild {
         return it->second;
     }
 
-    Ptr<Chunk> GameEngine::get_or_load_chunk(int32 cx, int32 cy) {
+    Ptr<Chunk> World::get_or_load_chunk(int32 cx, int32 cy) {
         if (auto chunk_ptr = get_chunk(cx, cy)) return chunk_ptr;
 
         const int32 rx = (cx >= 0) ? (cx / 16) : ((cx - 15) / 16);
@@ -353,7 +351,7 @@ namespace craftbuild {
         return nullptr;
     };
 
-    Ptr<Chunk> GameEngine::get_or_create_chunk(int32 cx, int32 cy) {
+    Ptr<Chunk> World::get_or_create_chunk(int32 cx, int32 cy) {
         Pos2D<int32> chunk_pos{ cx, cy };
         {
             std::shared_lock lock(chunks_mutex);
@@ -370,7 +368,7 @@ namespace craftbuild {
         return chunks[chunk_pos];
     }
 
-    uint32 GameEngine::get_global_block_id(int32 wx, int32 wy, int32 wz) {
+    uint32 World::get_global_block_id(int32 wx, int32 wy, int32 wz) {
         if (wy < 0 or wy >= Chunk::HEIGHT) return BlockRegistry::get_id("Air");
 
         int32 cx = int32(std::floor(float32(wx) / Chunk::WIDTH));
@@ -386,7 +384,7 @@ namespace craftbuild {
         return chunk.value().get_block({ uint8(lx), uint8(wy), uint8(lz) });
     }
 
-    void GameEngine::set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz) {
+    void World::set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz) {
         if (wy < 0 or wy >= Chunk::HEIGHT) return;
 
         int32 cx = int32(std::floor(float32(wx) / Chunk::WIDTH));
@@ -402,7 +400,7 @@ namespace craftbuild {
         chunk.value().set_block({ uint8(lx), uint8(wy), uint8(lz) }, block_id);
     }
 
-    void GameEngine::unload_distant_chunks() {
+    void World::unload_distant_chunks() {
         const int32 unload_dist = render_distance + 4;
         Set<Pos2D<int32>> still_viewing_chunks;
 
@@ -442,16 +440,16 @@ namespace craftbuild {
         }
     }
 
-    void GameEngine::set_seed_and_world_name(int32 seed, Str const& name) {
+    void World::set_seed_and_world_name(int32 seed, Str const& name) {
 		world_seed.store(seed, std::memory_order_release);
 		noise->set_seed(seed);
 		world_name = name;
     }
 
-    void GameEngine::set_render_distance(int32 rd) { render_distance = rd; }
-    void GameEngine::set_cpu_sleep_time(int32 stc) { cpu_sleep_time = stc; }
+    void World::set_render_distance(int32 rd) { render_distance = rd; }
+    void World::set_cpu_sleep_time(int32 stc) { cpu_sleep_time = stc; }
 
-    Str GameEngine::chat(Str const& msg) {
+    Str World::chat(Str const& msg) {
         if (msg) {
             std::string _msg = msg.std_str();
             log<LogType::NORMAL>("[Player] "f << _msg);
@@ -464,7 +462,7 @@ namespace craftbuild {
         return "";
     }
 
-    void GameEngine::save_world(Str const& path) {
+    void World::save_world(Str const& path) {
         String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/" + world_name + ".cbworld").std_str().c_str());
         std::string std_path = (std::string)real_path.utf8();
 
@@ -519,7 +517,7 @@ namespace craftbuild {
         log<LogType::INFO>("World saved!");
     }
 
-    bool GameEngine::load_world(Str const& path) {
+    bool World::load_world(Str const& path) {
         String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/" + world_name + ".cbworld").std_str().c_str());
         std::string std_path = (std::string)real_path.utf8();
 
@@ -564,7 +562,7 @@ namespace craftbuild {
         return true;
     }
 
-    void GameEngine::save_region(Str const& path, int32 rx, int32 ry) {
+    void World::save_region(Str const& path, int32 rx, int32 ry) {
         String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(ry) + ".cbregion").std_str().c_str());
         std::string std_path = (std::string)real_path.utf8();
 
@@ -649,7 +647,7 @@ namespace craftbuild {
 		}
     }
 
-    bool GameEngine::load_region(Str const& path, int32 rx, int32 ry) {
+    bool World::load_region(Str const& path, int32 rx, int32 ry) {
         String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(ry) + ".cbregion").std_str().c_str());
         std::string std_path = (std::string)real_path.utf8();
 
@@ -832,32 +830,33 @@ namespace craftbuild {
         if (tcp_server.is_valid() and tcp_server->is_connection_available()) {
             auto client_peer = tcp_server->take_connection();
             if (client_peer.is_valid()) {
-                clients[client_peer];
-                log<LogType::INFO>("Accepted client: "f << client_peer->get_connected_host().utf8() << ":" << client_peer->get_connected_port());
+                clients[client_peer].ip_addr = ""f << client_peer->get_connected_host().utf8() << ":" << client_peer->get_connected_port();
+                log<LogType::INFO>("Accepted client: "f << clients[client_peer].ip_addr);
             }
         }
 
-        std::vector<Ref<StreamPeerTCP>> disconnected_clients;
+        List<Ref<StreamPeerTCP>> disconnected_clients;
         for (auto& [client_peer, client] : clients) {
             List<char> buffer;
             const auto recv_state = client.receive_queue.receive(**client_peer, buffer);
 
             if (recv_state == ReceiveState::WAITING) continue;
             if (recv_state == ReceiveState::ERROR) {
-                log<LogType::WARNING>("Lost connect to client: "f << client_peer->get_connected_host().utf8() << ":" << client_peer->get_connected_port());
+                log<LogType::WARNING>("Lost connect to client: "f << client.ip_addr);
                 server.disconnect(client.name);
-                disconnected_clients.push_back(client_peer);
+                disconnected_clients.append(client_peer);
                 continue;
             }
 
             Message message = ReceiveQueue::parse(buffer);
-            log<LogType::VERBOSE>(message.content);
+            if (not message.content) continue;
 
             try {
                 if (message.content == "Connect") {
                     Str const& name = message.arguments[0];
                     server.connect(name);
                     client.name = name;
+
                     const auto player_pos = server.players[client.name].pos;
                     client.send_queue.store({ "Connected", { std::to_string(player_pos.x), std::to_string(player_pos.y), std::to_string(player_pos.z) } });
                 }
@@ -941,12 +940,9 @@ namespace craftbuild {
             if (not client_peer.is_valid()) continue;
             client_peer->disconnect_from_host();
         }
+
         clients.clear();
-
         running.store(false, std::memory_order_release);
-
-        if (log_thread.joinable()) log_thread.join();
-        if (gc_thread.joinable()) gc_thread.join();
     }
 
     void Server::start_gc_thread() {
@@ -964,7 +960,7 @@ namespace craftbuild {
             GarbageCollector::collect();
         };
 
-        gc_thread = std::thread(worker);
+        gc_thread = std::jthread(worker);
     }
 
     void Server::start_log_thread() {
@@ -982,6 +978,6 @@ namespace craftbuild {
             LogQueue::flush();
         };
 
-        log_thread = std::thread(worker);
+        log_thread = std::jthread(worker);
     }
 }

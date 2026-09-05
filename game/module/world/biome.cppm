@@ -1,6 +1,7 @@
 export module game.world.biome;
 
 import misc.str;
+import misc.list;
 import misc.dict;
 import misc.number;
 
@@ -20,7 +21,7 @@ export namespace craftbuild {
 	};
 
 	struct BiomeRegistry {
-		inline static std::vector<BiomeEntry> registry;
+		inline static List<BiomeEntry> registry;
 		inline static Dict<Str, uint64> name2id;
 
 		static void register_biome(Str const& name, Biome const& biome);

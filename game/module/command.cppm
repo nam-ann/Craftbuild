@@ -4,6 +4,7 @@ import std;
 
 import misc.pos;
 import misc.str;
+import misc.list;
 import misc.range;
 import misc.format;
 import misc.number;
@@ -13,7 +14,7 @@ import game.player;
 
 namespace craftbuild {
     inline Str trim(Str const& str);
-    inline std::vector<Str> tokenize_with_quotes(Str const& input);
+    inline List<Str> tokenize_with_quotes(Str const& input);
 }
 
 export namespace craftbuild {
@@ -28,8 +29,8 @@ export namespace craftbuild {
         CommandInterpreter(void* world) : world_ptr(world) {}
 
         Str execute_command(Str const& command_line);
-        Str execute_set_block(std::vector<Str> const& args);
-        Str execute_fill(std::vector<Str> const& args);
-        Str execute_give(std::vector<Str> const& args);
+        Str execute_set_block(List<Str> const& args);
+        Str execute_fill(List<Str> const& args);
+        Str execute_give(List<Str> const& args);
     };
 }
