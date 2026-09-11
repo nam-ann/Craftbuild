@@ -381,13 +381,14 @@ namespace craftbuild {
             Ref<StreamPeerTCP> client_peer;
             client_peer.instantiate();
 
+            log<LogType::INFO>("Connecting to server...");
+
+        RECONNECT:
             auto err = client_peer->connect_to_host("127.0.0.1", 8888);
-            if (err != godot::OK) {
+            if (err != OK) {
                 log<LogType::ERROR>("Connect failed");
                 return;
             }
-
-            log<LogType::INFO>("Connecting to server...");
 
             while (running.load(std::memory_order_relaxed)) {
                 client_peer->poll();
@@ -395,8 +396,9 @@ namespace craftbuild {
 
                 if (status == StreamPeerTCP::STATUS_CONNECTED) break;
                 if (status == StreamPeerTCP::STATUS_ERROR or status == StreamPeerTCP::STATUS_NONE) {
-                    log<LogType::ERROR>("Failed to connect to server_ptr");
-                    return;
+                    log<LogType::WARNING>("Lost connect to server");
+                    log<LogType::INFO>("Reconnecting to server...");
+                    goto RECONNECT;
                 }
 
                 std::this_thread::sleep_for(10ms);
@@ -409,16 +411,16 @@ namespace craftbuild {
                 send_queue.send(**client_peer);
                 buffer.fill(0);
 
-                const auto recv_state = receive_queue.receive(**client_peer, buffer);
+                auto const recv_state = receive_queue.receive(**client_peer, buffer);
 
                 if (recv_state == ReceiveState::WAITING) {
                     std::this_thread::sleep_for(100ms);
                     continue;
                 }
                 if (recv_state == ReceiveState::ERROR) {
-                    log<LogType::ERROR>("Lost connect to server");
-                    client_peer->disconnect_from_host();
-                    return;
+                    log<LogType::WARNING>("Lost connect to server");
+                    log<LogType::INFO>("Reconnecting to server...");
+                    goto RECONNECT;
                 }
 
                 Message message = ReceiveQueue::parse(buffer);
@@ -442,20 +444,22 @@ namespace craftbuild {
                 std::this_thread::sleep_for(10ms);
             }
 
+            requested_chunks.clear();
             start_scheduler_thread();
 
             while (running.load(std::memory_order_relaxed)) {
                 send_queue.send(**client_peer);
                 buffer.fill(0);
 
-                const auto recv_state = receive_queue.receive(**client_peer, buffer);
+                auto const recv_state = receive_queue.receive(**client_peer, buffer);
                 if (recv_state == ReceiveState::WAITING) {
                     std::this_thread::sleep_for(100ms);
                     continue;
                 }
                 if (recv_state == ReceiveState::ERROR) {
-                    log<LogType::ERROR>("Lost connect to server");
-                    break;
+                    log<LogType::WARNING>("Lost connect to server");
+                    log<LogType::INFO>("Reconnecting to server...");
+                    goto RECONNECT;
                 }
 
                 Message message = ReceiveQueue::parse(buffer);
@@ -509,7 +513,6 @@ namespace craftbuild {
                         chunk.clear();
 
                         is.read(reinterpret_cast<char*>(&chunk.blocks[0][0][0]), uint64(Chunk::WIDTH * Chunk::HEIGHT * Chunk::WIDTH * sizeof(uint8)));
-                        log<LogType::VERBOSE>(""f << chunk.blocks[0][0][0]);
 
                         is.read(reinterpret_cast<char*>(&chunk.block_ids_size), sizeof(uint8));
                         is.read(reinterpret_cast<char*>(&chunk.block_ids), sizeof(uint32) * 256);

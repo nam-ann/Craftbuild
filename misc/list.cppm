@@ -47,10 +47,10 @@ export namespace craftbuild {
         List& operator=(List const& s) {
             if (this == &s) return *this;
 
+            clear();
             expect(s.__len__);
-            std::ranges::destroy_n(__value__, __len__);
-            std::ranges::uninitialized_copy(s, *this);
             __len__ = s.__len__;
+            std::ranges::uninitialized_copy(s, *this);
 
             return *this;
         }
@@ -67,7 +67,7 @@ export namespace craftbuild {
 
         List& operator+=(std::initializer_list<T> const& l) {
             expect(l.size());
-            std::ranges::uninitialized_copy(l, end(), end() + l.size());
+            std::ranges::uninitialized_copy(l.begin(), l.end(), end(), end() + l.size());
             __len__ += l.size();
 
             return *this;
@@ -174,9 +174,7 @@ export namespace craftbuild {
             return result;
         }
 
-        operator bool() const {
-            return __len__ != 0;
-        }
+        operator bool() const { return __len__ != 0; }
 
         bool operator==(List const& s) const {
             if (__len__ != s.__len__) return false;
@@ -204,12 +202,9 @@ export namespace craftbuild {
 
             if (__len__ >= __space__) expect(__len__);
 
-            if (index == int64(__len__)) {
-                std::construct_at(__value__ + __len__, t);
-            }
+            if (index == int64(__len__)) std::construct_at(__value__ + __len__, t);
             else {
                 std::construct_at(__value__ + __len__, std::move(__value__[__len__ - 1]));
-
                 std::ranges::move_backward(
                     __value__ + index,
                     __value__ + __len__ - 1,
@@ -229,36 +224,33 @@ export namespace craftbuild {
 
             if (this == &l) return insert(index, List(*this));
 
-            usize const count = l.__len__;
-            usize const old_len = __len__;
-            usize const tail = old_len - usize(index);
+            expect(l.__len__);
 
-            expect(count);
-
-            if (count <= tail) {
+            usize const tail = __len__ - usize(index);
+            if (l.__len__ <= tail) {
                 std::ranges::uninitialized_move(
-                    __value__ + old_len - count,
-                    __value__ + old_len,
-                    __value__ + old_len,
-                    __value__ + old_len + count
+                    end() - l.__len__,
+                    end(),
+                    end(),
+                    end() + l.__len__
                 );
                 std::ranges::move_backward(
                     __value__ + index,
-                    __value__ + old_len - count,
-                    __value__ + old_len
+                    end() - l.__len__,
+                    end()
                 );
                 std::ranges::copy(
                     l.__value__,
-                    l.__value__ + count,
+                    l.end(),
                     __value__ + index
                 );
             }
             else {
                 std::ranges::uninitialized_move(
                     __value__ + index,
-                    __value__ + old_len,
-                    __value__ + index + count,
-                    __value__ + old_len + count
+                    end(),
+                    __value__ + index + l.__len__,
+                    end() + l.__len__
                 );
                 std::ranges::copy(
                     l.__value__,
@@ -267,13 +259,13 @@ export namespace craftbuild {
                 );
                 std::ranges::uninitialized_copy(
                     l.__value__ + tail,
-                    l.__value__ + count,
-                    __value__ + old_len,
-                    __value__ + old_len + (count - tail)
+                    l.end(),
+                    end(),
+                    end() + (l.__len__ - tail)
                 );
             }
             
-            __len__ += count;
+            __len__ += l.__len__;
             return *this;
         }
 
@@ -282,13 +274,11 @@ export namespace craftbuild {
 			if (index < 0) index += __len__;
 			if (index < 0 or index >= int64(__len__)) throw std::out_of_range("List index out of range");
 			
-            if (index + 1 < int64(__len__)) {
+            if (index < int64(__len__) - 1) {
                 std::ranges::move(__value__ + index + 1, end(), __value__ + index);
             }
 
-            std::destroy_at(__value__ + __len__ - 1);
-
-			--__len__;
+            std::destroy_at(__value__ + --__len__);
 			return *this;
 		}
 
@@ -375,7 +365,7 @@ export namespace craftbuild {
         usize operator()(List<T> const& value) const {
             usize hash = 0;
             for (const auto& elem : value) {
-                hash ^= Hasher<T>{}(elem)+0x9e3779b9 + (hash << 6) + (hash >> 2);
+                hash ^= Hasher<T>{}(elem) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
             }
             return hash;
         }

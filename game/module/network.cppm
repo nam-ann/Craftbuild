@@ -24,6 +24,8 @@ export namespace craftbuild {
     struct Message {
         Str content;
         List<std::string> arguments;
+
+        void swap(Message& other);
     };
 
     struct SendQueue {

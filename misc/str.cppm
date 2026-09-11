@@ -75,22 +75,22 @@ inline void append_utf8(std::string& out, uint32 cp) {
     }
 
     if (cp <= 0x7F) {
-        out.push_back(static_cast<char>(cp));
+        out.push_back(char(cp));
     }
     else if (cp <= 0x7FF) {
-        out.push_back(static_cast<char>(0xC0 | (cp >> 6)));
-        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        out.push_back(char(0xC0 | (cp >> 6)));
+        out.push_back(char(0x80 | (cp & 0x3F)));
     }
     else if (cp <= 0xFFFF) {
-        out.push_back(static_cast<char>(0xE0 | (cp >> 12)));
-        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
-        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        out.push_back(char(0xE0 | (cp >> 12)));
+        out.push_back(char(0x80 | ((cp >> 6) & 0x3F)));
+        out.push_back(char(0x80 | (cp & 0x3F)));
     }
     else {
-        out.push_back(static_cast<char>(0xF0 | (cp >> 18)));
-        out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
-        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
-        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        out.push_back(char(0xF0 | (cp >> 18)));
+        out.push_back(char(0x80 | ((cp >> 12) & 0x3F)));
+        out.push_back(char(0x80 | ((cp >> 6) & 0x3F)));
+        out.push_back(char(0x80 | (cp & 0x3F)));
     }
 }
 
@@ -100,21 +100,6 @@ export namespace craftbuild {
         usize __len__ = 0;
         usize __space__ = 0;
 
-        struct Iterator {
-            uint8* __ptr__;
-
-            Iterator(uint8* p) : __ptr__(p) {}
-
-            uint8& operator*() { return *__ptr__; }
-            Iterator& operator++() {
-                __ptr__++;
-                return *this;
-            }
-            bool operator!=(Iterator const& other) const {
-                return __ptr__ != other.__ptr__;
-            }
-        };
-
         void append(uint8 b) {
             if (__len__ >= __space__) expect(__len__);
             __value__[__len__++] = b;
@@ -123,7 +108,7 @@ export namespace craftbuild {
         // ENCODE: codepoint -> UEF-8
         void encode(uint32 cp) {
             if (cp < 0x80) { // ASCII
-                append((uint8)cp);
+                append(uint8(cp));
                 return;
             }
 
@@ -144,13 +129,13 @@ export namespace craftbuild {
 
         // encode UTF-32 string
         void encode(std::u32string const& s) {
+            if (s.empty()) return;
+
             expect(s.size() * 2);
-            for (byte32 cp : s) {
-                encode((uint32)cp);
-            }
+            for (byte32 cp : s) encode(uint32(cp));
         }
 
-        // DECODE: UEF-8 -> codepoint
+        // DECODE: Str -> codepoint
         uint32 decode_one(usize& i) const {
             uint32 result = 0;
 
@@ -262,10 +247,7 @@ export namespace craftbuild {
         uint8& operator[](usize pos) { return __value__[pos]; }
         uint8 const& operator[](usize pos) const { return __value__[pos]; }
 
-        operator bool() const {
-            static Str const empty = U"";
-            return __value__ and *this != empty;
-        }
+        operator bool() const { return __len__ != 0; }
 
         bool operator==(Str const& s) const {
             return (not __value__ and not s.__value__) or (__value__ and s.__value__ and __len__ == s.__len__ and std::memcmp(__value__, s.__value__, __len__) == 0);
@@ -361,10 +343,10 @@ export namespace craftbuild {
         uint8* data() { return __value__; }
         uint8 const* data() const { return __value__; }
 
-        Iterator begin() { return Iterator(__value__); }
-        Iterator end() { return Iterator(__value__ + __len__); }
-        Iterator begin() const { return Iterator(__value__); }
-        Iterator end() const { return Iterator(__value__ + __len__); }
+        auto begin() { return __value__; }
+        auto end() { return __value__ + __len__; }
+        auto begin() const { return __value__; }
+        auto end() const { return __value__ + __len__; }
 
         friend usize len(Str const& s) { return s.__len__; }
 

@@ -9,36 +9,39 @@ ENABLE_WARNING
 module game.network;
 
 namespace craftbuild {
+    void Message::swap(Message& other) {
+        arguments.swap(other.arguments);
+        content.swap(other.content);
+    }
+
     void SendQueue::store(Message const& message) {
         std::lock_guard lock(msg_mutex);
         msg.append(message);
     }
 
     void SendQueue::send(StreamPeerTCP& peer) {
-        if (peer.get_status() != StreamPeerTCP::STATUS_CONNECTED) return;
+        if (not msg or peer.get_status() != StreamPeerTCP::STATUS_CONNECTED) return;
 
-        List<Message> send_msg;
+        Message message;
         {
             std::lock_guard lock(msg_mutex);
-            msg.swap(send_msg);
+            message.swap(msg[0]);
+            msg.pop(0);
         }
 
-        for (auto const& message : send_msg) {
-            if (not message.content) continue;
-            std::string arg = message.content.std_str() + '\2';
+        if (not message.content) return;
+        std::string arg = message.content.std_str() + '\2';
 
-            arg.reserve(len(message.arguments));
-            for (auto const& E : message.arguments) arg += E + '\1';
-            arg += '\0';
+        arg.reserve(len(message.arguments));
+        for (auto const& E : message.arguments) arg += E + '\1';
+        arg += '\0';
 
-            godot::PackedByteArray data;
-            data.resize(int64(arg.size()));
-            memcpy(data.ptrw(), arg.data(), arg.size());
+        PackedByteArray data;
+        data.resize(int64(arg.size()));
+        memcpy(data.ptrw(), arg.data(), arg.size());
 
-            if (Error err = peer.put_data(data); err != godot::OK) {
-                log<LogType::ERROR>("Failed to send message: "f << message.content);
-                break;
-            }
+        if (auto err = peer.put_data(data); err != OK) {
+            log<LogType::ERROR>("Failed to send message: "f << message.content);
         }
     }
 
@@ -66,8 +69,8 @@ namespace craftbuild {
         if (available <= 0) return ReceiveState::WAITING;
 
         auto res = peer.get_partial_data(available);
-        auto err = static_cast<godot::Error>((int)res[0]);
-        if (err != godot::OK) return ReceiveState::ERROR;
+        auto err = static_cast<Error>(int32(res[0]));
+        if (err != OK) return ReceiveState::ERROR;
 
         PackedByteArray chunk = res[1];
         auto read_bytes = chunk.size();
@@ -99,7 +102,7 @@ namespace craftbuild {
         std::string str(buffer.data(), len(buffer));
 
         usize pos = str.find('\2');
-        if (pos == std::string::npos) return { Str(str), {} };
+        if (pos == std::string::npos) return { "", {}};
 
         Message message;
         message.content = Str(str.substr(0, pos));
