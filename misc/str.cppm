@@ -247,7 +247,7 @@ export namespace craftbuild {
         uint8& operator[](usize pos) { return __value__[pos]; }
         uint8 const& operator[](usize pos) const { return __value__[pos]; }
 
-        operator bool() const { return __len__ != 0; }
+        explicit operator bool() const { return __len__ != 0; }
 
         bool operator==(Str const& s) const {
             return (not __value__ and not s.__value__) or (__value__ and s.__value__ and __len__ == s.__len__ and std::memcmp(__value__, s.__value__, __len__) == 0);
@@ -355,6 +355,8 @@ export namespace craftbuild {
         friend Str operator+(std::string const& std_s, Str const& s) { return Str(std_s) + s; }
         friend Str operator+(std::string_view std_s, Str const& s) { return Str(std_s) + s; }
         friend Str operator+(std::u32string const& std_s, Str const& s) { return Str(std_s) + s; }
+
+        friend std::ostream& operator<<(std::ostream& os, Str const& self) { return os << self.std_str(); }
 
         friend struct Hasher<Str>;
     };

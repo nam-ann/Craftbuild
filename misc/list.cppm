@@ -174,7 +174,7 @@ export namespace craftbuild {
             return result;
         }
 
-        operator bool() const { return __len__ != 0; }
+        explicit operator bool() const { return __len__ != 0; }
 
         bool operator==(List const& s) const {
             if (__len__ != s.__len__) return false;
