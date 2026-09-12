@@ -13,9 +13,18 @@ var current_history = 0
 func _ready() -> void:
 	chat_output.connect(_on_chat_output)
 	chat_box.visible = false
-	singleplayer()
-	set_seed_and_world_name(Global.world_seed, Global.world_name)
-	set_render_distance(int(Global.render_distance))
+	
+	if (Global.game_type == Global.GameType.SINGLEPLAYER):
+		set_seed_and_world_name(Global.world_seed, Global.world_name)
+		set_render_distance(int(Global.render_distance))
+		
+		singleplayer()
+	else:
+		var parts: PackedStringArray = Global.server_socket.split(":")
+		set_server_socket(parts[0], int(parts[1]))
+		
+		multiplayer()
+		
 	init()
 
 func _input(_event):

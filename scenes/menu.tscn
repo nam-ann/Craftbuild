@@ -1,9 +1,10 @@
 [gd_scene format=3 uid="uid://b5wynaoplraj3"]
 
 [ext_resource type="Script" uid="uid://cxmuhw4grh6rf" path="res://assets/scripts/SettingBtn.gd" id="1_11y2r"]
-[ext_resource type="Script" uid="uid://dxln5m6miiwd0" path="res://assets/scripts/menu/PlayBtn.gd" id="1_e5g8k"]
+[ext_resource type="Script" uid="uid://dxln5m6miiwd0" path="res://assets/scripts/menu/SingleplayerBtn.gd" id="1_e5g8k"]
 [ext_resource type="Texture2D" uid="uid://cllm2lif8lntf" path="res://assets/logo.png" id="1_mhnvy"]
 [ext_resource type="Script" uid="uid://4kpelmigxnuv" path="res://assets/scripts/menu/QuitBtn.gd" id="2_vjb58"]
+[ext_resource type="Script" uid="uid://xa2ahf731o6i" path="res://assets/scripts/menu/MultiplayerBtn.gd" id="5_4ytvr"]
 
 [node name="Menu" type="Control" unique_id=2034666212]
 layout_mode = 3
@@ -31,9 +32,9 @@ layout_mode = 1
 anchors_preset = 4
 anchor_top = 0.5
 anchor_bottom = 0.5
-offset_top = -38.0
+offset_top = 1.0
 offset_right = 434.0
-offset_bottom = 38.0
+offset_bottom = 77.0
 grow_vertical = 2
 theme_override_font_sizes/font_size = 20
 text = "Setting"
@@ -44,23 +45,36 @@ layout_mode = 1
 anchors_preset = 4
 anchor_top = 0.5
 anchor_bottom = 0.5
-offset_top = 41.0
+offset_top = 80.0
 offset_right = 434.0
-offset_bottom = 117.0
+offset_bottom = 156.0
 grow_vertical = 2
 theme_override_font_sizes/font_size = 20
 text = "Quit"
 script = ExtResource("2_vjb58")
 
-[node name="PlayBtn" type="Button" parent="." unique_id=962739249]
+[node name="SingleplayerBtn" type="Button" parent="." unique_id=208386555]
 layout_mode = 1
 anchors_preset = 4
 anchor_top = 0.5
 anchor_bottom = 0.5
-offset_top = -117.0
+offset_top = -157.0
 offset_right = 434.0
-offset_bottom = -41.0
+offset_bottom = -81.0
 grow_vertical = 2
 theme_override_font_sizes/font_size = 20
-text = "Play"
+text = "Singleplayer"
 script = ExtResource("1_e5g8k")
+
+[node name="MultiplayerBtn" type="Button" parent="." unique_id=962739249]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -78.0
+offset_right = 434.0
+offset_bottom = -2.0
+grow_vertical = 2
+theme_override_font_sizes/font_size = 20
+text = "Multiplayer"
+script = ExtResource("5_4ytvr")

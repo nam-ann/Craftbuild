@@ -1,7 +1,7 @@
 extends Button
 
 func _ready() -> void:
-	button_up.connect(_on_pressed)
+	button_up.connect(_on_release)
 	var dir = DirAccess.open(Global.world_saves)
 	if dir == null: return
 		
@@ -16,7 +16,7 @@ func _ready() -> void:
 	
 	if (i > 1): $"../WorldName".text = "My World " + str(i)
 
-func _on_pressed():
+func _on_release():
 	if not check_name(Global.world_name): return
 	
 	Global.world_name = $"../WorldName".text

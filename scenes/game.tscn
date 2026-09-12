@@ -215,7 +215,7 @@ grow_horizontal = 2
 grow_vertical = 0
 
 [node name="Sun" type="Sun" parent="." unique_id=954182571]
-transform = Transform3D(0.73168886, 0.48867673, -0.47521177, 0, 0.6971607, 0.71691453, 0.6816388, -0.5245583, 0.5101047, 0, 0, 0)
+transform = Transform3D(0.73168886, 0.48867974, -0.47520864, 0, 0.69715613, 0.7169189, 0.6816388, -0.5245616, 0.5101013, 0, 0, 0)
 light_color = Color(1, 0.93, 0.78, 1)
 light_energy = 1.2
 light_indirect_energy = 0.55
@@ -263,7 +263,7 @@ offset_top = 25.0
 offset_right = 435.0
 offset_bottom = 48.0
 theme_override_font_sizes/font_size = 20
-text = "Player position: (x: 0, y: 0, z: 0)"
+text = "Player pos: (x: 0, y: 0, z: 0)"
 script = ExtResource("8_gee14")
 
 [node name="ChatBox" type="TextEdit" parent="." unique_id=1400547662]

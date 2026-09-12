@@ -1,7 +1,7 @@
 extends Button
 
 func _ready() -> void:
-	button_up.connect(_on_pressed)
+	button_up.connect(_on_release)
 
-func _on_pressed():
+func _on_release():
 	get_tree().quit()

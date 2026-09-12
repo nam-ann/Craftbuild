@@ -1,0 +1,54 @@
+[gd_scene format=3 uid="uid://e8nqhja0cdvc"]
+
+[ext_resource type="Script" uid="uid://c1h07b8t7gb1o" path="res://assets/scripts/server_list/Servers.gd" id="1_uxco0"]
+[ext_resource type="Script" uid="uid://c4k7n8fquvnsp" path="res://assets/scripts/ExitBtn.gd" id="2_obush"]
+[ext_resource type="Script" uid="uid://buoqydvq3smr3" path="res://assets/scripts/server_list/AddBtn.gd" id="3_uxco0"]
+
+[node name="ServerList" type="Control" unique_id=504102342]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Servers" type="VBoxContainer" parent="." unique_id=990709204]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -621.0
+offset_top = -324.0
+offset_bottom = 324.0
+grow_horizontal = 0
+grow_vertical = 2
+alignment = 1
+script = ExtResource("1_uxco0")
+
+[node name="ExitBtn" type="Button" parent="." unique_id=807444775]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = 1.0
+offset_right = 434.0
+offset_bottom = 77.0
+grow_vertical = 2
+theme_override_font_sizes/font_size = 20
+text = "Exit"
+script = ExtResource("2_obush")
+
+[node name="AddBtn" type="Button" parent="." unique_id=482615447]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -77.0
+offset_right = 434.0
+offset_bottom = -1.0
+grow_vertical = 2
+theme_override_font_sizes/font_size = 20
+text = "Add new Server"
+script = ExtResource("3_uxco0")

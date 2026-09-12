@@ -1,6 +1,6 @@
 extends VBoxContainer
 
-var game = "res://scenes/game.tscn"
+var game: String = "res://scenes/game.tscn"
 
 func _ready() -> void:
 	load_folders()
@@ -9,7 +9,8 @@ func create_button(world_name: String) -> void:
 	var btn = Button.new()
 	btn.add_theme_font_size_override("font_size", 20)
 	btn.text = world_name
-	btn.pressed.connect(func(): 
+	btn.pressed.connect(func() -> void:
+		Global.game_type = Global.GameType.SINGLEPLAYER
 		Global.world_name = world_name
 		Global.go_to(game)
 	)
