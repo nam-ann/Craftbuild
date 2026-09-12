@@ -1,0 +1,7 @@
+[configuration]
+entry_symbol = "craftbuild_server"
+compatibility_minimum = "4.1"
+
+[libraries]
+windows.debug.x86_64 = "res://bin/craftbuild.dll"
+windows.release.x86_64 = "res://bin/craftbuild.dll"

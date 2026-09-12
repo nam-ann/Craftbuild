@@ -1,0 +1,1 @@
+copy "C:\C++ files\craftbuild\x64\Release\craftbuild.dll" "C:\Godot files\craftbuild-server\bin"
