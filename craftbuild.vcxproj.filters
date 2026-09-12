@@ -173,5 +173,11 @@
     <ClCompile Include="game\source\block\block_data.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="game\module\world\world.cppm">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="game\source\world\world.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

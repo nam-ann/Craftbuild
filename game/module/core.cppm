@@ -19,8 +19,8 @@ import misc.number;
 using namespace godot;
 
 export namespace craftbuild {
-    inline constexpr char const* version = VERSION;
-    inline constexpr char const* full_version = "indev " VERSION;
+    inline constexpr std::string_view version = VERSION;
+    inline constexpr std::string_view full_version = "indev " VERSION;
     inline bool craftbuild_debug = true;
     inline bool log_verbose = true;
     inline bool colored_log = true;

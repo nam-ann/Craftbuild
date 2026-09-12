@@ -406,7 +406,7 @@ namespace craftbuild {
                 std::this_thread::sleep_for(10ms);
             }
 
-            send_queue.store({ "Connect", { player_name.std_str() } });
+            send_queue.store({ "Connect", { player_name.std_str() }});
             List<char> buffer;
 
             while (running.load(std::memory_order_relaxed)) {
@@ -430,11 +430,16 @@ namespace craftbuild {
 
                 if (message.content == "Connected") {
                     log<LogType::INFO>("Connected to server");
+
                     Pos3D<real> player_pos{
                         real(std::stod(message.arguments[0])),
                         real(std::stod(message.arguments[1])),
                         real(std::stod(message.arguments[2]))
                     };
+
+                    if (Str server_version = message.arguments[3]; server_version != version) {
+                        log<LogType::WARNING>("Server version"f << "(" << server_version << ")" << " mismatch with current version(" << version << ")");
+                    }
 
                     if (auto player = static_cast<Player*>(player_ptr)) {
                         std::unique_lock lock(player_mutex);

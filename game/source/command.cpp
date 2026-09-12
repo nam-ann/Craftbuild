@@ -1,6 +1,6 @@
 module game.command;
 
-import game.server;
+import game.world;
 import game.world.chunk;
 
 namespace craftbuild {

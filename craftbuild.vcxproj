@@ -158,6 +158,7 @@
   <ItemGroup>
     <ClCompile Include="game\module\block\block_data.cppm" />
     <ClCompile Include="game\module\block\redstone.cppm" />
+    <ClCompile Include="game\module\world\world.cppm" />
     <ClCompile Include="game\source\block\block_data.cpp" />
     <ClCompile Include="game\source\block\restone.cpp" />
     <ClCompile Include="game\source\bridge.cpp" />
@@ -174,6 +175,7 @@
     <ClCompile Include="game\module\server.cppm" />
     <ClCompile Include="game\module\world\cave.cppm" />
     <ClCompile Include="game\source\thread.cpp" />
+    <ClCompile Include="game\source\world\world.cpp" />
     <ClCompile Include="misc\gc.cppm" />
     <ClCompile Include="misc\list.cppm" />
     <ClCompile Include="misc\pos.cppm" />
