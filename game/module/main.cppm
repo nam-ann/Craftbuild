@@ -62,6 +62,7 @@ export namespace craftbuild {
         std::atomic<int32> world_seed = 0;
         Str world_name = "My World";
         Str player_name = "Player";
+        std::tuple<String, int32> server_socket = std::tuple(String("127.0.0.1"), 8888);
 
         void* player_ptr = nullptr;
         mutable std::shared_mutex player_mutex;
@@ -127,6 +128,7 @@ export namespace craftbuild {
         void set_seed_and_world_name(int32 seed, const String name);
         void set_render_distance(int32 rd);
         void set_cpu_sleep_time(int32 stc);
+        void set_server_socket(String ip, int32_t port);
 
         static void _bind_methods();
 

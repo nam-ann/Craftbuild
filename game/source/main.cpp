@@ -384,10 +384,12 @@ namespace craftbuild {
             log<LogType::INFO>("Connecting to server...");
 
         RECONNECT:
-            auto err = client_peer->connect_to_host("127.0.0.1", 8888);
-            if (err != OK) {
+            client_peer->disconnect_from_host();
+            
+            if (auto err = client_peer->connect_to_host(std::get<0>(server_socket), std::get<1>(server_socket)); err != OK) {
                 log<LogType::ERROR>("Connect failed");
-                return;
+                log<LogType::INFO>("Reconnecting to server...");
+                goto RECONNECT;
             }
 
             while (running.load(std::memory_order_relaxed)) {
@@ -945,7 +947,7 @@ namespace craftbuild {
         chatting.store(true, std::memory_order_relaxed);
     }
 
-    void Main::chat(const String msg) {
+    void Main::chat(String const msg) {
         if (not server_ptr) send_queue.store({ "Chat", { (std::string)msg.utf8() } });
         else {
             Str output = server_ptr.value().chat((std::string)msg.utf8());
@@ -974,6 +976,10 @@ namespace craftbuild {
         if (not server_ptr) send_queue.store({ "Set sleep time CPU", { std::to_string(stc) } });
         else server_ptr.value().set_cpu_sleep_time(stc);
     }
+
+    void Main::set_server_socket(String ip, int32 port) {
+        server_socket = std::tuple(ip, port);
+    }
     
     void Main::_bind_methods() {
         ADD_SIGNAL(MethodInfo("chat_output", PropertyInfo(Variant::STRING, "line")));
@@ -989,5 +995,6 @@ namespace craftbuild {
         ClassDB::bind_method(D_METHOD("set_seed_and_world_name", "seed", "name"), &Main::set_seed_and_world_name);
         ClassDB::bind_method(D_METHOD("set_render_distance", "rd"), &Main::set_render_distance);
         ClassDB::bind_method(D_METHOD("set_cpu_sleep_time", "stc"), &Main::set_cpu_sleep_time);
+        ClassDB::bind_method(D_METHOD("set_server_socket", "stc"), &Main::set_server_socket);
     }
 }
