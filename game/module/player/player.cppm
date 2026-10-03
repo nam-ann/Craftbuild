@@ -37,9 +37,9 @@ export namespace craftbuild {
 
     public:
         // Movement
-        real speed = 4.0f;
-        real gravity = 24.0f;
-        real jump_velocity = 8.0f;
+        floatr speed = 4.0f;
+        floatr gravity = 24.0f;
+        floatr jump_velocity = 8.0f;
         bool is_grounded = false;
         bool can_fly = false;
         bool jump_was_pressed = false;
@@ -74,8 +74,8 @@ export namespace craftbuild {
 
         bool would_collide_with_player(Pos3D<int32> const& block_pos) const;
         Ref<ShaderMaterial> create_selection_box_material();
-        Dictionary raycast_block(real max_distance = 5.0f);
-        Face get_face(Pos3D<real> n);
+        Dictionary raycast_block(floatr max_distance = 5.0f);
+        Face get_face(Pos3D<floatr> n);
 
         void cycle_hotbar(int32 dir);
         void select_slot(int32 slot);

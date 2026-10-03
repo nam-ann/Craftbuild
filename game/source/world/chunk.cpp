@@ -82,8 +82,8 @@ namespace craftbuild {
         if (biome_count == 0) return { 0.01f, 40.0f, 0.4f, 4.0f, 60.0f, 0 };
 
         float32 const biome_noise_val = noise->get_noise_2d(
-            real(wx + 10000) * 0.005f,
-            real(wz + 10000) * 0.005f
+            floatr(wx + 10000) * 0.005f,
+            floatr(wz + 10000) * 0.005f
         );
         float32 const normalized = (biome_noise_val + 1.0f) * 0.5f;
         usize const biome_idx = std::clamp(usize(normalized * biome_count), usize(0), biome_count - 1);
@@ -240,11 +240,11 @@ namespace craftbuild {
 
                 Biome const current_biome = get_blended_biome(global_x, global_z, noise, biome_count);
 
-                float32 base_noise = noise->get_noise_2d(real(global_x) * current_biome.base_noise, real(global_z) * current_biome.base_noise);
+                float32 base_noise = noise->get_noise_2d(floatr(global_x) * current_biome.base_noise, floatr(global_z) * current_biome.base_noise);
                 float32 base_elevation = ((base_noise + 1.0f) * 0.5f) * current_biome.base_height;
                 float32 detail_elevation = 0.0f;
                 if (current_biome.detail_noise > 0.0f and current_biome.detail_height > 0.0f) {
-                    const float32 detail_noise = noise->get_noise_2d(real(global_x) * current_biome.detail_noise, real(global_z) * current_biome.detail_noise);
+                    const float32 detail_noise = noise->get_noise_2d(floatr(global_x) * current_biome.detail_noise, floatr(global_z) * current_biome.detail_noise);
                     detail_elevation = detail_noise * current_biome.detail_height;
                 }
                 float32 terrain_base_y = current_biome.min_height + base_elevation + detail_elevation;
@@ -264,9 +264,9 @@ namespace craftbuild {
                     );
 
                     float32 noise_3d = noise->get_noise_3d(
-                        real(global_x) * 0.2f,
-                        real(y) * 0.3f,
-                        real(global_z) * 0.2f
+                        floatr(global_x) * 0.2f,
+                        floatr(y) * 0.3f,
+                        floatr(global_z) * 0.2f
                     );
 
                     float32 density = terrain_base_y - float32(y) + (noise_3d * 25.0f);
@@ -468,7 +468,7 @@ namespace craftbuild {
                         Pos3D p2(start[0] + du[0] + dv[0], start[1] + du[1] + dv[1], start[2] + du[2] + dv[2]);
                         Pos3D p3(start[0] + dv[0], start[1] + dv[1], start[2] + dv[2]);
 
-                        auto get_uv = [&p0, current_face, width, height, d](Pos3D<float32> const& p) -> Pos2D<real> {
+                        auto get_uv = [&p0, current_face, width, height, d](Pos3D<float32> const& p) -> Pos2D<floatr> {
                             float32 const dx = p.x - p0.x;
                             float32 const dy = p.y - p0.y;
                             float32 const dz = p.z - p0.z;
@@ -504,7 +504,7 @@ namespace craftbuild {
                             uvs.append(get_uv(p1));
                         }
 
-                        Pos3D<real> normal(0, 0, 0);
+                        Pos3D<floatr> normal(0, 0, 0);
                         if (d == 0)      normal.x = current_face.back_face() ? -1.0f : 1.0f;
                         else if (d == 1) normal.y = current_face.back_face() ? -1.0f : 1.0f;
                         else if (d == 2) normal.z = current_face.back_face() ? -1.0f : 1.0f;

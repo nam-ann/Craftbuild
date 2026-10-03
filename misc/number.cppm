@@ -22,7 +22,7 @@ export namespace craftbuild {
 	using byte32 = char32_t;
 	using float32 = float;
 	using float64 = double;
-	using real = godot::real_t;
+	using floatr = godot::real_t;
 	using usize = size_t;
 }
 
@@ -37,5 +37,5 @@ export using craftbuild::uint64;
 export using craftbuild::byte32;
 export using craftbuild::float32;
 export using craftbuild::float64;
-export using craftbuild::real;
+export using craftbuild::floatr;
 export using craftbuild::usize;

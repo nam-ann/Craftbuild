@@ -56,7 +56,7 @@ export namespace craftbuild {
         mutable std::shared_mutex chunks_mutex;
 
         Set<Pos2D<int32>> requested_chunks;
-        std::mutex requested_chunks_mutex;
+        mutable std::mutex requested_chunks_mutex;
 
         Ref<ShaderMaterial> world_material;
         std::atomic<int32> world_seed = 0;
@@ -68,21 +68,21 @@ export namespace craftbuild {
         mutable std::shared_mutex player_mutex;
 
         std::atomic<bool> running = true;
-        std::atomic<real> player_x = 0.0;
-        std::atomic<real> player_y = 0.0;
-        std::atomic<real> player_z = 0.0;
+        std::atomic<floatr> player_x = 0.0;
+        std::atomic<floatr> player_y = 0.0;
+        std::atomic<floatr> player_z = 0.0;
         std::jthread gc_thread;
         std::jthread log_thread;
         std::jthread network_thread;
         std::jthread scheduler_thread;
         ThreadPool mesh_pool{ 4 };
         Set<Pos2D<int32>> pending_mesh_jobs;
-        std::mutex pending_jobs_mutex;
+        mutable std::mutex pending_jobs_mutex;
 
         std::atomic<bool> pausing = true;
         std::atomic<bool> chatting = false;
-        std::mutex loop_mutex;
         std::condition_variable loop_cv;
+        mutable std::mutex loop_mutex;
 
         bool full_screen = false;
 

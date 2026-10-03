@@ -109,7 +109,7 @@ namespace craftbuild {
         Vector3 const normal = hit["normal"];
 
         Vector3 const pos_float = hit_pos - (normal * 0.001f);
-        Pos3D<real> block_pos = pos_float.floor();
+        Pos3D<floatr> block_pos = pos_float.floor();
 
         selection_box->set_position(Vector3(block_pos.x, block_pos.y, block_pos.z) + Vector3(0.5, 0.5, 0.5));
     }
@@ -157,8 +157,8 @@ namespace craftbuild {
             float32 const blend = has_input ? accel : decel;
 
             Vector3 const target_xz = wish_dir * current_speed;
-            velocity.x = velocity.x + (target_xz.x - velocity.x) * real(std::min(blend * delta, 1.0));
-            velocity.z = velocity.z + (target_xz.z - velocity.z) * real(std::min(blend * delta, 1.0));
+            velocity.x = velocity.x + (target_xz.x - velocity.x) * floatr(std::min(blend * delta, 1.0));
+            velocity.z = velocity.z + (target_xz.z - velocity.z) * floatr(std::min(blend * delta, 1.0));
 
             if (is_grounded) {
                 if (velocity.y < 0.0f) velocity.y = -0.1f;
@@ -173,15 +173,15 @@ namespace craftbuild {
                     can_fly = true;
                     velocity.y = 0.0f;
                 }
-                else velocity.y -= real(gravity * delta);
+                else velocity.y -= floatr(gravity * delta);
             }
         }
         else {
             bool const has_h_input = wish_dir.length_squared() > 0.0f;
             float32 const h_blend = has_h_input ? accel : decel;
             Vector3 const target_xz = wish_dir * current_speed;
-            velocity.x = velocity.x + (target_xz.x - velocity.x) * real(std::min(h_blend * delta, 1.0));
-            velocity.z = velocity.z + (target_xz.z - velocity.z) * real(std::min(h_blend * delta, 1.0));
+            velocity.x = velocity.x + (target_xz.x - velocity.x) * floatr(std::min(h_blend * delta, 1.0));
+            velocity.z = velocity.z + (target_xz.z - velocity.z) * floatr(std::min(h_blend * delta, 1.0));
 
             float32 wish_y = 0.0f;
             if (key_space) wish_y = speed;
@@ -189,7 +189,7 @@ namespace craftbuild {
 
             bool const has_v_input = (wish_y != 0.0f);
             float32 const v_blend = has_v_input ? accel : decel;
-            velocity.y = velocity.y + (wish_y - velocity.y) * real(std::min(v_blend * delta, 1.0));
+            velocity.y = velocity.y + (wish_y - velocity.y) * floatr(std::min(v_blend * delta, 1.0));
 
             if (is_grounded and not key_space) can_fly = false;
         }
@@ -301,21 +301,21 @@ namespace craftbuild {
     }
 
     bool Player::would_collide_with_player(Pos3D<int32> const& block_pos) const {
-        Pos3D<real> player_pos = get_position();
+        Pos3D<floatr> player_pos = get_position();
 
-        real min_x = player_pos.x - 0.3f;
-        real max_x = player_pos.x + 0.3f;
-        real min_y = player_pos.y;
-        real max_y = player_pos.y + 1.8f;
-        real min_z = player_pos.z - 0.3f;
-        real max_z = player_pos.z + 0.3f;
+        floatr min_x = player_pos.x - 0.3f;
+        floatr max_x = player_pos.x + 0.3f;
+        floatr min_y = player_pos.y;
+        floatr max_y = player_pos.y + 1.8f;
+        floatr min_z = player_pos.z - 0.3f;
+        floatr max_z = player_pos.z + 0.3f;
 
-        real block_min_x = real(block_pos.x);
-        real block_max_x = real(block_pos.x + 1.0);
-        real block_min_y = real(block_pos.y);
-        real block_max_y = real(block_pos.y + 0.8);
-        real block_min_z = real(block_pos.z);
-        real block_max_z = real(block_pos.z + 1.0);
+        floatr block_min_x = floatr(block_pos.x);
+        floatr block_max_x = floatr(block_pos.x + 1.0);
+        floatr block_min_y = floatr(block_pos.y);
+        floatr block_max_y = floatr(block_pos.y + 0.8);
+        floatr block_min_z = floatr(block_pos.z);
+        floatr block_max_z = floatr(block_pos.z + 1.0);
 
         return (max_x > block_min_x and min_x < block_max_x and max_y > block_min_y and min_y < block_max_y and max_z > block_min_z and min_z < block_max_z);
     }
@@ -343,7 +343,7 @@ namespace craftbuild {
         return mat;
     }
 
-    Dictionary Player::raycast_block(real max_distance) {
+    Dictionary Player::raycast_block(floatr max_distance) {
         if (not camera) return Dictionary();
 
         Vector2 screen_center = camera->get_viewport()->get_visible_rect().get_center();
@@ -359,13 +359,13 @@ namespace craftbuild {
         return space_state->intersect_ray(query);
     }
 
-    Face Player::get_face(Pos3D<real> n) {
-        if (n == Pos3D<real>(0, 1, 0))  return Face::TOP;
-        if (n == Pos3D<real>(0, -1, 0)) return Face::BOTTOM;
-        if (n == Pos3D<real>(1, 0, 0))  return Face::LEFT;
-        if (n == Pos3D<real>(-1, 0, 0)) return Face::RIGHT;
-        if (n == Pos3D<real>(0, 0, 1))  return Face::FRONT;
-        if (n == Pos3D<real>(0, 0, -1)) return Face::BACK;
+    Face Player::get_face(Pos3D<floatr> n) {
+        if (n == Pos3D<floatr>(0, 1, 0))  return Face::TOP;
+        if (n == Pos3D<floatr>(0, -1, 0)) return Face::BOTTOM;
+        if (n == Pos3D<floatr>(1, 0, 0))  return Face::LEFT;
+        if (n == Pos3D<floatr>(-1, 0, 0)) return Face::RIGHT;
+        if (n == Pos3D<floatr>(0, 0, 1))  return Face::FRONT;
+        if (n == Pos3D<floatr>(0, 0, -1)) return Face::BACK;
         return Face::TOP;
     }
 

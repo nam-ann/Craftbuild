@@ -28,6 +28,6 @@ export namespace craftbuild {
     inline int32 render_distance = 32;
     inline int32 cpu_sleep_time = 180;
 
-    inline constexpr real MATH_PI = (real)Math_PI;
-    inline constexpr real MAXIMUM_CAMERA_ANGLE = (real)2.0000002384185791015625f;
+    inline constexpr floatr MATH_PI = (floatr)Math_PI;
+    inline constexpr floatr MAXIMUM_CAMERA_ANGLE = (floatr)2.0000002384185791015625f;
 }

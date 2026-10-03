@@ -121,8 +121,8 @@ namespace craftbuild {
         player_y.store(player_pos.y, std::memory_order_relaxed);
         player_z.store(player_pos.z, std::memory_order_relaxed);
 
-        static Pos3D<real> last_sent_pos;
-        if ((player_pos - last_sent_pos) > Pos3D<real>(0.01f, 0.01f, 0.01f)) {
+        static Pos3D<floatr> last_sent_pos;
+        if ((player_pos - last_sent_pos) > Pos3D<floatr>(0.01f, 0.01f, 0.01f)) {
             if (not server_ptr) {
                 last_sent_pos = player_pos;
                 send_queue.store({ "Update player pos", { player_name.std_str(), std::to_string(player_pos.x), std::to_string(player_pos.y), std::to_string(player_pos.z)} });
@@ -431,10 +431,10 @@ namespace craftbuild {
                 if (message.content == "Connected") {
                     log<LogType::INFO>("Connected to server");
 
-                    Pos3D<real> player_pos{
-                        real(std::stod(message.arguments[0])),
-                        real(std::stod(message.arguments[1])),
-                        real(std::stod(message.arguments[2]))
+                    Pos3D<floatr> player_pos{
+                        floatr(std::stod(message.arguments[0])),
+                        floatr(std::stod(message.arguments[1])),
+                        floatr(std::stod(message.arguments[2]))
                     };
 
                     if (Str server_version = message.arguments[3]; server_version != version) {
@@ -624,7 +624,7 @@ namespace craftbuild {
                             name.resize(name_len);
                             is.read(reinterpret_cast<char*>(name.data()), name_len);
                             is.read(reinterpret_cast<char*>(&player_data.hp), sizeof(uint8));
-                            is.read(reinterpret_cast<char*>(&player_data.pos), sizeof(Pos3D<real>));
+                            is.read(reinterpret_cast<char*>(&player_data.pos), sizeof(Pos3D<floatr>));
                             is.read(reinterpret_cast<char*>(&player_data.hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);
 
                             if (name == player_name) {
@@ -666,7 +666,7 @@ namespace craftbuild {
                     last_unload_time = now;
                 }
 
-                std::unique_lock<std::mutex> lock(loop_mutex);
+                std::unique_lock lock(loop_mutex);
                 loop_cv.wait_for(lock, std::chrono::milliseconds(cpu_sleep_time));
             }
         };
@@ -781,7 +781,7 @@ namespace craftbuild {
     void Main::update_chunk_mesh(ChunkRender& chunk_render, Pos2D<int32>& pos, Ref<ArrayMesh> const& mesh, int32 submesh_idx) {
         if (not chunk_render.mesh_instances[submesh_idx]) {
             MeshInstance3D* mi = memnew(MeshInstance3D);
-            mi->set_position(Vector3(real(pos.x * Chunk::WIDTH), 0, real(pos.y * Chunk::WIDTH)));
+            mi->set_position(Vector3(floatr(pos.x * Chunk::WIDTH), 0, floatr(pos.y * Chunk::WIDTH)));
             mi->set_material_override(world_material);
             add_child(mi);
             chunk_render.mesh_instances[submesh_idx] = mi;

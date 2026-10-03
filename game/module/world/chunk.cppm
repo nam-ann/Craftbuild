@@ -40,12 +40,12 @@ export namespace craftbuild {
     };
 
     struct MeshData {
-        List<Pos3D<real>> vertices;
-        List<Pos3D<real>> normals;
+        List<Pos3D<floatr>> vertices;
+        List<Pos3D<floatr>> normals;
         List<int32> indices;
-        List<Pos2D<real>> uvs;
-        List<Pos2D<real>> uvs_layer;
-        List<Pos3D<real>> collision_faces;
+        List<Pos2D<floatr>> uvs;
+        List<Pos2D<floatr>> uvs_layer;
+        List<Pos3D<floatr>> collision_faces;
         List<ComplexBlockInstance> complex_instance;
     };
 

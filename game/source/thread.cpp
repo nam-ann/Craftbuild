@@ -19,7 +19,7 @@ namespace craftbuild {
                 while (true) {
                     std::function<void()> task;
                     {
-                        std::unique_lock<std::mutex> lock(mutex);
+                        std::unique_lock lock(mutex);
                         cv.wait(lock, [this] { return stop or not tasks.empty(); });
 
                         if (stop and tasks.empty()) return;
@@ -35,7 +35,7 @@ namespace craftbuild {
 
     ThreadPool::~ThreadPool() {
         {
-            std::lock_guard<std::mutex> lock(mutex);
+            std::lock_guard lock(mutex);
             stop = true;
         }
         cv.notify_all();

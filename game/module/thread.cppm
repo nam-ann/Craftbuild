@@ -21,7 +21,7 @@ export namespace craftbuild {
         List<std::jthread> workers;
         std::queue<std::function<void()>> tasks;
 
-        std::mutex mutex;
+        mutable std::mutex mutex;
         std::condition_variable cv;
         bool stop;
 
@@ -32,7 +32,7 @@ export namespace craftbuild {
         template<class F>
         void enqueue(F&& f) {
             {
-                std::lock_guard<std::mutex> lock(mutex);
+                std::lock_guard lock(mutex);
                 tasks.emplace(std::forward<F>(f));
             }
             cv.notify_one();

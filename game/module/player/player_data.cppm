@@ -9,7 +9,7 @@ import misc.number;
 export namespace craftbuild {
     struct PlayerData {
         Str name;
-        Pos3D<real> pos;
+        Pos3D<floatr> pos;
 
         inline static constexpr uint8 HOTBAR_SIZE = 9;
         uint32 hotbar[HOTBAR_SIZE] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };

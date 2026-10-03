@@ -30,7 +30,7 @@ namespace craftbuild {
     void LogQueue::store(Str const& log, Str const& file_log) {
         if (craftbuild_debug) UtilityFunctions::print(log.std_str().c_str());
 
-        std::lock_guard<std::mutex> lock(log_mutex);
+        std::lock_guard lock(log_mutex);
         file_queue += file_log + "\n";
     }
 
@@ -38,7 +38,7 @@ namespace craftbuild {
         Str file_dump;
 
         {
-            std::lock_guard<std::mutex> lock(log_mutex);
+            std::lock_guard lock(log_mutex);
             file_dump.swap(file_queue);
         }
 

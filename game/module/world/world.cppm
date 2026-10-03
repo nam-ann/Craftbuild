@@ -69,11 +69,11 @@ export namespace craftbuild {
         ~World();
         void connect(Str const& player_name);
         void disconnect(Str const& player_name);
-        void update(Str const& player_name, Pos3D<real> const& new_pos);
+        void update(Str const& player_name, Pos3D<floatr> const& new_pos);
 
         void start_redstone_thread();
         void start_scheduler_thread();
-        void submit_jobs(Pos3D<real> const& player);
+        void submit_jobs(Pos3D<floatr> const& player);
 
         std::string serialize_players();
         std::string serialize_chunk(int32 cx, int32 cy);

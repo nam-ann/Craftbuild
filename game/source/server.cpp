@@ -173,10 +173,10 @@ namespace craftbuild {
                     client.send_queue.store({ "Set" });
                 }
                 else if (message.content == "Update player pos") {
-                    Pos3D<real> pos{
-                        (real)std::stod(message.arguments[1]),
-                        (real)std::stod(message.arguments[2]),
-                        (real)std::stod(message.arguments[3])
+                    Pos3D<floatr> pos{
+                        (floatr)std::stod(message.arguments[1]),
+                        (floatr)std::stod(message.arguments[2]),
+                        (floatr)std::stod(message.arguments[3])
                     };
                     server.update(message.arguments[0], pos);
                     client.send_queue.store({ "Updated" });

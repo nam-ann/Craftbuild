@@ -84,7 +84,7 @@ namespace craftbuild {
         log<LogType::INFO>("Player connected: "f << player_name);
     }
 
-    void World::update(Str const& player_name, Pos3D<real> const& new_pos) {
+    void World::update(Str const& player_name, Pos3D<floatr> const& new_pos) {
         std::unique_lock lock(player_mutex);
         players[player_name].pos = new_pos;
     }
@@ -127,7 +127,7 @@ namespace craftbuild {
 
                 {
                     std::lock_guard lock1(current_player_mutex);
-                    Pos3D<real> pos;
+                    Pos3D<floatr> pos;
                     {
                         std::shared_lock lock(player_mutex);
                         pos = players[current_player->first].pos;
@@ -139,15 +139,15 @@ namespace craftbuild {
                     if (++current_player == online_players.end()) current_player = online_players.begin();
                 }
 
-                std::unique_lock<std::mutex> lock(loop_mutex);
+                std::unique_lock lock(loop_mutex);
                 loop_cv.wait_for(lock, std::chrono::milliseconds(cpu_sleep_time));
             }
-            };
+        };
 
         scheduler_thread = std::jthread(worker);
     }
 
-    void World::submit_jobs(Pos3D<real> const& player) {
+    void World::submit_jobs(Pos3D<floatr> const& player) {
         int32 px = static_cast<int32>(std::floor(player.x / Chunk::WIDTH));
         int32 pz = static_cast<int32>(std::floor(player.z / Chunk::WIDTH));
 
@@ -222,7 +222,7 @@ namespace craftbuild {
                 os.write(reinterpret_cast<char const*>(&name_len), sizeof(uint64));
                 os.write(reinterpret_cast<char const*>(player_name.data()), name_len);
                 os.write(reinterpret_cast<char const*>(&player_data.hp), sizeof(uint8));
-                os.write(reinterpret_cast<char const*>(&player_data.pos), sizeof(Pos3D<real>));
+                os.write(reinterpret_cast<char const*>(&player_data.pos), sizeof(Pos3D<floatr>));
                 os.write(reinterpret_cast<char const*>(&player_data.hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);
             }
         }
@@ -494,7 +494,7 @@ namespace craftbuild {
                 ofs.write(reinterpret_cast<char const*>(&player_name_len), sizeof(uint64));
                 ofs.write(reinterpret_cast<char const*>(player_name.data()), player_name_len);
                 ofs.write(reinterpret_cast<char const*>(&player_data.hp), sizeof(uint8));
-                ofs.write(reinterpret_cast<char const*>(&player_data.pos), sizeof(Pos3D<real>));
+                ofs.write(reinterpret_cast<char const*>(&player_data.pos), sizeof(Pos3D<floatr>));
                 ofs.write(reinterpret_cast<char const*>(&player_data.hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);
             }
         }
@@ -553,7 +553,7 @@ namespace craftbuild {
                 player_name.resize(player_name_len);
                 ifs.read(reinterpret_cast<char*>(player_name.data()), player_name_len);
                 ifs.read(reinterpret_cast<char*>(&players[player_name].hp), sizeof(uint8));
-                ifs.read(reinterpret_cast<char*>(&players[player_name].pos), sizeof(Pos3D<real>));
+                ifs.read(reinterpret_cast<char*>(&players[player_name].pos), sizeof(Pos3D<floatr>));
                 ifs.read(reinterpret_cast<char*>(&players[player_name].hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);
             }
         }
