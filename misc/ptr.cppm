@@ -32,6 +32,11 @@ export namespace craftbuild {
 
 		inline void init() { GarbageCollector::add_root(__value__); }
 
+		inline void raw_clear() {
+			if (not __value__) [[unlikely]] return;
+			GarbageCollector::remove_root(__value__);
+		}
+
 	public:
 		Ptr() noexcept : __value__(nullptr) {}
 		Ptr(std::nullptr_t) noexcept : __value__(nullptr) {}
@@ -46,14 +51,14 @@ export namespace craftbuild {
 
 		template <typename U>
 		requires std::convertible_to<U*, T*>
-		Ptr(Ptr<U>&& x) noexcept : __value__(x.__value__) { x.__value__ = nullptr; init(); }
+		Ptr(Ptr<U>&& x) noexcept : __value__(x.__value__) { x.__value__ = nullptr; }
 
-		~Ptr() { clear(); }
+		~Ptr() { raw_clear(); }
 
 		template <typename U>
 		requires std::convertible_to<U*, T*>
 		Ptr<T>& operator=(Obj<U>* x) {
-			clear();
+			raw_clear();
 			__value__ = x;
 			init();
 			return *this;
@@ -63,7 +68,7 @@ export namespace craftbuild {
 		requires std::convertible_to<U*, T*>
 		Ptr<T>& operator=(Ptr<U> const& x) {
 			if (__value__ == x.__value__) [[unlikely]] return *this;
-			clear();
+			raw_clear();
 			__value__ = x.__value__;
 			init();
 			return *this;
@@ -73,7 +78,7 @@ export namespace craftbuild {
 		requires std::convertible_to<U*, T*>
 		Ptr<T>& operator=(Ptr<U>&& x) noexcept {
 			if (__value__ == x.__value__) [[unlikely]] return *this;
-			clear();
+			raw_clear();
 			__value__ = x.__value__;
 			x.__value__ = nullptr;
 			init();
@@ -97,14 +102,15 @@ export namespace craftbuild {
 			other.__value__ = cache;
 		}
 
-		inline Obj<T>* object() const noexcept { return static_cast<Obj<T>*>(__value__); }
+		[[nodiscard]]
+		inline GCObject* object() const noexcept { return __value__; }
 
 		inline T& value() const {
-			if (__value__) [[likely]] return *(T*)__value__->__data__;
+			if (__value__) [[likely]] return *static_cast<T*>(__value__->__data__);
 			throw std::runtime_error("Cannot access nullptr of ptr");
 		}
 		inline T& value() {
-			if (__value__) [[likely]] return *(T*)__value__->__data__;
+			if (__value__) [[likely]] return *static_cast<T*>(__value__->__data__);
 			throw std::runtime_error("Cannot access nullptr of ptr");
 		}
 
