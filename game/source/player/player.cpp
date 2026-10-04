@@ -14,7 +14,6 @@ DISABLE_WARNING
 #include <godot_cpp/classes/input_event.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
 #include <godot_cpp/classes/capsule_shape3d.hpp>
-#include <godot_cpp/classes/resource_loader.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
 #include <godot_cpp/classes/input_event_key.hpp>
 #include <godot_cpp/classes/character_body3d.hpp>
@@ -34,22 +33,6 @@ import game.main;
 import game.player.skin_manager;
 
 namespace craftbuild {
-    bool SkinManager::load_skin(Player& player, char const* path) {
-        Ref<Texture2D> skin_tex = ResourceLoader::get_singleton()->load(path);
-        if (skin_tex.is_null()) {
-            log<LogType::ERROR>("Failed to load skin: "f << path);
-            return false;
-        }
-
-        log<LogType::INFO>("Skin loaded: "f << path);
-
-        MeshInstance3D* player_model = player.get_node<MeshInstance3D>("Mesh");
-        if (player_model) SkinManager::apply_skin_to_model(player_model, skin_tex);
-        else log<LogType::WARNING>("Player model not found. Create a MeshInstance3D named 'Model'");
-
-        return true;
-    }
-
     void Player::_ready() {
         // Camera
         camera = get_node<Camera3D>("Camera");
@@ -85,7 +68,7 @@ namespace craftbuild {
         selection_box->set_material_override(create_selection_box_material());
 
         // Load skin
-        SkinManager::load_skin(*this, "res://assets/textures/skin/creeper_boy.png");
+        skin_manager::load_skin(*this, "res://assets/textures/skin/creeper_boy.png");
         
 		// World reference
         world_ptr = Object::cast_to<Main>(get_parent());
@@ -93,7 +76,7 @@ namespace craftbuild {
         log<LogType::INFO>("Player initialized");
     }
 
-    void Player::_process(float64 delta) {
+    void Player::_process(f64 delta) {
         Main* world = static_cast<Main*>(world_ptr);
         if (not world) return;
         if (world->pausing.load(std::memory_order_relaxed)) return;
@@ -109,12 +92,12 @@ namespace craftbuild {
         Vector3 const normal = hit["normal"];
 
         Vector3 const pos_float = hit_pos - (normal * 0.001f);
-        Pos3D<floatr> block_pos = pos_float.floor();
+        Pos3D<fsize> block_pos = pos_float.floor();
 
         selection_box->set_position(Vector3(block_pos.x, block_pos.y, block_pos.z) + Vector3(0.5, 0.5, 0.5));
     }
 
-    void Player::_physics_process(float64 delta) {
+    void Player::_physics_process(f64 delta) {
         if (gamemode == Gamemode::SPECTATOR) return;
         if (not camera or not world_ptr) return;
 
@@ -136,29 +119,29 @@ namespace craftbuild {
         is_grounded = is_on_floor();
 
         running = key_w and (key_ctrl or running);
-        float32 const current_speed = running ? speed * 2.0f : speed;
+        f32 const current_speed = running ? speed * 2.0f : speed;
 
         Vector3 forward = -camera->get_global_transform().basis.get_column(2);
         Vector3 right = camera->get_global_transform().basis.get_column(0);
 
-        float32 forward_input = (key_w ? 1.0f : 0.0f) - (key_s ? 1.0f : 0.0f);
-        float32 strafe_input = (key_d ? 1.0f : 0.0f) - (key_a ? 1.0f : 0.0f);
+        f32 forward_input = (key_w ? 1.0f : 0.0f) - (key_s ? 1.0f : 0.0f);
+        f32 strafe_input = (key_d ? 1.0f : 0.0f) - (key_a ? 1.0f : 0.0f);
 
         Vector3 wish_dir = (forward * forward_input) + (right * strafe_input);
         wish_dir.y = 0;
         if (wish_dir.length() > 0) wish_dir = wish_dir.normalized();
 
-        float32 const accel = is_grounded ? 18.0f : 6.0f;
-        float32 const decel = is_grounded ? 22.0f : 2.0f;
+        f32 const accel = is_grounded ? 18.0f : 6.0f;
+        f32 const decel = is_grounded ? 22.0f : 2.0f;
 
         // Gravity & Jump
         if (not can_fly) {
             bool const has_input = wish_dir.length_squared() > 0.0f;
-            float32 const blend = has_input ? accel : decel;
+            f32 const blend = has_input ? accel : decel;
 
             Vector3 const target_xz = wish_dir * current_speed;
-            velocity.x = velocity.x + (target_xz.x - velocity.x) * floatr(std::min(blend * delta, 1.0));
-            velocity.z = velocity.z + (target_xz.z - velocity.z) * floatr(std::min(blend * delta, 1.0));
+            velocity.x = velocity.x + (target_xz.x - velocity.x) * fsize(std::min(blend * delta, 1.0));
+            velocity.z = velocity.z + (target_xz.z - velocity.z) * fsize(std::min(blend * delta, 1.0));
 
             if (is_grounded) {
                 if (velocity.y < 0.0f) velocity.y = -0.1f;
@@ -173,23 +156,23 @@ namespace craftbuild {
                     can_fly = true;
                     velocity.y = 0.0f;
                 }
-                else velocity.y -= floatr(gravity * delta);
+                else velocity.y -= fsize(gravity * delta);
             }
         }
         else {
             bool const has_h_input = wish_dir.length_squared() > 0.0f;
-            float32 const h_blend = has_h_input ? accel : decel;
+            f32 const h_blend = has_h_input ? accel : decel;
             Vector3 const target_xz = wish_dir * current_speed;
-            velocity.x = velocity.x + (target_xz.x - velocity.x) * floatr(std::min(h_blend * delta, 1.0));
-            velocity.z = velocity.z + (target_xz.z - velocity.z) * floatr(std::min(h_blend * delta, 1.0));
+            velocity.x = velocity.x + (target_xz.x - velocity.x) * fsize(std::min(h_blend * delta, 1.0));
+            velocity.z = velocity.z + (target_xz.z - velocity.z) * fsize(std::min(h_blend * delta, 1.0));
 
-            float32 wish_y = 0.0f;
+            f32 wish_y = 0.0f;
             if (key_space) wish_y = speed;
             if (key_shift) wish_y = -speed;
 
             bool const has_v_input = (wish_y != 0.0f);
-            float32 const v_blend = has_v_input ? accel : decel;
-            velocity.y = velocity.y + (wish_y - velocity.y) * floatr(std::min(v_blend * delta, 1.0));
+            f32 const v_blend = has_v_input ? accel : decel;
+            velocity.y = velocity.y + (wish_y - velocity.y) * fsize(std::min(v_blend * delta, 1.0));
 
             if (is_grounded and not key_space) can_fly = false;
         }
@@ -234,14 +217,14 @@ namespace craftbuild {
                     Vector3 const pos_float = hit_pos - (normal * 0.001f);
                     Vector3i block_pos = Vector3i(pos_float.floor());
 
-                    uint32 target_block_id = world->get_global_block_id(block_pos.x, block_pos.y, block_pos.z);
+                    u32 target_block_id = world->get_global_block_id(block_pos.x, block_pos.y, block_pos.z);
                     log<LogType::VERBOSE>("Looking at block id: "f << target_block_id << " at (" << block_pos.x << ", " << block_pos.y << ", " << block_pos.z << ")");
 
                     if (mid and gamemode == Gamemode::CREATIVE) hotbar[selected_slot] = target_block_id;
 
                     if (left or right) {
-                        uint32 AIR = BlockRegistry::get_id("Air");
-                        uint32 block = get_selected_block_id();
+                        u32 AIR = block_registry::get_id("Air");
+                        u32 block = get_selected_block_id();
 
                         if (left) world->set_global_block_id(AIR, block_pos.x, block_pos.y, block_pos.z);
                         if (right and block != AIR) {
@@ -258,13 +241,13 @@ namespace craftbuild {
                             if (not would_collide_with_player(block_pos)) world->set_global_block_id(block, block_pos.x, block_pos.y, block_pos.z);
                         }
 
-                        const auto cx = int32(std::floor(float32(block_pos.x) / Chunk::WIDTH));
-                        const auto cy = int32(std::floor(float32(block_pos.z) / Chunk::WIDTH));
+                        const auto cx = i32(std::floor(f32(block_pos.x) / Chunk::WIDTH));
+                        const auto cy = i32(std::floor(f32(block_pos.z) / Chunk::WIDTH));
                         if (auto chunk = world->get_chunk(cx, cy)) {
                             chunk.value().dirty.store(true, std::memory_order_release);
 
                             if (block_pos.x >= 0 or block_pos.z >= 0 or block_pos.x < Chunk::WIDTH or block_pos.z < Chunk::WIDTH) {
-                                Pos2D<int32> neighbor_offsets[4] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
+                                Pos2D<i32> neighbor_offsets[4] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
                                 for (auto const& offset : neighbor_offsets) {
                                     if (auto neighbor = world->get_chunk(cx + offset.x, cy + offset.y)) neighbor.value().dirty.store(true, std::memory_order_release);
                                 }
@@ -281,7 +264,7 @@ namespace craftbuild {
             if (input->is_pressed() and input->get_keycode() == KEY_F4 and is_f3_held) {
                 if (not gamemode_toggled) {
                     gamemode = (Gamemode)(((uint8_t)gamemode + 1) % 4);
-                    log<LogType::INFO>("Changed gamemode to "f << (int32)gamemode);
+                    log<LogType::INFO>("Changed gamemode to "f << (i32)gamemode);
                     can_fly = false;
                     gamemode_toggled = true;
                 }
@@ -290,7 +273,7 @@ namespace craftbuild {
             if (gamemode == Gamemode::SPECTATOR) can_fly = true;
         }
 
-        for (auto i : range<int32>(9)) {
+        for (auto i : range<i32>(9)) {
             Key key = (Key)(KEY_1 + i);
             if (Input::get_singleton()->is_key_pressed(key)) {
                 if (event->is_pressed() and not event->is_echo()) {
@@ -300,22 +283,22 @@ namespace craftbuild {
         }
     }
 
-    bool Player::would_collide_with_player(Pos3D<int32> const& block_pos) const {
-        Pos3D<floatr> player_pos = get_position();
+    bool Player::would_collide_with_player(Pos3D<i32> const& block_pos) const {
+        Pos3D<fsize> player_pos = get_position();
 
-        floatr min_x = player_pos.x - 0.3f;
-        floatr max_x = player_pos.x + 0.3f;
-        floatr min_y = player_pos.y;
-        floatr max_y = player_pos.y + 1.8f;
-        floatr min_z = player_pos.z - 0.3f;
-        floatr max_z = player_pos.z + 0.3f;
+        fsize min_x = player_pos.x - 0.3f;
+        fsize max_x = player_pos.x + 0.3f;
+        fsize min_y = player_pos.y;
+        fsize max_y = player_pos.y + 1.8f;
+        fsize min_z = player_pos.z - 0.3f;
+        fsize max_z = player_pos.z + 0.3f;
 
-        floatr block_min_x = floatr(block_pos.x);
-        floatr block_max_x = floatr(block_pos.x + 1.0);
-        floatr block_min_y = floatr(block_pos.y);
-        floatr block_max_y = floatr(block_pos.y + 0.8);
-        floatr block_min_z = floatr(block_pos.z);
-        floatr block_max_z = floatr(block_pos.z + 1.0);
+        fsize block_min_x = fsize(block_pos.x);
+        fsize block_max_x = fsize(block_pos.x + 1.0);
+        fsize block_min_y = fsize(block_pos.y);
+        fsize block_max_y = fsize(block_pos.y + 0.8);
+        fsize block_min_z = fsize(block_pos.z);
+        fsize block_max_z = fsize(block_pos.z + 1.0);
 
         return (max_x > block_min_x and min_x < block_max_x and max_y > block_min_y and min_y < block_max_y and max_z > block_min_z and min_z < block_max_z);
     }
@@ -343,7 +326,7 @@ namespace craftbuild {
         return mat;
     }
 
-    Dictionary Player::raycast_block(floatr max_distance) {
+    Dictionary Player::raycast_block(fsize max_distance) {
         if (not camera) return Dictionary();
 
         Vector2 screen_center = camera->get_viewport()->get_visible_rect().get_center();
@@ -359,51 +342,51 @@ namespace craftbuild {
         return space_state->intersect_ray(query);
     }
 
-    Face Player::get_face(Pos3D<floatr> n) {
-        if (n == Pos3D<floatr>(0, 1, 0))  return Face::TOP;
-        if (n == Pos3D<floatr>(0, -1, 0)) return Face::BOTTOM;
-        if (n == Pos3D<floatr>(1, 0, 0))  return Face::LEFT;
-        if (n == Pos3D<floatr>(-1, 0, 0)) return Face::RIGHT;
-        if (n == Pos3D<floatr>(0, 0, 1))  return Face::FRONT;
-        if (n == Pos3D<floatr>(0, 0, -1)) return Face::BACK;
+    Face Player::get_face(Pos3D<fsize> n) {
+        if (n == Pos3D<fsize>(0, 1, 0))  return Face::TOP;
+        if (n == Pos3D<fsize>(0, -1, 0)) return Face::BOTTOM;
+        if (n == Pos3D<fsize>(1, 0, 0))  return Face::LEFT;
+        if (n == Pos3D<fsize>(-1, 0, 0)) return Face::RIGHT;
+        if (n == Pos3D<fsize>(0, 0, 1))  return Face::FRONT;
+        if (n == Pos3D<fsize>(0, 0, -1)) return Face::BACK;
         return Face::TOP;
     }
 
-    void Player::cycle_hotbar(int32 dir) {
+    void Player::cycle_hotbar(i32 dir) {
         selected_slot = (selected_slot + dir + HOTBAR_SIZE) % HOTBAR_SIZE;
         log<LogType::INFO>("Selected slot: "f << selected_slot + 1);
     }
 
-    void Player::select_slot(int32 slot) {
+    void Player::select_slot(i32 slot) {
 
     }
 
-    uint32 Player::get_selected_block_id() const {
+    u32 Player::get_selected_block_id() const {
         return hotbar[selected_slot];
     }
 
     void Player::save_data(std::ostream& os) {
-        os.write(reinterpret_cast<char const*>(&speed), sizeof(float32));
-        os.write(reinterpret_cast<char const*>(&gravity), sizeof(float32));
-        os.write(reinterpret_cast<char const*>(&jump_velocity), sizeof(float32));
+        os.write(reinterpret_cast<char const*>(&speed), sizeof(f32));
+        os.write(reinterpret_cast<char const*>(&gravity), sizeof(f32));
+        os.write(reinterpret_cast<char const*>(&jump_velocity), sizeof(f32));
         os.write(reinterpret_cast<char const*>(&is_grounded), sizeof(bool));
         os.write(reinterpret_cast<char const*>(&can_fly), sizeof(bool));
         os.write(reinterpret_cast<char const*>(&running), sizeof(bool));
         os.write(reinterpret_cast<char const*>(&gamemode), sizeof(Gamemode));
-        os.write(reinterpret_cast<char const*>(&hotbar), sizeof(uint32) * HOTBAR_SIZE);
-        os.write(reinterpret_cast<char const*>(&selected_slot), sizeof(uint8));
+        os.write(reinterpret_cast<char const*>(&hotbar), sizeof(u32) * HOTBAR_SIZE);
+        os.write(reinterpret_cast<char const*>(&selected_slot), sizeof(u8));
     }
 
     void Player::load_data(std::istream& is) {
-        is.read(reinterpret_cast<char*>(&speed), sizeof(float32));
-        is.read(reinterpret_cast<char*>(&gravity), sizeof(float32));
-        is.read(reinterpret_cast<char*>(&jump_velocity), sizeof(float32));
+        is.read(reinterpret_cast<char*>(&speed), sizeof(f32));
+        is.read(reinterpret_cast<char*>(&gravity), sizeof(f32));
+        is.read(reinterpret_cast<char*>(&jump_velocity), sizeof(f32));
         is.read(reinterpret_cast<char*>(&is_grounded), sizeof(bool));
         is.read(reinterpret_cast<char*>(&can_fly), sizeof(bool));
         is.read(reinterpret_cast<char*>(&running), sizeof(bool));
         is.read(reinterpret_cast<char*>(&gamemode), sizeof(Gamemode));
-        is.read(reinterpret_cast<char*>(&hotbar), sizeof(uint32) * HOTBAR_SIZE);
-        is.read(reinterpret_cast<char*>(&selected_slot), sizeof(uint8));
+        is.read(reinterpret_cast<char*>(&hotbar), sizeof(u32) * HOTBAR_SIZE);
+        is.read(reinterpret_cast<char*>(&selected_slot), sizeof(u8));
     }
 
     void Player::_bind_methods() {}

@@ -20,14 +20,12 @@ import misc.hasher;
 using namespace godot;
 
 template<typename T1, typename T2>
-concept AbleToCast = requires (T2 t2) {
-    (T1)t2;
-};
+concept AbleToCast = requires (T2 t2) { T1(t2); };
 
 export namespace craftbuild {
     template <typename T>
     requires std::is_arithmetic_v<T>
-    struct Pos3D {
+    struct Pos3D final {
         T x, y, z;
 
         Pos3D() = default;
@@ -58,10 +56,10 @@ export namespace craftbuild {
 #undef def_operator
 
         operator godot::Vector3() const {
-            return godot::Vector3(static_cast<float32>(x), static_cast<float32>(y), static_cast<float32>(z));
+            return godot::Vector3(static_cast<f32>(x), static_cast<f32>(y), static_cast<f32>(z));
         }
         operator godot::Vector3i() const {
-            return godot::Vector3i(static_cast<int32>(x), static_cast<int32>(y), static_cast<int32>(z));
+            return godot::Vector3i(static_cast<i32>(x), static_cast<i32>(y), static_cast<i32>(z));
         }
 
         bool operator==(Pos3D const& other) const {
@@ -75,7 +73,7 @@ export namespace craftbuild {
 
     template <typename T>
     requires std::is_arithmetic_v<T>
-    struct Pos2D {
+    struct Pos2D final {
         T x, y;
 
         Pos2D() = default;
@@ -106,10 +104,10 @@ export namespace craftbuild {
 #undef def_operator
 
         operator godot::Vector2() const {
-            return godot::Vector2(static_cast<float32>(x), static_cast<float32>(y));
+            return godot::Vector2(static_cast<f32>(x), static_cast<f32>(y));
         }
         operator godot::Vector2i() const {
-            return godot::Vector2i(static_cast<int32>(x), static_cast<int32>(y));
+            return godot::Vector2i(static_cast<i32>(x), static_cast<i32>(y));
         }
 
         bool operator==(Pos2D const& other) const {
@@ -123,7 +121,7 @@ export namespace craftbuild {
 
     template <typename T>
     requires std::is_arithmetic_v<T>
-    struct Hasher<Pos3D<T>> {
+    struct Hasher<Pos3D<T>> final {
         usize operator()(Pos3D<T> const& pos) const {
             return std::hash<T>{}(pos.x) ^ (std::hash<T>{}(pos.y) << 16) ^ (std::hash<T>{}(pos.z) << 8);
         }
@@ -131,7 +129,7 @@ export namespace craftbuild {
 
     template <typename T>
     requires std::is_arithmetic_v<T>
-    struct Hasher<Pos2D<T>> {
+    struct Hasher<Pos2D<T>> final {
         usize operator()(Pos2D<T> const& pos) const {
             return std::hash<T>{}(pos.x) ^ (std::hash<T>{}(pos.y) << 16);
         }

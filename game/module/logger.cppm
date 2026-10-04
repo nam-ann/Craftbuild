@@ -24,7 +24,7 @@ namespace craftbuild {
 }
 
 export namespace craftbuild {
-    struct LogQueue {
+    struct LogQueue final {
         inline static Str file_queue;
         inline static std::mutex log_mutex;
 
@@ -32,7 +32,7 @@ export namespace craftbuild {
         static void flush();
     };
 
-    enum class LogType : uint8 {
+    enum class LogType : u8 {
         NORMAL,
         VERBOSE,
         INFO,

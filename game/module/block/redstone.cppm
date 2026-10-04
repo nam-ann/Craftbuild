@@ -4,8 +4,8 @@ import misc.number;
 import game.block;
 
 export namespace craftbuild {
-	class RedstoneDust : public ComplexBlock {
+	class RedstoneDust final : public ComplexBlock {
 
 	};
-	struct RedstoneBlock : public Block1F {};
+	struct RedstoneBlock final : public Block1F {};
 }

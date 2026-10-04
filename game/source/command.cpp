@@ -50,12 +50,12 @@ namespace craftbuild {
         return tokens;
     }
 
-	bool CommandInterpreter::is_valid_coordinate(int64 x, int64 y, int64 z) {
+	bool CommandInterpreter::is_valid_coordinate(i64 x, i64 y, i64 z) {
         return (x >= -World::RANGE and x <= World::RANGE and y >= 0 and y <= Chunk::HEIGHT and z >= -World::RANGE and z <= World::RANGE);
     }
 
     bool CommandInterpreter::is_valid_block_type(Str const& block_type) {
-        return BlockRegistry::has_block(block_type);
+        return block_registry::has_block(block_type);
     }
 
     Str CommandInterpreter::execute_command(Str const& command_line) {
@@ -87,9 +87,9 @@ namespace craftbuild {
         }
 
         try {
-            int32 x = std::stoi(args[1].std_str());
-            int32 y = std::stoi(args[2].std_str());
-            int32 z = std::stoi(args[3].std_str());
+            i32 x = std::stoi(args[1].std_str());
+            i32 y = std::stoi(args[2].std_str());
+            i32 z = std::stoi(args[3].std_str());
             Str block_type = args[4];
 
             if (not is_valid_coordinate(x, y, z)) {
@@ -104,7 +104,7 @@ namespace craftbuild {
                 return output;
             }
 
-            world->set_global_block_id(BlockRegistry::get_id(block_type), x, y, z);
+            world->set_global_block_id(block_registry::get_id(block_type), x, y, z);
             output = "Set block "f << block_type << " at " << Pos3D(x, y, z);
             log<LogType::INFO>(output);
         }
@@ -127,12 +127,12 @@ namespace craftbuild {
         }
 
         try {
-            int32 x1 = std::stoi(args[1].std_str());
-            int32 y1 = std::stoi(args[2].std_str());
-            int32 z1 = std::stoi(args[3].std_str());
-            int32 x2 = std::stoi(args[4].std_str());
-            int32 y2 = std::stoi(args[5].std_str());
-            int32 z2 = std::stoi(args[6].std_str());
+            i32 x1 = std::stoi(args[1].std_str());
+            i32 y1 = std::stoi(args[2].std_str());
+            i32 z1 = std::stoi(args[3].std_str());
+            i32 x2 = std::stoi(args[4].std_str());
+            i32 y2 = std::stoi(args[5].std_str());
+            i32 z2 = std::stoi(args[6].std_str());
             Str block_type = args[7];
 
             if (not is_valid_block_type(block_type)) {
@@ -141,12 +141,12 @@ namespace craftbuild {
                 return output;
             }
 
-            int32 min_x = std::min(x1, x2);
-            int32 max_x = std::max(x1, x2);
-            int32 min_y = std::min(y1, y2);
-            int32 max_y = std::max(y1, y2);
-            int32 min_z = std::min(z1, z2);
-            int32 max_z = std::max(z1, z2);
+            i32 min_x = std::min(x1, x2);
+            i32 max_x = std::max(x1, x2);
+            i32 min_y = std::min(y1, y2);
+            i32 max_y = std::max(y1, y2);
+            i32 min_z = std::min(z1, z2);
+            i32 max_z = std::max(z1, z2);
 
             if (not is_valid_coordinate(min_x, min_y, min_z) or not is_valid_coordinate(max_x, max_y, max_z)) {
                 output = ""f << Pos3D(min_x, min_y, min_z) << " or " << Pos3D(max_x, max_y, max_z) << " outs of bounds";
@@ -154,11 +154,11 @@ namespace craftbuild {
                 return output;
             }
 
-            int32 block_count = 0;
-            for (int32 x = min_x; x <= max_x; ++x) {
-                for (int32 y = min_y; y <= max_y; ++y) {
-                    for (int32 z = min_z; z <= max_z; ++z) {
-                        world->set_global_block_id(BlockRegistry::get_id(block_type), x, y, z);
+            i32 block_count = 0;
+            for (i32 x = min_x; x <= max_x; ++x) {
+                for (i32 y = min_y; y <= max_y; ++y) {
+                    for (i32 z = min_z; z <= max_z; ++z) {
+                        world->set_global_block_id(block_registry::get_id(block_type), x, y, z);
                         block_count++;
                     }
                 }
@@ -184,7 +184,7 @@ namespace craftbuild {
             return output;
         }
 
-        int64 amount = 1;
+        i64 amount = 1;
         if (len(args) >= 4) {
             try {
                 amount = std::stoi(args[3].std_str());
@@ -212,7 +212,7 @@ namespace craftbuild {
         }
 
         PlayerData& player = world->players[args[1]];
-        player.hotbar[player.selected_slot] = BlockRegistry::get_id(args[2]);
+        player.hotbar[player.selected_slot] = block_registry::get_id(args[2]);
 
         output = "Gave "f << args[1] << " " << amount << " " << args[2] << "(s)";
         log<LogType::INFO>(output);

@@ -21,14 +21,14 @@ using namespace godot;
 using namespace std::chrono_literals;
 
 export namespace craftbuild {
-    struct Message {
+    struct Message final {
         Str content;
         List<std::string> arguments;
 
         void swap(Message& other);
     };
 
-    struct SendQueue {
+    struct SendQueue final {
         List<Message> msg;
         mutable std::mutex msg_mutex;
 
@@ -42,7 +42,7 @@ export namespace craftbuild {
         ERROR
     };
 
-    struct ReceiveQueue {
+    struct ReceiveQueue final {
         List<char> buffer;
 
         ReceiveState receive(StreamPeerTCP& peer, List<char>& out_data);

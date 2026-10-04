@@ -19,21 +19,21 @@ namespace craftbuild {
         start_gc_thread();
         start_log_thread();
 
-        MetaRegistry::register_metadata("transparent");
+        meta_registry::register_metadata("transparent");
 
-        BlockRegistry::register_block<Air>("Air", "");
-        BlockRegistry::register_block<Grass>("Grass Block", "");
-        BlockRegistry::register_block<Dirt>("Dirt", "");
-        BlockRegistry::register_block<Stone>("Stone", "");
-        BlockRegistry::register_block<Pebble>("Pebble", "");
-        BlockRegistry::register_block<OakLog>("Oak Log", "");
-        BlockRegistry::register_block<OakPlanks>("Oak Planks", "");
-        BlockRegistry::register_block<OakLeaves>("Oak Leaves", "");
-        BlockRegistry::register_block<DiamondBlock>("Diamond Block", "");
-        BlockRegistry::register_block<DiamondOre>("Diamond Ore", "");
-        BlockRegistry::register_block<Bedrock>("Bedrock", "");
-        BlockRegistry::register_block<RedstoneBlock>("Redstone Block", "");
-        BlockRegistry::register_block<RedstoneDust>("Redstone Dust", "");
+        block_registry::register_block<Air>("Air", "");
+        block_registry::register_block<Grass>("Grass Block", "");
+        block_registry::register_block<Dirt>("Dirt", "");
+        block_registry::register_block<Stone>("Stone", "");
+        block_registry::register_block<Pebble>("Pebble", "");
+        block_registry::register_block<OakLog>("Oak Log", "");
+        block_registry::register_block<OakPlanks>("Oak Planks", "");
+        block_registry::register_block<OakLeaves>("Oak Leaves", "");
+        block_registry::register_block<DiamondBlock>("Diamond Block", "");
+        block_registry::register_block<DiamondOre>("Diamond Ore", "");
+        block_registry::register_block<Bedrock>("Bedrock", "");
+        block_registry::register_block<RedstoneBlock>("Redstone Block", "");
+        block_registry::register_block<RedstoneDust>("Redstone Dust", "");
 
         Biome plains;
         plains.base_height = 5.0f;
@@ -70,15 +70,15 @@ namespace craftbuild {
         cherry_grove.detail_noise = 0.25f;
         cherry_grove.min_height = 45;
 
-        BiomeRegistry::register_biome("Plains", plains);
-        BiomeRegistry::register_biome("Normal", normal);
-        BiomeRegistry::register_biome("Mountains", mountains);
-        BiomeRegistry::register_biome("Jagged Peaks", jagged_peaks);
-        BiomeRegistry::register_biome("Cherry Grove", cherry_grove);
+        biome_registry::register_biome("Plains", plains);
+        biome_registry::register_biome("Normal", normal);
+        biome_registry::register_biome("Mountains", mountains);
+        biome_registry::register_biome("Jagged Peaks", jagged_peaks);
+        biome_registry::register_biome("Cherry Grove", cherry_grove);
 
-        CaveRegistry::register_cave("Large Cavern", { CaveType::CHEESE, 0.5f, 0.02f });
-        CaveRegistry::register_cave("Standard Tunnel", { CaveType::SPAGHETTI, 0.45f, 0.05f });
-        CaveRegistry::register_cave("Deep Noodle", { CaveType::NOODLE, 0.35f, 0.08f });
+        cave_registry::register_cave("Large Cavern", { CaveType::CHEESE, 0.5f, 0.02f });
+        cave_registry::register_cave("Standard Tunnel", { CaveType::SPAGHETTI, 0.45f, 0.05f });
+        cave_registry::register_cave("Deep Noodle", { CaveType::NOODLE, 0.35f, 0.08f });
 
         tcp_server.instantiate();
         auto err = tcp_server->listen(8888);
@@ -91,7 +91,7 @@ namespace craftbuild {
         log<LogType::INFO>("TCP Server listening on port 8888...");
     }
 
-    void Server::_process(float64 delta) {
+    void Server::_process(f64 delta) {
         if (tcp_server.is_valid() and tcp_server->is_connection_available()) {
             auto client_peer = tcp_server->take_connection();
             if (client_peer.is_valid()) {
@@ -157,26 +157,26 @@ namespace craftbuild {
                     client.send_queue.store({ "Players data", { players_data } });
                 }
                 else if (message.content == "Set seed and world name") {
-                    int32 seed = std::stoi(message.arguments[0]);
+                    i32 seed = std::stoi(message.arguments[0]);
                     Str world_name = message.arguments[1];
                     server.set_seed_and_world_name(seed, world_name);
                     client.send_queue.store({ "Set" });
                 }
                 else if (message.content == "Set render distance") {
-                    int32 rd = std::stoi(message.arguments[0]);
+                    i32 rd = std::stoi(message.arguments[0]);
                     server.set_render_distance(rd);
                     client.send_queue.store({ "Set" });
                 }
                 else if (message.content == "Set sleep time CPU") {
-                    int32 stc = std::stoi(message.arguments[0]);
+                    i32 stc = std::stoi(message.arguments[0]);
                     server.set_cpu_sleep_time(stc);
                     client.send_queue.store({ "Set" });
                 }
                 else if (message.content == "Update player pos") {
-                    Pos3D<floatr> pos{
-                        (floatr)std::stod(message.arguments[1]),
-                        (floatr)std::stod(message.arguments[2]),
-                        (floatr)std::stod(message.arguments[3])
+                    Pos3D<fsize> pos{
+                        (fsize)std::stod(message.arguments[1]),
+                        (fsize)std::stod(message.arguments[2]),
+                        (fsize)std::stod(message.arguments[3])
                     };
                     server.update(message.arguments[0], pos);
                     client.send_queue.store({ "Updated" });
@@ -215,15 +215,15 @@ namespace craftbuild {
         if (gc_thread.joinable()) return;
 
         auto worker = [this]() {
-            ThreadRegistry::register_thread("GC");
+            thread_registry::register_thread("GC");
             log<LogType::INFO>("GC thread started");
 
             while (running.load(std::memory_order_relaxed)) {
-                GarbageCollector::collect();
+                garbage_collector::collect();
                 std::this_thread::sleep_for(5s);
             }
 
-            GarbageCollector::collect();
+            garbage_collector::collect();
         };
 
         gc_thread = std::jthread(worker);
@@ -233,7 +233,7 @@ namespace craftbuild {
         if (log_thread.joinable()) return;
 
         auto worker = [this]() {
-            ThreadRegistry::register_thread("Log");
+            thread_registry::register_thread("Log");
             log<LogType::INFO>("Log thread started");
 
             while (running.load(std::memory_order_relaxed)) {

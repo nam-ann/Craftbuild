@@ -16,22 +16,22 @@ import misc.number;
 using namespace godot;
 
 export namespace craftbuild {
-    class Sun : public DirectionalLight3D {
+    class Sun final : public DirectionalLight3D {
         GDCLASS(Sun, DirectionalLight3D)
 
     private:
-        float32 day_angle = -0.8f;
-        float32 day_speed = 0.0001f;
+        f32 day_angle = -0.8f;
+        f32 day_speed = 0.0001f;
 
     protected:
         static void _bind_methods();
 
     public:
         void _ready() override;
-        void _process(float64 delta) override;
+        void _process(f64 delta) override;
     };
 
-    class CraftSky : public WorldEnvironment {
+    class CraftSky final : public WorldEnvironment {
         GDCLASS(CraftSky, WorldEnvironment)
 
     private:

@@ -14,15 +14,14 @@ import misc.ptr;
 import misc.number;
 import misc.format;
 import game.logger;
+import game.player;
 
 using namespace godot;
 
 export namespace craftbuild {
-    class Player;
-    class SkinManager {
-    public:
-        static bool load_skin(Player& player, char const* path);
-        static Ref<StandardMaterial3D> create_skin_material(Ref<Texture2D> texture);
-        static void apply_skin_to_model(MeshInstance3D* model, Ref<Texture2D> texture);
+    namespace skin_manager {
+        bool load_skin(Player& player, char const* path);
+        Ref<StandardMaterial3D> create_skin_material(Ref<Texture2D> texture);
+        void apply_skin_to_model(MeshInstance3D* model, Ref<Texture2D> texture);
     };
 }

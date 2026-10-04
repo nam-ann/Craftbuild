@@ -9,15 +9,15 @@ import misc.range;
 import misc.number;
 
 export namespace craftbuild {
-	struct ThreadRegistry {
-		inline static std::unordered_map<std::jthread::id, Str> threads;
-		inline static std::mutex threads_mutex;
+	namespace thread_registry {
+		inline std::unordered_map<std::jthread::id, Str> threads;
+		inline std::mutex threads_mutex;
 
-        static void register_thread(Str const& thread_name);
-        static Str get_name(std::jthread::id const& thread_id);
+        void register_thread(Str const& thread_name);
+        Str get_name(std::jthread::id const& thread_id);
 	};
 
-    class ThreadPool {
+    class ThreadPool final {
         List<std::jthread> workers;
         std::queue<std::function<void()>> tasks;
 

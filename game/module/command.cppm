@@ -18,11 +18,11 @@ namespace craftbuild {
 }
 
 export namespace craftbuild {
-    class CommandInterpreter {
+    class CommandInterpreter final {
     private:
         void* world_ptr = nullptr;
 
-        bool is_valid_coordinate(int64 x, int64 y, int64 z);
+        bool is_valid_coordinate(i64 x, i64 y, i64 z);
         bool is_valid_block_type(Str const& block_type);
 
     public:

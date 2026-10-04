@@ -33,16 +33,16 @@ import game.player.player_data;
 using namespace godot;
 
 export namespace craftbuild {
-    class World {
-        Dict<Pos2D<int32>, Ptr<Chunk>> chunks;
+    class World final {
+        Dict<Pos2D<i32>, Ptr<Chunk>> chunks;
         mutable std::shared_mutex chunks_mutex;
 
         Ref<FastNoiseLite> noise;
-        std::atomic<int32> world_seed = 0;
+        std::atomic<i32> world_seed = 0;
         Str world_name = "My World";
 
         Dict<Str, PlayerData> players;
-        Dict<Str, uint8> online_players;
+        Dict<Str, u8> online_players;
         decltype(online_players.begin()) current_player;
         void* command_ptr = nullptr;
         mutable std::shared_mutex player_mutex;
@@ -52,7 +52,7 @@ export namespace craftbuild {
         std::jthread redstone_thread;
         std::jthread scheduler_thread;
         ThreadPool terrain_pool{ 4 };
-        Set<Pos2D<int32>> pending_terrain_jobs;
+        Set<Pos2D<i32>> pending_terrain_jobs;
         mutable std::mutex pending_jobs_mutex;
 
         std::atomic<bool> pausing = true;
@@ -61,7 +61,7 @@ export namespace craftbuild {
         mutable std::mutex loop_mutex;
 
     public:
-        inline static int32 RANGE = render_distance * 16;
+        inline static i32 RANGE = render_distance * 16;
 
         void _get_refs(List<GCObject*>& refs);
 
@@ -69,35 +69,34 @@ export namespace craftbuild {
         ~World();
         void connect(Str const& player_name);
         void disconnect(Str const& player_name);
-        void update(Str const& player_name, Pos3D<floatr> const& new_pos);
+        void update(Str const& player_name, Pos3D<fsize> const& new_pos);
 
         void start_redstone_thread();
         void start_scheduler_thread();
-        void submit_jobs(Pos3D<floatr> const& player);
+        void submit_jobs(Pos3D<fsize> const& player);
 
         std::string serialize_players();
-        std::string serialize_chunk(int32 cx, int32 cy);
-        Ptr<Chunk> get_chunk(int32 cx, int32 cy);
-        Ptr<Chunk> get_or_load_chunk(int32 cx, int32 cy);
-        Ptr<Chunk> get_or_create_chunk(int32 cx, int32 cy);
-        uint32 get_global_block_id(int32 wx, int32 wy, int32 wz);
-        void set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz);
+        std::string serialize_chunk(i32 cx, i32 cy);
+        Ptr<Chunk> get_chunk(i32 cx, i32 cy);
+        Ptr<Chunk> get_or_load_chunk(i32 cx, i32 cy);
+        Ptr<Chunk> get_or_create_chunk(i32 cx, i32 cy);
+        u32 get_global_block_id(i32 wx, i32 wy, i32 wz);
+        void set_global_block_id(u32 block_id, i32 wx, i32 wy, i32 wz);
         void unload_distant_chunks();
 
-        void set_seed_and_world_name(int32 seed, Str const& name);
-        void set_render_distance(int32 rd);
-        void set_cpu_sleep_time(int32 stc);
+        void set_seed_and_world_name(i32 seed, Str const& name);
+        void set_render_distance(i32 rd);
+        void set_cpu_sleep_time(i32 stc);
 
         Str chat(Str const& message);
 
         void save_world(Str const& path);
         bool load_world(Str const& path);
-        void save_region(Str const& path, int32 rx, int32 ry);
-        bool load_region(Str const& path, int32 rx, int32 ry);
+        void save_region(Str const& path, i32 rx, i32 ry);
+        bool load_region(Str const& path, i32 rx, i32 ry);
 
         friend class Main;
         friend class Server;
         friend class CommandInterpreter;
-        friend void craftbuild_mod_main();
     };
 }

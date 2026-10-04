@@ -30,16 +30,16 @@ import game.texture.atlas_texture;
 using namespace godot;
 
 export namespace craftbuild {
-    enum class Gamemode : uint8 { SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR };
+    enum class Gamemode : u8 { SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR };
 
-    class Player : public CharacterBody3D {
+    class Player final : public CharacterBody3D {
         GDCLASS(Player, CharacterBody3D)
 
     public:
         // Movement
-        floatr speed = 4.0f;
-        floatr gravity = 24.0f;
-        floatr jump_velocity = 8.0f;
+        fsize speed = 4.0f;
+        fsize gravity = 24.0f;
+        fsize jump_velocity = 8.0f;
         bool is_grounded = false;
         bool can_fly = false;
         bool jump_was_pressed = false;
@@ -48,15 +48,15 @@ export namespace craftbuild {
 
         // Camera
         Camera3D* camera = nullptr;
-        float32 sensitivity = 0.0043f;
-        float32 mouse_pitch = 0.0f;
+        f32 sensitivity = 0.0043f;
+        f32 mouse_pitch = 0.0f;
         
         // Gameplay
-        inline static constexpr uint8 HOTBAR_SIZE = 9;
-        uint32 hotbar[HOTBAR_SIZE] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-        uint8 selected_slot = 0;
-        Dict<Str, int32> inventory;
-        int8 hp = 20;
+        inline static constexpr u8 HOTBAR_SIZE = 9;
+        u32 hotbar[HOTBAR_SIZE] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        u8 selected_slot = 0;
+        Dict<Str, i32> inventory;
+        i8 hp = 20;
 
         // World
         void* world_ptr = nullptr;
@@ -68,18 +68,18 @@ export namespace craftbuild {
 
     public:
         void _ready() override;
-        void _process(float64 delta) override;
-        void _physics_process(float64 delta) override;
+        void _process(f64 delta) override;
+        void _physics_process(f64 delta) override;
         void _input(Ref<InputEvent> const& event) override;
 
-        bool would_collide_with_player(Pos3D<int32> const& block_pos) const;
+        bool would_collide_with_player(Pos3D<i32> const& block_pos) const;
         Ref<ShaderMaterial> create_selection_box_material();
-        Dictionary raycast_block(floatr max_distance = 5.0f);
-        Face get_face(Pos3D<floatr> n);
+        Dictionary raycast_block(fsize max_distance = 5.0f);
+        Face get_face(Pos3D<fsize> n);
 
-        void cycle_hotbar(int32 dir);
-        void select_slot(int32 slot);
-        uint32 get_selected_block_id() const;
+        void cycle_hotbar(i32 dir);
+        void select_slot(i32 slot);
+        u32 get_selected_block_id() const;
 
         void save_data(std::ostream& os);
         void load_data(std::istream& is);

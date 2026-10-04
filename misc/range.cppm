@@ -4,7 +4,7 @@ import std;
 
 template <typename T>
 requires std::is_arithmetic_v<T>
-class Range {
+class Range final {
 private:
     T __start__, __stop__, __step__;
 

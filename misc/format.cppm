@@ -21,7 +21,7 @@ export namespace craftbuild {
 		return Str(buffer);
 	}
 
-	class format {
+	class format final {
 		Str __buffer__;
 
 	public:
@@ -44,23 +44,23 @@ export namespace craftbuild {
 			f.__buffer__ += s;
 			return std::move(f);
 		}
-		friend format&& operator<<(format&& f, int64 i) {
+		friend format&& operator<<(format&& f, i64 i) {
 			f.__buffer__ += Str(i);
 			return std::move(f);
 		}
-		friend format&& operator<<(format&& f, int32 i) {
+		friend format&& operator<<(format&& f, i32 i) {
 			f.__buffer__ += Str(i);
 			return std::move(f);
 		}
-		friend format&& operator<<(format&& f, uint64 i) {
+		friend format&& operator<<(format&& f, u64 i) {
 			f.__buffer__ += Str(i);
 			return std::move(f);
 		}
-		friend format&& operator<<(format&& f, uint32 i) {
+		friend format&& operator<<(format&& f, u32 i) {
 			f.__buffer__ += Str(i);
 			return std::move(f);
 		}
-		friend format&& operator<<(format&& f, float64 i) {
+		friend format&& operator<<(format&& f, f64 i) {
 			f.__buffer__ += Str(i);
 			return std::move(f);
 		}

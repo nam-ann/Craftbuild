@@ -39,21 +39,21 @@ namespace craftbuild {
         start_gc_thread();
         start_log_thread();
 
-        MetaRegistry::register_metadata("transparent");
+        meta_registry::register_metadata("transparent");
         
-        BlockRegistry::register_block<Air>          ("Air"           , "");
-        BlockRegistry::register_block<Grass>        ("Grass Block"   , "grass_block.png");
-        BlockRegistry::register_block<Dirt>         ("Dirt"          , "dirt.png");
-        BlockRegistry::register_block<Stone>        ("Stone"         , "stone.png");
-        BlockRegistry::register_block<Pebble>       ("Pebble"        , "pebble.png");
-        BlockRegistry::register_block<OakLog>       ("Oak Log"       , "oak_log.png");
-        BlockRegistry::register_block<OakPlanks>    ("Oak Planks"    , "oak_planks.png");
-        BlockRegistry::register_block<OakLeaves>    ("Oak Leaves"    , "oak_leaves.png");
-        BlockRegistry::register_block<DiamondBlock> ("Diamond Block" , "diamond_block.png");
-        BlockRegistry::register_block<DiamondOre>   ("Diamond Ore"   , "diamond_ore.png");
-        BlockRegistry::register_block<Bedrock>      ("Bedrock"       , "bedrock.png");
-        BlockRegistry::register_block<RedstoneBlock>("Redstone Block", "redstone_block.png");
-        BlockRegistry::register_block<RedstoneDust> ("Redstone Dust" , "redstone_dust.glb");
+        block_registry::register_block<Air>          ("Air"           , "");
+        block_registry::register_block<Grass>        ("Grass Block"   , "grass_block.png");
+        block_registry::register_block<Dirt>         ("Dirt"          , "dirt.png");
+        block_registry::register_block<Stone>        ("Stone"         , "stone.png");
+        block_registry::register_block<Pebble>       ("Pebble"        , "pebble.png");
+        block_registry::register_block<OakLog>       ("Oak Log"       , "oak_log.png");
+        block_registry::register_block<OakPlanks>    ("Oak Planks"    , "oak_planks.png");
+        block_registry::register_block<OakLeaves>    ("Oak Leaves"    , "oak_leaves.png");
+        block_registry::register_block<DiamondBlock> ("Diamond Block" , "diamond_block.png");
+        block_registry::register_block<DiamondOre>   ("Diamond Ore"   , "diamond_ore.png");
+        block_registry::register_block<Bedrock>      ("Bedrock"       , "bedrock.png");
+        block_registry::register_block<RedstoneBlock>("Redstone Block", "redstone_block.png");
+        block_registry::register_block<RedstoneDust> ("Redstone Dust" , "redstone_dust.glb");
 
         Biome plains;
         plains.base_height = 5.0f;
@@ -90,15 +90,15 @@ namespace craftbuild {
         cherry_grove.detail_noise = 0.25f;
         cherry_grove.min_height = 45;
 
-        BiomeRegistry::register_biome("Plains", plains);
-        BiomeRegistry::register_biome("Normal", normal);
-        BiomeRegistry::register_biome("Mountains", mountains);
-        BiomeRegistry::register_biome("Jagged Peaks", jagged_peaks);
-        BiomeRegistry::register_biome("Cherry Grove", cherry_grove);
+        biome_registry::register_biome("Plains", plains);
+        biome_registry::register_biome("Normal", normal);
+        biome_registry::register_biome("Mountains", mountains);
+        biome_registry::register_biome("Jagged Peaks", jagged_peaks);
+        biome_registry::register_biome("Cherry Grove", cherry_grove);
 
-        CaveRegistry::register_cave("Large Cavern", { CaveType::CHEESE, 0.5f, 0.02f });
-        CaveRegistry::register_cave("Standard Tunnel", { CaveType::SPAGHETTI, 0.45f, 0.05f });
-        CaveRegistry::register_cave("Deep Noodle", { CaveType::NOODLE, 0.35f, 0.08f });
+        cave_registry::register_cave("Large Cavern", { CaveType::CHEESE, 0.5f, 0.02f });
+        cave_registry::register_cave("Standard Tunnel", { CaveType::SPAGHETTI, 0.45f, 0.05f });
+        cave_registry::register_cave("Deep Noodle", { CaveType::NOODLE, 0.35f, 0.08f });
 
         {
             std::unique_lock lock(player_mutex);
@@ -106,13 +106,13 @@ namespace craftbuild {
         }
         if (not load_userdata()) log<LogType::WARNING>("Userdata file not found.");
 
-        AtlasTexture::build_texture_array();
+        atlas_texture::build_texture_array();
         setup_voxel_material();
 
         log<LogType::INFO>("Main initialized");
     }
 
-    void Main::_process(float64 delta) {
+    void Main::_process(f64 delta) {
         Player* player = static_cast<Player*>(player_ptr);
         if (not player) return;
 
@@ -121,8 +121,8 @@ namespace craftbuild {
         player_y.store(player_pos.y, std::memory_order_relaxed);
         player_z.store(player_pos.z, std::memory_order_relaxed);
 
-        static Pos3D<floatr> last_sent_pos;
-        if ((player_pos - last_sent_pos) > Pos3D<floatr>(0.01f, 0.01f, 0.01f)) {
+        static Pos3D<fsize> last_sent_pos;
+        if ((player_pos - last_sent_pos) > Pos3D<fsize>(0.01f, 0.01f, 0.01f)) {
             if (not server_ptr) {
                 last_sent_pos = player_pos;
                 send_queue.store({ "Update player pos", { player_name.std_str(), std::to_string(player_pos.x), std::to_string(player_pos.y), std::to_string(player_pos.z)} });
@@ -141,17 +141,17 @@ namespace craftbuild {
                 auto& player_data = server_ptr.value().players[player_name];
 
                 player->hp = player_data.hp;
-                std::memcpy(&player->hotbar, &player_data.hotbar, sizeof(uint32) * PlayerData::HOTBAR_SIZE);
+                std::memcpy(&player->hotbar, &player_data.hotbar, sizeof(u32) * PlayerData::HOTBAR_SIZE);
             }
         }
 
-        List<Pos2D<int32>> chunks_to_upload;
+        List<Pos2D<i32>> chunks_to_upload;
         {
             std::lock_guard lock(ready_chunks_queue_mutex);
             ready_chunks_queue.swap(chunks_to_upload);
         }
 
-        List<Pos2D<int32>> deferred_chunks;
+        List<Pos2D<i32>> deferred_chunks;
         {
             PackedVector3Array vertices;
             PackedVector3Array normals;
@@ -162,7 +162,7 @@ namespace craftbuild {
             PackedVector3Array total_collision_faces;
 
             static constexpr auto max_updates = 8;
-            int32 updates_this_frame = 0;
+            i32 updates_this_frame = 0;
 
             for (auto& chunk_pos : chunks_to_upload) {
                 if (updates_this_frame >= max_updates) {
@@ -181,7 +181,7 @@ namespace craftbuild {
                 if (not chunk_data_ptr) continue;
                 auto& chunk_data = chunk_data_ptr.value();
 
-                for (uint8 sub_idx : range<uint8>(4)) {
+                for (u8 sub_idx : range<u8>(4)) {
                     auto& data = chunk_data[sub_idx];
 
                     if (data.vertices) {
@@ -191,11 +191,11 @@ namespace craftbuild {
                         uvs.resize(len(data.uvs));
                         uvs_layer.resize(len(data.uvs_layer));
 
-                        std::memcpy(vertices.ptrw(), data.vertices.data(), len(data.vertices) * sizeof(Pos3D<float32>));
-                        std::memcpy(normals.ptrw(), data.normals.data(), len(data.normals) * sizeof(Pos3D<float32>));
-                        std::memcpy(indices.ptrw(), data.indices.data(), len(data.indices) * sizeof(int32));
-                        std::memcpy(uvs.ptrw(), data.uvs.data(), len(data.uvs) * sizeof(Pos2D<float32>));
-                        std::memcpy(uvs_layer.ptrw(), data.uvs_layer.data(), len(data.uvs_layer) * sizeof(Pos2D<float32>));
+                        std::memcpy(vertices.ptrw(), data.vertices.data(), len(data.vertices) * sizeof(Pos3D<f32>));
+                        std::memcpy(normals.ptrw(), data.normals.data(), len(data.normals) * sizeof(Pos3D<f32>));
+                        std::memcpy(indices.ptrw(), data.indices.data(), len(data.indices) * sizeof(i32));
+                        std::memcpy(uvs.ptrw(), data.uvs.data(), len(data.uvs) * sizeof(Pos2D<f32>));
+                        std::memcpy(uvs_layer.ptrw(), data.uvs_layer.data(), len(data.uvs_layer) * sizeof(Pos2D<f32>));
 
                         Array arrays;
                         arrays.resize(Mesh::ARRAY_MAX);
@@ -212,9 +212,9 @@ namespace craftbuild {
                         mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
                         update_chunk_mesh(chunk_render, chunk_pos, mesh, sub_idx);
 
-                        int32 const current_size = int32(total_collision_faces.size());
+                        i32 const current_size = i32(total_collision_faces.size());
                         total_collision_faces.resize(current_size + len(data.collision_faces));
-                        std::memcpy(total_collision_faces.ptrw() + current_size, data.collision_faces.data(), len(data.collision_faces) * sizeof(Pos3D<float32>));
+                        std::memcpy(total_collision_faces.ptrw() + current_size, data.collision_faces.data(), len(data.collision_faces) * sizeof(Pos3D<f32>));
                     }
 
                     if (not data.complex_instance) {
@@ -233,7 +233,7 @@ namespace craftbuild {
                         child->queue_free();
                     }
 
-                    Dict<uint32, List<ComplexBlockInstance>> grouped_instances;
+                    Dict<u32, List<ComplexBlockInstance>> grouped_instances;
                     for (auto&& inst : data.complex_instance) {
                         Ref<BoxShape3D> box;
                         box.instantiate();
@@ -248,19 +248,19 @@ namespace craftbuild {
                     }
 
                     for (auto const& [id, instances] : grouped_instances) {
-                        if (id >= len(BlockRegistry::registry)) continue;
+                        if (id >= len(block_registry::registry)) continue;
 
                         Ref<MultiMesh> multimesh;
                         multimesh.instantiate();
                         multimesh->set_transform_format(MultiMesh::TRANSFORM_3D);
-                        multimesh->set_mesh(BlockRegistry::registry[id].mesh);
-                        multimesh->set_instance_count(int32(len(instances)));
+                        multimesh->set_mesh(block_registry::registry[id].mesh);
+                        multimesh->set_instance_count(i32(len(instances)));
 
                         for (usize i : range(len(instances))) {
                             auto const& inst = instances[i];
                             Transform3D transform;
                             transform.origin = Vector3(inst.local_pos.x, inst.local_pos.y + 0.01f, inst.local_pos.z);
-                            multimesh->set_instance_transform(int32(i), transform);
+                            multimesh->set_instance_transform(i32(i), transform);
                         }
 
                         if (not chunk_render.multi_mesh_instance) {
@@ -330,7 +330,7 @@ namespace craftbuild {
         else log<LogType::ERROR>("Shader file not found at: "f << shader_path.utf8());
 
         mat->set_shader(shader);
-        mat->set_shader_parameter("u_texture_array", AtlasTexture::atlas_texture);
+        mat->set_shader_parameter("u_texture_array", atlas_texture::atlas_texture);
 
         world_material = mat;
     }
@@ -339,15 +339,15 @@ namespace craftbuild {
         if (gc_thread.joinable()) return;
 
         auto worker = [this]() {
-            ThreadRegistry::register_thread("GC");
+            thread_registry::register_thread("GC");
             log<LogType::INFO>("GC thread started");
 
             while (running.load(std::memory_order_relaxed)) {
-                GarbageCollector::collect();
+                garbage_collector::collect();
                 std::this_thread::sleep_for(5s);
             }
 
-            GarbageCollector::collect();
+            garbage_collector::collect();
         };
 
         gc_thread = std::jthread(worker);
@@ -357,7 +357,7 @@ namespace craftbuild {
         if (log_thread.joinable()) return;
 
         auto worker = [this]() {
-            ThreadRegistry::register_thread("Log");
+            thread_registry::register_thread("Log");
             log<LogType::INFO>("Log thread started");
 
             while (running.load(std::memory_order_relaxed)) {
@@ -375,7 +375,7 @@ namespace craftbuild {
         if (network_thread.joinable()) return;
 
         auto worker = [this]() {
-            ThreadRegistry::register_thread("Network");
+            thread_registry::register_thread("Network");
             log<LogType::INFO>("Network thread started");
 
             Ref<StreamPeerTCP> client_peer;
@@ -431,10 +431,10 @@ namespace craftbuild {
                 if (message.content == "Connected") {
                     log<LogType::INFO>("Connected to server");
 
-                    Pos3D<floatr> player_pos{
-                        floatr(std::stod(message.arguments[0])),
-                        floatr(std::stod(message.arguments[1])),
-                        floatr(std::stod(message.arguments[2]))
+                    Pos3D<fsize> player_pos{
+                        fsize(std::stod(message.arguments[0])),
+                        fsize(std::stod(message.arguments[1])),
+                        fsize(std::stod(message.arguments[2]))
                     };
 
                     if (Str server_version = message.arguments[3]; server_version != version) {
@@ -474,14 +474,14 @@ namespace craftbuild {
 
                 try {
                     if (message.content == "Chunk version") {
-                        uint8 chunk_version = std::stoi(message.arguments[0]);
+                        u8 chunk_version = std::stoi(message.arguments[0]);
                         auto cx = std::stoi(message.arguments[1]), cy = std::stoi(message.arguments[2]);
 
                         if (auto chunk = get_chunk(cx, cy); not chunk or chunk.value().chunk_version != chunk_version) send_queue.store({ "Get chunk data", { std::to_string(cx), std::to_string(cy) } });
                     }
                     else if (message.content == "Chunk data") {
                         // Unzip
-                        if (len(buffer) < sizeof(uint32)) {
+                        if (len(buffer) < sizeof(u32)) {
                             log<LogType::ERROR>("Received chunk data is too small("f << len(buffer) << "). Packet might be corrupted");
                             continue;
                         }
@@ -490,18 +490,18 @@ namespace craftbuild {
                         String godot_base64_str = base64_payload.c_str();
                         PackedByteArray payload = Marshalls::get_singleton()->base64_to_raw(godot_base64_str);
 
-                        if (payload.size() < sizeof(uint32)) {
+                        if (payload.size() < sizeof(u32)) {
                             log<LogType::ERROR>("Received chunk data is too small("f << payload.size() << ") to contain uncompressed size. Packet might be corrupted");
                             continue;
                         }
 
-                        uint32 uncompressed_size = 0;
-                        memcpy(&uncompressed_size, payload.ptr(), sizeof(uint32));
+                        u32 uncompressed_size = 0;
+                        memcpy(&uncompressed_size, payload.ptr(), sizeof(u32));
 
-                        size_t compressed_size = payload.size() - sizeof(uint32);
+                        size_t compressed_size = payload.size() - sizeof(u32);
                         PackedByteArray compressed_pba;
                         compressed_pba.resize(compressed_size);
-                        memcpy(compressed_pba.ptrw(), payload.ptr() + sizeof(uint32), compressed_size);
+                        memcpy(compressed_pba.ptrw(), payload.ptr() + sizeof(u32), compressed_size);
 
                         PackedByteArray decompressed_pba = compressed_pba.decompress(uncompressed_size, FileAccess::COMPRESSION_ZSTD);
 
@@ -519,84 +519,84 @@ namespace craftbuild {
                         std::unique_lock data_lock(chunk.data_mutex);
                         chunk.clear();
 
-                        is.read(reinterpret_cast<char*>(&chunk.blocks[0][0][0]), uint64(Chunk::WIDTH * Chunk::HEIGHT * Chunk::WIDTH * sizeof(uint8)));
+                        is.read(reinterpret_cast<char*>(&chunk.blocks[0][0][0]), u64(Chunk::WIDTH * Chunk::HEIGHT * Chunk::WIDTH * sizeof(u8)));
 
-                        is.read(reinterpret_cast<char*>(&chunk.block_ids_size), sizeof(uint8));
-                        is.read(reinterpret_cast<char*>(&chunk.block_ids), sizeof(uint32) * 256);
+                        is.read(reinterpret_cast<char*>(&chunk.block_ids_size), sizeof(u8));
+                        is.read(reinterpret_cast<char*>(&chunk.block_ids), sizeof(u32) * 256);
 
-                        uint8 id2block_size = 0;
-                        is.read(reinterpret_cast<char*>(&id2block_size), sizeof(uint8));
+                        u8 id2block_size = 0;
+                        is.read(reinterpret_cast<char*>(&id2block_size), sizeof(u8));
                         chunk.id2block.reserve(id2block_size);
-                        for (auto j : range<uint8>(id2block_size)) {
-                            uint32 global_id = 0;
-                            is.read(reinterpret_cast<char*>(&global_id), sizeof(uint32));
-                            is.read(reinterpret_cast<char*>(&chunk.id2block[global_id]), sizeof(uint8));
+                        for (auto j : range<u8>(id2block_size)) {
+                            u32 global_id = 0;
+                            is.read(reinterpret_cast<char*>(&global_id), sizeof(u32));
+                            is.read(reinterpret_cast<char*>(&chunk.id2block[global_id]), sizeof(u8));
                         }
 
-                        uint64 meta_size = 0;
-                        is.read(reinterpret_cast<char*>(&meta_size), sizeof(uint64));
+                        u64 meta_size = 0;
+                        is.read(reinterpret_cast<char*>(&meta_size), sizeof(u64));
                         for (auto j : range(meta_size)) {
-                            Pos3D<uint8> pos = {};
+                            Pos3D<u8> pos = {};
 
-                            is.read(reinterpret_cast<char*>(&pos.x), sizeof(uint8));
-                            is.read(reinterpret_cast<char*>(&pos.y), sizeof(uint8));
-                            is.read(reinterpret_cast<char*>(&pos.z), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&pos.x), sizeof(u8));
+                            is.read(reinterpret_cast<char*>(&pos.y), sizeof(u8));
+                            is.read(reinterpret_cast<char*>(&pos.z), sizeof(u8));
 
                             auto& meta_storages = chunk.meta_ids[pos];
 
-                            uint64 meta_storages_size = 0;
-                            is.read(reinterpret_cast<char*>(&meta_storages_size), sizeof(uint64));
+                            u64 meta_storages_size = 0;
+                            is.read(reinterpret_cast<char*>(&meta_storages_size), sizeof(u64));
                             for (auto k : range(meta_storages_size)) {
-                                uint32 key = 0;
-                                is.read(reinterpret_cast<char*>(&key), sizeof(uint32));
+                                u32 key = 0;
+                                is.read(reinterpret_cast<char*>(&key), sizeof(u32));
 
 								auto& value = meta_storages[key];
 
-                                uint64 data_size = len(value);
-                                is.read(reinterpret_cast<char*>(&data_size), sizeof(uint64));
+                                u64 data_size = len(value);
+                                is.read(reinterpret_cast<char*>(&data_size), sizeof(u64));
                                 is.read(reinterpret_cast<char*>(value.data()), data_size);
                             }
                         }
 
-                        uint64 tag_size = 0;
-                        is.read(reinterpret_cast<char*>(&tag_size), sizeof(uint64));
+                        u64 tag_size = 0;
+                        is.read(reinterpret_cast<char*>(&tag_size), sizeof(u64));
                         for (auto j : range(tag_size)) {
-                            Pos3D<uint8> pos = {};
+                            Pos3D<u8> pos = {};
 
-                            is.read(reinterpret_cast<char*>(&pos.x), sizeof(uint8));
-                            is.read(reinterpret_cast<char*>(&pos.y), sizeof(uint8));
-                            is.read(reinterpret_cast<char*>(&pos.z), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&pos.x), sizeof(u8));
+                            is.read(reinterpret_cast<char*>(&pos.y), sizeof(u8));
+                            is.read(reinterpret_cast<char*>(&pos.z), sizeof(u8));
 
                             auto& tag_storages = chunk.tag_ids[pos];
 
-                            uint64 tag_storages_size = 0;
-                            is.read(reinterpret_cast<char*>(&tag_storages_size), sizeof(uint64));
+                            u64 tag_storages_size = 0;
+                            is.read(reinterpret_cast<char*>(&tag_storages_size), sizeof(u64));
                             for (auto k : range(tag_storages_size)) {
-                                uint32 key = 0;
-                                is.read(reinterpret_cast<char*>(&key), sizeof(uint32));
+                                u32 key = 0;
+                                is.read(reinterpret_cast<char*>(&key), sizeof(u32));
                                 tag_storages.insert(key);
                             }
                         }
 
-                        uint64 extended_block_size = 0;
-                        is.read(reinterpret_cast<char*>(&extended_block_size), sizeof(uint64));
+                        u64 extended_block_size = 0;
+                        is.read(reinterpret_cast<char*>(&extended_block_size), sizeof(u64));
 
                         for (auto j : range(extended_block_size)) {
-                            Pos3D<uint8> pos;
+                            Pos3D<u8> pos;
 
-                            is.read(reinterpret_cast<char*>(&pos.x), sizeof(uint8));
-                            is.read(reinterpret_cast<char*>(&pos.y), sizeof(uint8));
-                            is.read(reinterpret_cast<char*>(&pos.z), sizeof(uint8));
+                            is.read(reinterpret_cast<char*>(&pos.x), sizeof(u8));
+                            is.read(reinterpret_cast<char*>(&pos.y), sizeof(u8));
+                            is.read(reinterpret_cast<char*>(&pos.z), sizeof(u8));
 
-                            is.read(reinterpret_cast<char*>(&chunk.extended_block_id[pos]), sizeof(uint32));
+                            is.read(reinterpret_cast<char*>(&chunk.extended_block_id[pos]), sizeof(u32));
                         }
 
-                        is.read(reinterpret_cast<char*>(&chunk.chunk_version), sizeof(uint8));
+                        is.read(reinterpret_cast<char*>(&chunk.chunk_version), sizeof(u8));
 
                         chunk.generated.store(true, std::memory_order_release);
                         chunk.dirty.store(true, std::memory_order_release);
 
-                        Pos2D<int32> offsets[4] = { {1,0}, {-1,0}, {0,1}, {0,-1} };
+                        Pos2D<i32> offsets[4] = { {1,0}, {-1,0}, {0,1}, {0,-1} };
                         for (auto& o : offsets) {
                             auto n = get_chunk(chunk.chunk_pos.x + o.x, chunk.chunk_pos.y + o.y);
                             if (n and n.value().generated.load(std::memory_order_acquire)) n.value().dirty.store(true);
@@ -612,20 +612,20 @@ namespace craftbuild {
                     else if (message.content == "Players data") {
                         std::stringstream is(message.arguments[0]);
 
-                        uint64 player_count = 0;
-                        is.read(reinterpret_cast<char*>(&player_count), sizeof(uint64));
+                        u64 player_count = 0;
+                        is.read(reinterpret_cast<char*>(&player_count), sizeof(u64));
 
-                        for (auto i : range<uint64>(player_count)) {
-                            uint64 name_len = 0;
+                        for (auto i : range<u64>(player_count)) {
+                            u64 name_len = 0;
                             Str name;
                             PlayerData player_data;
 
-                            is.read(reinterpret_cast<char*>(&name_len), sizeof(uint64));
+                            is.read(reinterpret_cast<char*>(&name_len), sizeof(u64));
                             name.resize(name_len);
                             is.read(reinterpret_cast<char*>(name.data()), name_len);
-                            is.read(reinterpret_cast<char*>(&player_data.hp), sizeof(uint8));
-                            is.read(reinterpret_cast<char*>(&player_data.pos), sizeof(Pos3D<floatr>));
-                            is.read(reinterpret_cast<char*>(&player_data.hotbar), sizeof(uint32) * PlayerData::HOTBAR_SIZE);
+                            is.read(reinterpret_cast<char*>(&player_data.hp), sizeof(u8));
+                            is.read(reinterpret_cast<char*>(&player_data.pos), sizeof(Pos3D<fsize>));
+                            is.read(reinterpret_cast<char*>(&player_data.hotbar), sizeof(u32) * PlayerData::HOTBAR_SIZE);
 
                             if (name == player_name) {
                                 Player* player = static_cast<Player*>(player_ptr);
@@ -633,7 +633,7 @@ namespace craftbuild {
 
                                 std::unique_lock lock(player_mutex);
                                 player->hp = player_data.hp;
-                                memcpy(&player->hotbar, &player_data.hotbar, sizeof(uint32) * PlayerData::HOTBAR_SIZE);
+                                memcpy(&player->hotbar, &player_data.hotbar, sizeof(u32) * PlayerData::HOTBAR_SIZE);
                             }
                         }
                     }
@@ -654,7 +654,7 @@ namespace craftbuild {
 
     void Main::start_scheduler_thread() {
         auto worker = [this]() {
-            ThreadRegistry::register_thread("Mesh");
+            thread_registry::register_thread("Mesh");
             log<LogType::INFO>("Mesh thread started");
 
             auto last_unload_time = std::chrono::high_resolution_clock::now();
@@ -675,17 +675,17 @@ namespace craftbuild {
     }
 
     void Main::submit_jobs() {
-        const int32 px = int32(std::floor(player_x.load() / Chunk::WIDTH));
-        const int32 pz = int32(std::floor(player_z.load() / Chunk::WIDTH));
+        const i32 px = i32(std::floor(player_x.load() / Chunk::WIDTH));
+        const i32 pz = i32(std::floor(player_z.load() / Chunk::WIDTH));
 
-        auto get_chunk_server_or_not = +[](Main& self, Pos2D<int32> chunk_pos) {
+        auto get_chunk_server_or_not = +[](Main& self, Pos2D<i32> chunk_pos) {
             Ptr<Chunk> chunk = self.server_ptr.value().get_chunk(chunk_pos.x, chunk_pos.y);
             self.set_chunk(chunk, chunk_pos.x, chunk_pos.y);
             return chunk;
         };
 
         if (not server_ptr) {
-            get_chunk_server_or_not = +[](Main& self, Pos2D<int32> chunk_pos) {
+            get_chunk_server_or_not = +[](Main& self, Pos2D<i32> chunk_pos) {
                 std::lock_guard lock(self.requested_chunks_mutex);
                 if (not self.requested_chunks.contains({ chunk_pos.x, chunk_pos.y })) {
                     self.send_queue.store({ "Get chunk version", { std::to_string(chunk_pos.x), std::to_string(chunk_pos.y) } });
@@ -695,8 +695,8 @@ namespace craftbuild {
             };
         }
 
-        auto process_cell = [&](int32 x, int32 z) {
-            Pos2D<int32> chunk_pos{ px + x, pz + z };
+        auto process_cell = [&](i32 x, i32 z) {
+            Pos2D<i32> chunk_pos{ px + x, pz + z };
             Ptr<Chunk> chunk_ptr = get_chunk_server_or_not(*this, chunk_pos);
 
             if (not chunk_ptr) return;
@@ -737,12 +737,12 @@ namespace craftbuild {
 
         process_cell(0, 0);
 
-        for (auto r : range<int32>(1, render_distance + 1)) {
-            for (auto x : range<int32>(-r, r + 1)) {
+        for (auto r : range<i32>(1, render_distance + 1)) {
+            for (auto x : range<i32>(-r, r + 1)) {
                 process_cell(x, -r);
                 process_cell(x, r);
             }
-            for (auto z : range<int32>(-r + 1, r)) {
+            for (auto z : range<i32>(-r + 1, r)) {
                 process_cell(-r, z);
                 process_cell(r, z);
             }
@@ -778,10 +778,10 @@ namespace craftbuild {
         chunk_render.collision_shape->set_shape(concave);
     }
 
-    void Main::update_chunk_mesh(ChunkRender& chunk_render, Pos2D<int32>& pos, Ref<ArrayMesh> const& mesh, int32 submesh_idx) {
+    void Main::update_chunk_mesh(ChunkRender& chunk_render, Pos2D<i32>& pos, Ref<ArrayMesh> const& mesh, i32 submesh_idx) {
         if (not chunk_render.mesh_instances[submesh_idx]) {
             MeshInstance3D* mi = memnew(MeshInstance3D);
-            mi->set_position(Vector3(floatr(pos.x * Chunk::WIDTH), 0, floatr(pos.y * Chunk::WIDTH)));
+            mi->set_position(Vector3(fsize(pos.x * Chunk::WIDTH), 0, fsize(pos.y * Chunk::WIDTH)));
             mi->set_material_override(world_material);
             add_child(mi);
             chunk_render.mesh_instances[submesh_idx] = mi;
@@ -791,18 +791,18 @@ namespace craftbuild {
     }
 
     void Main::unload_distant_chunks() {
-        const int32 p_cx = int32(player_x.load() / Chunk::WIDTH);
-        const int32 p_cy = int32(player_z.load() / Chunk::WIDTH);
-        const int32 unload_dist = render_distance + 4;
+        const i32 p_cx = i32(player_x.load() / Chunk::WIDTH);
+        const i32 p_cy = i32(player_z.load() / Chunk::WIDTH);
+        const i32 unload_dist = render_distance + 4;
 
-        int32 removed = 0;
+        i32 removed = 0;
         {
             std::unique_lock lock(chunks_mutex);
             for (auto it = chunks.begin(); it != chunks.end();) {
                 auto& [chunk_pos, chunk_pair] = *it;
 
-                int32 dx = std::abs(chunk_pos.x - p_cx);
-                int32 dz = std::abs(chunk_pos.y - p_cy);
+                i32 dx = std::abs(chunk_pos.x - p_cx);
+                i32 dz = std::abs(chunk_pos.y - p_cy);
 
                 if (dx > unload_dist or dz > unload_dist) {
                     chunk_pair.second.clear();
@@ -816,8 +816,8 @@ namespace craftbuild {
         if (removed) log<LogType::VERBOSE>("Queued unload for "f << removed << " chunks");
     }
 
-    Ptr<Chunk> Main::get_chunk(int32 cx, int32 cy) {
-        Pos2D<int32> cpos(cx, cy);
+    Ptr<Chunk> Main::get_chunk(i32 cx, i32 cy) {
+        Pos2D<i32> cpos(cx, cy);
 
         std::shared_lock lock(chunks_mutex);
         auto it = chunks.find(cpos);
@@ -826,8 +826,8 @@ namespace craftbuild {
         return it->second.first;
     }
 
-    Ptr<Chunk> Main::get_or_create_chunk(int32 cx, int32 cy) {
-        Pos2D<int32> chunk_pos{ cx, cy };
+    Ptr<Chunk> Main::get_or_create_chunk(i32 cx, i32 cy) {
+        Pos2D<i32> chunk_pos{ cx, cy };
         {
             std::shared_lock lock(chunks_mutex);
             auto it = chunks.find(chunk_pos);
@@ -843,51 +843,51 @@ namespace craftbuild {
         return chunks[chunk_pos].first;
     }
 
-    ChunkRender& Main::ref_mesh(int32 cx, int32 cy) {
-        Pos2D<int32> cpos(cx, cy);
+    ChunkRender& Main::ref_mesh(i32 cx, i32 cy) {
+        Pos2D<i32> cpos(cx, cy);
 
         std::unique_lock lock(chunks_mutex);
         return chunks[cpos].second;
     }
     
-    uint32 Main::get_global_block_id(int32 wx, int32 wy, int32 wz) {
-        if (wy < 0 or wy >= Chunk::HEIGHT) return BlockRegistry::get_id("Air");
+    u32 Main::get_global_block_id(i32 wx, i32 wy, i32 wz) {
+        if (wy < 0 or wy >= Chunk::HEIGHT) return block_registry::get_id("Air");
 
-        int32 cx = int32(std::floor(float32(wx) / Chunk::WIDTH));
-        int32 cy = int32(std::floor(float32(wz) / Chunk::WIDTH));
-        Pos2D<int32> cpos(cx, cy);
+        i32 cx = i32(std::floor(f32(wx) / Chunk::WIDTH));
+        i32 cy = i32(std::floor(f32(wz) / Chunk::WIDTH));
+        Pos2D<i32> cpos(cx, cy);
 
         Ptr<Chunk> chunk = get_chunk(cx, cy);
-        if (not chunk) return BlockRegistry::get_id("Air");
+        if (not chunk) return block_registry::get_id("Air");
 
-        int32 lx = (wx % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
-        int32 lz = (wz % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
+        i32 lx = (wx % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
+        i32 lz = (wz % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
 
-        return chunk.value().get_block({ uint8(lx), uint8(wy), uint8(lz) });
+        return chunk.value().get_block({ u8(lx), u8(wy), u8(lz) });
     }
 
-    void Main::set_chunk(Ptr<Chunk>& chunk, int32 cx, int32 cy) {
-        Pos2D<int32> cpos(cx, cy);
+    void Main::set_chunk(Ptr<Chunk>& chunk, i32 cx, i32 cy) {
+        Pos2D<i32> cpos(cx, cy);
 
         std::unique_lock lock(chunks_mutex);
 		chunks[cpos].first = chunk;
     }
 
-    void Main::set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz) {
+    void Main::set_global_block_id(u32 block_id, i32 wx, i32 wy, i32 wz) {
         if (wy < 0 or wy >= Chunk::HEIGHT) return;
         if (not server_ptr) send_queue.store({ "Set block", { std::to_string(block_id), std::to_string(wx), std::to_string(wy), std::to_string(wz) } });
         
-        int32 cx = int32(std::floor(float32(wx) / Chunk::WIDTH));
-        int32 cy = int32(std::floor(float32(wz) / Chunk::WIDTH));
-        Pos2D<int32> cpos(cx, cy);
+        i32 cx = i32(std::floor(f32(wx) / Chunk::WIDTH));
+        i32 cy = i32(std::floor(f32(wz) / Chunk::WIDTH));
+        Pos2D<i32> cpos(cx, cy);
 
         Ptr<Chunk> chunk = get_chunk(cx, cy);
         if (not chunk) return;
 
-        int32 lx = (wx % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
-        int32 lz = (wz % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
+        i32 lx = (wx % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
+        i32 lz = (wz % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH;
 
-        chunk.value().set_block({ uint8(lx), uint8(wy), uint8(lz) }, block_id);
+        chunk.value().set_block({ u8(lx), u8(wy), u8(lz) }, block_id);
     }
 
     void Main::save_userdata(char const* path) {
@@ -908,9 +908,9 @@ namespace craftbuild {
         if (not player) return;
 
         ofs.write(reinterpret_cast<char const*>(&full_screen), sizeof(bool));
-        ofs.write(reinterpret_cast<char const*>(&player->sensitivity), sizeof(float32));
-        ofs.write(reinterpret_cast<char const*>(&player->mouse_pitch), sizeof(float32));
-        ofs.write(reinterpret_cast<char const*>(&render_distance), sizeof(int32));
+        ofs.write(reinterpret_cast<char const*>(&player->sensitivity), sizeof(f32));
+        ofs.write(reinterpret_cast<char const*>(&player->mouse_pitch), sizeof(f32));
+        ofs.write(reinterpret_cast<char const*>(&render_distance), sizeof(i32));
     }
 
     bool Main::load_userdata(char const* path) {
@@ -926,9 +926,9 @@ namespace craftbuild {
             if (not player) return false;
 
             ifs.read(reinterpret_cast<char*>(&full_screen), sizeof(bool));
-            ifs.read(reinterpret_cast<char*>(&player->sensitivity), sizeof(float32));
-            ifs.read(reinterpret_cast<char*>(&player->mouse_pitch), sizeof(float32));
-            ifs.read(reinterpret_cast<char*>(&render_distance), sizeof(int32));
+            ifs.read(reinterpret_cast<char*>(&player->sensitivity), sizeof(f32));
+            ifs.read(reinterpret_cast<char*>(&player->mouse_pitch), sizeof(f32));
+            ifs.read(reinterpret_cast<char*>(&render_distance), sizeof(i32));
         }
 
 		log<LogType::INFO>("Userdata loaded");
@@ -967,22 +967,22 @@ namespace craftbuild {
         return { player_x.load(std::memory_order_relaxed), player_y.load(std::memory_order_relaxed), player_z.load(std::memory_order_relaxed) };
 	}
 
-    void Main::set_seed_and_world_name(int32 seed, const String name) {
+    void Main::set_seed_and_world_name(i32 seed, const String name) {
         if (not server_ptr) send_queue.store({ "Set seed and world name", { std::to_string(seed), (std::string)name.utf8() } });
         else server_ptr.value().set_seed_and_world_name(seed, (std::string)name.utf8());
     }
 
-    void Main::set_render_distance(int32 rd) {
+    void Main::set_render_distance(i32 rd) {
         if (not server_ptr) send_queue.store({ "Set render distance", { std::to_string(rd) } });
         else server_ptr.value().set_render_distance(rd);
     }
 
-    void Main::set_cpu_sleep_time(int32 stc) {
+    void Main::set_cpu_sleep_time(i32 stc) {
         if (not server_ptr) send_queue.store({ "Set sleep time CPU", { std::to_string(stc) } });
         else server_ptr.value().set_cpu_sleep_time(stc);
     }
 
-    void Main::set_server_socket(String ip, int32 port) {
+    void Main::set_server_socket(String ip, i32 port) {
         server_socket = std::tuple(ip, port);
     }
     

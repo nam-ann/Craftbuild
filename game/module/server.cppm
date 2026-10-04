@@ -35,14 +35,14 @@ import game.block.normal_blocks;
 using namespace godot;
 
 export namespace craftbuild {
-    struct Client {
+    struct Client final {
         ReceiveQueue receive_queue;
         SendQueue send_queue;
         Str name;
         Str ip_addr;
     };
 
-    class Server : public Node {
+    class Server final : public Node {
         GDCLASS(Server, Node)
 
         Ref<TCPServer> tcp_server;
@@ -55,7 +55,7 @@ export namespace craftbuild {
 
     public:
         void _ready() override;
-        void _process(float64 delta) override;
+        void _process(f64 delta) override;
         void _exit_tree() override;
 
         void start_gc_thread();

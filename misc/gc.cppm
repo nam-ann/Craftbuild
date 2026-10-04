@@ -6,23 +6,23 @@ import misc.list;
 import misc.dict;
 import misc.number;
 
-export namespace craftbuild {
-    struct GCObject {
-        void* __data__ = nullptr;
+namespace craftbuild {
+    export struct GCObject {
         bool __marked__ = false;
+		void* __data__ = nullptr;
+
+        explicit GCObject(void* data) noexcept : __data__(data) {}
 
         virtual ~GCObject() noexcept = default;
         virtual void get_refs(List<GCObject*>&) noexcept {}
     };
 
-    class NewQueue {
-    public:
-        struct Data {
+    class NewQueue final {
+        struct Data final {
             List<GCObject*> obj_queue;
-            Dict<GCObject*, int64> root_queue;
+            Dict<GCObject*, i64> root_queue;
         };
 
-    private:
         Data __data__;
         mutable std::mutex __mtx__;
 
@@ -31,6 +31,13 @@ export namespace craftbuild {
             if (not obj) [[unlikely]] return;
             std::lock_guard lock(__mtx__);
             __data__.obj_queue.append(obj);
+			__data__.root_queue[obj];
+        }
+
+        bool is_registered(GCObject* obj) const {
+            if (not obj) [[unlikely]] return false;
+            std::lock_guard lock(__mtx__);
+            return __data__.root_queue.contains(obj);
         }
 
         void add_root(GCObject* obj) {
@@ -41,7 +48,7 @@ export namespace craftbuild {
         void remove_root(GCObject* obj) {
             if (not obj) [[unlikely]] return;
             std::lock_guard lock(__mtx__);
-			--__data__.root_queue[obj];
+            --__data__.root_queue[obj];
         }
 
         Data flush() {
@@ -55,24 +62,26 @@ export namespace craftbuild {
         }
     };
 
-    class GarbageCollector {
-		inline static NewQueue registration_queue;
+    namespace garbage_collector {
+        inline static NewQueue registration_queue;
 
         inline static List<GCObject*> all_objects;
         inline static Dict<GCObject*, usize> root_objects;
 
-    public:
-        static void register_object(GCObject* obj) { registration_queue.register_object(obj); }
-         
-        static void add_root(GCObject* obj) { registration_queue.add_root(obj); }
-        static void remove_root(GCObject* obj) { registration_queue.remove_root(obj); }
+        export void register_object(GCObject* obj) {
+			if (root_objects.contains(obj) or registration_queue.is_registered(obj)) [[unlikely]] return;
+            registration_queue.register_object(obj);
+        }
 
-        static void collect() {
+        export void add_root(GCObject* obj) { registration_queue.add_root(obj); }
+        export void remove_root(GCObject* obj) { registration_queue.remove_root(obj); }
+
+        export void collect() {
             auto const new_objects = registration_queue.flush();
             all_objects.append(new_objects.obj_queue);
 
             for (auto const& [root, delta] : new_objects.root_queue) {
-                int64 const current_count = root_objects[root] + delta;
+                i64 const current_count = root_objects[root] + delta;
                 if (current_count <= 0) root_objects.erase(root);
                 else root_objects[root] = usize(current_count);
             }
@@ -114,5 +123,5 @@ export namespace craftbuild {
                 }
             }
         }
-    };
+    }
 }

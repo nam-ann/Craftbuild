@@ -37,11 +37,12 @@ namespace craftbuild {
         arg += '\0';
 
         PackedByteArray data;
-        data.resize(int64(arg.size()));
+        data.resize(i64(arg.size()));
         memcpy(data.ptrw(), arg.data(), arg.size());
 
         if (auto err = peer.put_data(data); err != OK) {
             log<LogType::ERROR>("Failed to send message: "f << message.content);
+            msg.emplace(std::move(message));
         }
     }
 
@@ -69,7 +70,7 @@ namespace craftbuild {
         if (available <= 0) return ReceiveState::WAITING;
 
         auto res = peer.get_partial_data(available);
-        auto err = static_cast<Error>(int32(res[0]));
+        auto err = static_cast<Error>(i32(res[0]));
         if (err != OK) return ReceiveState::ERROR;
 
         PackedByteArray chunk = res[1];

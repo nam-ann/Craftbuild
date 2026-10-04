@@ -16,6 +16,7 @@ export module game.world.chunk;
 import std;
 
 import misc.gc;
+import misc.pos;
 import misc.ptr;
 import misc.str;
 import misc.set;
@@ -23,7 +24,6 @@ import misc.dict;
 import misc.list;
 import misc.range;
 import misc.number;
-import misc.pos;
 import game.block;
 import game.logger;
 import game.world.cave;
@@ -34,44 +34,44 @@ import game.block.block_data;
 using namespace godot;
 
 export namespace craftbuild {
-    struct ComplexBlockInstance {
-        uint32 block_id;
-        Pos3D<uint8> local_pos;
+    struct ComplexBlockInstance final {
+        u32 block_id;
+        Pos3D<u8> local_pos;
     };
 
-    struct MeshData {
-        List<Pos3D<floatr>> vertices;
-        List<Pos3D<floatr>> normals;
-        List<int32> indices;
-        List<Pos2D<floatr>> uvs;
-        List<Pos2D<floatr>> uvs_layer;
-        List<Pos3D<floatr>> collision_faces;
+    struct MeshData final {
+        List<Pos3D<fsize>> vertices;
+        List<Pos3D<fsize>> normals;
+        List<i32> indices;
+        List<Pos2D<fsize>> uvs;
+        List<Pos2D<fsize>> uvs_layer;
+        List<Pos3D<fsize>> collision_faces;
         List<ComplexBlockInstance> complex_instance;
     };
 
-    class MeshesData {
+    class MeshesData final {
         MeshData sub[4];
 
     public:
-		auto& operator[](uint8 idx) { return sub[idx]; }
+		auto& operator[](u8 idx) { return sub[idx]; }
     };
 
-    class FaceMask {
-        uint32 value = 0;
+    class FaceMask final {
+        u32 value = 0;
 
     public:
-        static constexpr uint32 BACK_FACE_BIT = 0x80000000u;
+        static constexpr u32 BACK_FACE_BIT = 0x80000000u;
 
         constexpr FaceMask();
-        constexpr FaceMask(int32 layer, bool back_face);
+        constexpr FaceMask(i32 layer, bool back_face);
 
-        int32 layer() const;
+        i32 layer() const;
         bool back_face() const;
 
         bool operator==(FaceMask const& other) const;
     };
 
-    struct ChunkRender {
+    struct ChunkRender final {
         MeshInstance3D* mesh_instances[4] = {};
         StaticBody3D* collision_body = nullptr;
         CollisionShape3D* collision_shape = nullptr;
@@ -86,57 +86,57 @@ export namespace craftbuild {
         void clear();
     };
 
-    class Chunk {
+    class Chunk final {
     public:
-        inline static constexpr uint8 WIDTH  = 16;
-        inline static constexpr uint8 HEIGHT = 255;
+        inline static constexpr u8 WIDTH  = 16;
+        inline static constexpr u8 HEIGHT = 255;
 
-        uint32 block_ids[256];
-        uint8 block_ids_size = 0;
+        u32 block_ids[256];
+        u8 block_ids_size = 0;
 
-        Dict<uint32, uint8> id2block;
+        Dict<u32, u8> id2block;
 
-        Dict<Pos3D<uint8>, Set<uint32>> tag_ids;
-        Dict<Pos3D<uint8>, Dict<uint32, Str>> meta_ids;
-        Dict<Pos3D<uint8>, uint32> extended_block_id;
-        uint8 blocks[WIDTH][HEIGHT][WIDTH] = {};
+        Dict<Pos3D<u8>, Set<u32>> tag_ids;
+        Dict<Pos3D<u8>, Dict<u32, Str>> meta_ids;
+        Dict<Pos3D<u8>, u32> extended_block_id;
+        u8 blocks[WIDTH][HEIGHT][WIDTH] = {};
 
-        Pos2D<int32> chunk_pos;
+        Pos2D<i32> chunk_pos;
         TrapezoidHeight height_provider{ VerticalAnchor::absolute(18), VerticalAnchor::absolute(38), 8 };
         std::atomic<bool> generated = false;
         std::atomic<bool> dirty = true;
         mutable std::shared_mutex data_mutex;
 
-        uint8 chunk_version = 0;
+        u8 chunk_version = 0;
 
         void clear();
 
-        static uint32 column_seed(int32 seed, int32 x, int32 z);
-        static float32 smoothstep(float32 value);
-        static Biome lerp_biome(Biome const& a, Biome const& b, float32 t);
-        static Biome select_biome_at(int32 wx, int32 wz, Ref<FastNoiseLite> noise, usize biome_count);
-        static Biome get_blended_biome(int32 wx, int32 wz, Ref<FastNoiseLite> noise, usize biome_count);
+        static u32 column_seed(i32 seed, i32 x, i32 z);
+        static f32 smoothstep(f32 value);
+        static Biome lerp_biome(Biome const& a, Biome const& b, f32 t);
+        static Biome select_biome_at(i32 wx, i32 wz, Ref<FastNoiseLite> noise, usize biome_count);
+        static Biome get_blended_biome(i32 wx, i32 wz, Ref<FastNoiseLite> noise, usize biome_count);
 
-        void set_block(Pos3D<uint8> const& pos, Str const& block);
-        void set_block(Pos3D<uint8> const& pos, uint32 block_id);
+        void set_block(Pos3D<u8> const& pos, Str const& block);
+        void set_block(Pos3D<u8> const& pos, u32 block_id);
 
-        void tag_block(Pos3D<uint8> const& pos, Str const& tag);
-        void tag_block(Pos3D<uint8> const& pos, uint32 tag_id);
+        void tag_block(Pos3D<u8> const& pos, Str const& tag);
+        void tag_block(Pos3D<u8> const& pos, u32 tag_id);
 
-        void set_block_metadata(Pos3D<uint8> const& pos, Str const& meta, Str const& meta_data = "");
-        void set_block_metadata(Pos3D<uint8> const& pos, uint32 meta_id, Str const& meta_data = "");
+        void set_block_metadata(Pos3D<u8> const& pos, Str const& meta, Str const& meta_data = "");
+        void set_block_metadata(Pos3D<u8> const& pos, u32 meta_id, Str const& meta_data = "");
 
-        bool has_tag(Pos3D<uint8> const& pos, Str const& tag) const;
-        bool has_tag(Pos3D<uint8> const& pos, uint32 tag_id) const;
+        bool has_tag(Pos3D<u8> const& pos, Str const& tag) const;
+        bool has_tag(Pos3D<u8> const& pos, u32 tag_id) const;
 
-        bool has_metadata(Pos3D<uint8> const& pos, Str const& meta, Str const& meta_data = "") const;
-        bool has_metadata(Pos3D<uint8> const& pos, uint32 meta_id, Str const& meta_data = "") const;
+        bool has_metadata(Pos3D<u8> const& pos, Str const& meta, Str const& meta_data = "") const;
+        bool has_metadata(Pos3D<u8> const& pos, u32 meta_id, Str const& meta_data = "") const;
 
-        uint32 get_block(Pos3D<uint8> const& pos) const;
-        Set<uint32> const* get_tag(Pos3D<uint8> const& pos) const;
-        Dict<uint32, Str> const* get_metadata(Pos3D<uint8> const& pos) const;
+        u32 get_block(Pos3D<u8> const& pos) const;
+        Set<u32> const* get_tag(Pos3D<u8> const& pos) const;
+        Dict<u32, Str> const* get_metadata(Pos3D<u8> const& pos) const;
 
-        void generate_terrain(int32 seed, Ref<FastNoiseLite> noise);
+        void generate_terrain(i32 seed, Ref<FastNoiseLite> noise);
         void generate_mesh(ChunkRender& mesh, Ptr<Chunk> neighbors[4]);
     };
 }

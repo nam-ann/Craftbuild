@@ -24,7 +24,7 @@ namespace craftbuild {
     }
 
     static Str get_info(LOC_PARAM) {
-        return "("f << ThreadRegistry::get_name(std::this_thread::get_id()) << " | " << get_file_name(__loc__.file_name()) << ":" << __loc__.line() << ") ";
+        return "("f << thread_registry::get_name(std::this_thread::get_id()) << " | " << get_file_name(__loc__.file_name()) << ":" << __loc__.line() << ") ";
     }
 
     void LogQueue::store(Str const& log, Str const& file_log) {

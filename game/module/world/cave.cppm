@@ -10,24 +10,24 @@ import misc.number;
 export namespace craftbuild {
     enum class CaveType { CHEESE, SPAGHETTI, NOODLE };
 
-    struct Cave {
+    struct Cave final {
         CaveType cave_type;
-        float32 threshold;
-        float32 frequency;
+        f32 threshold;
+        f32 frequency;
     };
 
-    struct CaveEntry {
+    struct CaveEntry final {
         Str name;
         Cave cave;
     };
 
-    struct CaveRegistry {
-        inline static List<CaveEntry> registry;
-        inline static Dict<Str, uint64> name2id;
+    namespace cave_registry {
+        inline List<CaveEntry> registry;
+        inline Dict<Str, u64> name2id;
 
-        static void register_cave(Str const& name, Cave cave);
-        static Cave get_cave(uint64 cave_id);
-        static Str get_name(uint64 cave_id);
-        static uint64 get_id(Str const& cave_name);
+        void register_cave(Str const& name, Cave cave);
+        Cave get_cave(u64 cave_id);
+        Str get_name(u64 cave_id);
+        u64 get_id(Str const& cave_name);
     };
 }

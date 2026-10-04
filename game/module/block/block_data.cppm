@@ -8,23 +8,23 @@ import misc.dict;
 import misc.number;
 
 export namespace craftbuild {
-	struct MetaRegistry {
-		inline static List<Str> registry;
-		inline static Dict<Str, uint32> name2id;
+	namespace meta_registry {
+		inline List<Str> registry;
+		inline Dict<Str, u32> name2id;
 
-		static void register_metadata(Str const& name);
-		static Str& get_metadata(uint32 meta_id);
-		static uint32 get_id(Str const& meta_name);
-		static bool has_metadata(Str const& meta_name);
-	};
+		void register_metadata(Str const& name);
+		Str& get_metadata(u32 meta_id);
+		u32 get_id(Str const& meta_name);
+		bool has_metadata(Str const& meta_name);
+	}
 
-	struct TagRegistry {
-		inline static List<Str> registry;
-		inline static Dict<Str, uint32> name2id;
+	namespace tag_registry {
+		inline List<Str> registry;
+		inline Dict<Str, u32> name2id;
 
-		static void register_tag(Str const& name);
-		static Str& get_tag(uint32 tag_id);
-		static uint32 get_id(Str const& tag_name);
-		static bool has_tag(Str const& tag_name);
-	};
+		void register_tag(Str const& name);
+		Str& get_tag(u32 tag_id);
+		u32 get_id(Str const& tag_name);
+		bool has_tag(Str const& tag_name);
+	}
 }

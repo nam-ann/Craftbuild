@@ -10,40 +10,42 @@ ENABLE_WARNING
 module game.texture.atlas_texture;
 
 namespace craftbuild {
-    void AtlasTexture::build_texture_array() {
-        Array images;
-        int32 current_layer = 0;
+    namespace atlas_texture {
+        void build_texture_array() {
+            Array images;
+            i32 current_layer = 0;
 
-        for (auto const& block : BlockRegistry::registry) {
-            if (block.texture.is_null()) continue;
+            for (auto const& block : block_registry::registry) {
+                if (block.texture.is_null()) continue;
 
-            Ref<Image> original_img = block.texture->get_image();
-            if (original_img.is_null()) continue;
+                Ref<Image> original_img = block.texture->get_image();
+                if (original_img.is_null()) continue;
 
-            block.block.value().base_texture_layer = current_layer;
-            log<LogType::VERBOSE>(""f << block.name.std_str().c_str() << " assigned layer: " << current_layer);
+                block.block.value().base_texture_layer = current_layer;
+                log<LogType::VERBOSE>(""f << block.name << " assigned layer: " << current_layer);
 
-            int32 width = original_img->get_width();
-            int32 face_count = width / IMAGE_SIZE;
+                i32 width = original_img->get_width();
+                i32 face_count = width / IMAGE_SIZE;
 
-            for (auto i : range<int32>(face_count)) {
-                Ref<Image> tile = original_img->get_region(Rect2i(i * IMAGE_SIZE, 0, IMAGE_SIZE, IMAGE_SIZE));
+                for (auto i : range<i32>(face_count)) {
+                    Ref<Image> tile = original_img->get_region(Rect2i(i * IMAGE_SIZE, 0, IMAGE_SIZE, IMAGE_SIZE));
 
-                tile->convert(Image::FORMAT_RGBA8);
-                tile->fix_alpha_edges();
-                tile->generate_mipmaps();
+                    tile->convert(Image::FORMAT_RGBA8);
+                    tile->fix_alpha_edges();
+                    tile->generate_mipmaps();
 
-                images.push_back(tile);
-                current_layer++;
+                    images.push_back(tile);
+                    ++current_layer;
+                }
             }
+
+            if (images.size() == 0) return;
+
+            atlas_texture.instantiate();
+            Error err = atlas_texture->create_from_images(images);
+
+            if (err != OK) log<LogType::ERROR>("Error: create_from_images failed code: "f << i32(err));
+            else log<LogType::VERBOSE>("TextureArray build success: "f << current_layer << " layers.");
         }
-
-        if (images.size() == 0) return;
-
-        atlas_texture.instantiate();
-        Error err = atlas_texture->create_from_images(images);
-
-        if (err != OK) log<LogType::ERROR>("Error: create_from_images failed code: "f << int32(err));
-        else log<LogType::VERBOSE>("TextureArray build success: "f << current_layer << " layers.");
     }
 }

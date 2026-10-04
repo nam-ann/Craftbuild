@@ -6,27 +6,27 @@ import misc.dict;
 import misc.number;
 
 export namespace craftbuild {
-	struct Biome {
-		float32 base_noise = 0.0f;
-		float32 base_height = 0.0f;
-		float32 detail_noise = 0.0f;
-		float32 detail_height = 0.0f;
-		float32 temperature = 0.0f;
-		int32 min_height = 0;
+	struct Biome final {
+		f32 base_noise = 0.0f;
+		f32 base_height = 0.0f;
+		f32 detail_noise = 0.0f;
+		f32 detail_height = 0.0f;
+		f32 temperature = 0.0f;
+		i32 min_height = 0;
 	};
 
-	struct BiomeEntry {
+	struct BiomeEntry final {
 		Str name;
 		Biome biome;
 	};
 
-	struct BiomeRegistry {
-		inline static List<BiomeEntry> registry;
-		inline static Dict<Str, uint64> name2id;
+	namespace biome_registry {
+		inline List<BiomeEntry> registry;
+		inline Dict<Str, u64> name2id;
 
-		static void register_biome(Str const& name, Biome const& biome);
-		static Biome get_biome(uint64 biome_id);
-		static Str get_name(uint64 biome_id);
-		static uint64 get_id(Str const& biome_name);
+		void register_biome(Str const& name, Biome const& biome);
+		Biome get_biome(u64 biome_id);
+		Str get_name(u64 biome_id);
+		u64 get_id(Str const& biome_name);
 	};
 }

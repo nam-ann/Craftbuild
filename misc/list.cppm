@@ -9,7 +9,7 @@ import misc.hasher;
 
 export namespace craftbuild {
     template <typename T>
-    class List {
+    class List final {
         inline static std::allocator<T> allocator;
 
         T* __value__ = nullptr;
@@ -112,30 +112,30 @@ export namespace craftbuild {
             return *this;
         }
 
-        List operator+(std::initializer_list<T> const& s) const { List cache(*this); cache += s; return cache; }
-        List operator+(List const& s) const { List cache(*this); cache += s; return cache; }
+        List operator+(std::initializer_list<T> const& s) const { List cache(*this); return cache += s; }
+        List operator+(List const& s) const { List cache(*this); return cache += s; }
 
         List operator*(usize n) const { List cache(*this); return cache *= n; }
 
-        T& operator[](int64 index) {
+        T& operator[](i64 index) {
             if (index < 0) index += __len__;
-            if (index < 0 or index >= int64(__len__)) throw std::out_of_range("List index out of range");
+            if (index < 0 or index >= i64(__len__)) throw std::out_of_range("List index out of range");
 
             return __value__[index];
         }
 
-		T const& operator[](int64 index) const {
+		T const& operator[](i64 index) const {
             if (index < 0) index += __len__;
-            if (index < 0 or index >= int64(__len__)) throw std::out_of_range("List index out of range");
+            if (index < 0 or index >= i64(__len__)) throw std::out_of_range("List index out of range");
 			
             return __value__[index];
 		}
 
-        List operator[](int64 start, int64 end, int64 step) const {
+        List operator[](i64 start, i64 end, i64 step) const {
             if (step == 0) throw std::invalid_argument("List slice step cannot be zero");
 
-            int64 const n = int64(__len__);
-            auto normalize = [n](int64 index) -> int64 {
+            i64 const n = i64(__len__);
+            auto normalize = [n](i64 index) -> i64 {
                 if (index < 0) index += n;
                 return index;
             };
@@ -145,28 +145,28 @@ export namespace craftbuild {
             List result;
 
             if (step > 0) {
-                start = std::clamp<int64>(start, 0, n);
-                end = std::clamp<int64>(end, 0, n);
+                start = std::clamp<i64>(start, 0, n);
+                end = std::clamp<i64>(end, 0, n);
                 
                 if (start >= end) return result;
                 usize count = usize((end - start + step - 1) / step);
                 result.reserve(count);
 
-                for (int64 i : range(start, end, step)) {
+                for (i64 i : range(start, end, step)) {
                     std::construct_at(result.__value__ + result.__len__++, __value__[i]);
                 }
             }
             else {
-                start = std::clamp<int64>(start, -1, n - 1);
-                end = std::clamp<int64>(end, -1, n - 1);
+                start = std::clamp<i64>(start, -1, n - 1);
+                end = std::clamp<i64>(end, -1, n - 1);
                 
                 if (start <= end) return result;
                 
-                int64 const abs_step = -step;
+                i64 const abs_step = -step;
                 usize count = usize((start - end + abs_step - 1) / abs_step);
                 result.reserve(count);
                 
-                for (int64 i : range(start, end, step)) {
+                for (i64 i : range(start, end, step)) {
                     std::construct_at(result.__value__ + result.__len__++, __value__[i]);
                 }
             }
@@ -196,13 +196,13 @@ export namespace craftbuild {
 
         List& append(T const& t) { return *this += t; }
         List& append(List const& l) { return *this += l; }
-        List& insert(int64 index, T const& t) {
-            if (index < 0) index += int64(__len__);
+        List& insert(i64 index, T const& t) {
+            if (index < 0) index += i64(__len__);
             if (index < 0 or index > __len__) [[unlikely]] throw std::out_of_range("List index out of range");
 
             if (__len__ >= __space__) expect(__len__);
 
-            if (index == int64(__len__)) std::construct_at(__value__ + __len__, t);
+            if (index == i64(__len__)) std::construct_at(__value__ + __len__, t);
             else {
                 std::construct_at(__value__ + __len__, std::move(__value__[__len__ - 1]));
                 std::ranges::move_backward(
@@ -217,10 +217,10 @@ export namespace craftbuild {
             ++__len__;
             return *this;
         }
-        List& insert(int64 index, List const& l) {
+        List& insert(i64 index, List const& l) {
             if (l.__len__ == 0) return *this;
-            if (index < 0) index += int64(__len__);
-            if (index < 0 or index > int64(__len__)) [[unlikely]] throw std::out_of_range("List index out of range");
+            if (index < 0) index += i64(__len__);
+            if (index < 0 or index > i64(__len__)) [[unlikely]] throw std::out_of_range("List index out of range");
 
             if (this == &l) return insert(index, List(*this));
 
@@ -269,12 +269,12 @@ export namespace craftbuild {
             return *this;
         }
 
-		List& pop(int64 index = -1) {
+		List& pop(i64 index = -1) {
 			if (__len__ == 0) throw std::out_of_range("List is empty");
 			if (index < 0) index += __len__;
-			if (index < 0 or index >= int64(__len__)) throw std::out_of_range("List index out of range");
+			if (index < 0 or index >= i64(__len__)) throw std::out_of_range("List index out of range");
 			
-            if (index < int64(__len__) - 1) {
+            if (index < i64(__len__) - 1) {
                 std::ranges::move(__value__ + index + 1, end(), __value__ + index);
             }
 

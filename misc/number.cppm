@@ -8,34 +8,36 @@ ENABLE_WARNING
 
 export module misc.number;
 
-import std;
-
 export namespace craftbuild {
-	using int8 = std::int8_t;
-	using int16 = std::int16_t;
-	using int32 = std::int32_t;
-	using int64 = std::int64_t;
-	using uint8 = std::uint8_t;
-	using uint16 = std::uint16_t;
-	using uint32 = std::uint32_t;
-	using uint64 = std::uint64_t;
-	using byte32 = char32_t;
-	using float32 = float;
-	using float64 = double;
-	using floatr = godot::real_t;
+	using i8 = signed char;
+	using i16 = signed short;
+	using i32 = signed int;
+	using i64 = signed long long;
+	using u8 = unsigned char;
+	using u16 = unsigned short;
+	using u32 = unsigned int;
+	using u64 = unsigned long long;
+	using f32 = float;
+	using f64 = double;
+	using f128 = long double;
+	using fsize = godot::real_t;
 	using usize = size_t;
+
+	constexpr auto operator""fz(long double value) { return fsize(value); }
 }
 
-export using craftbuild::int8;
-export using craftbuild::int16;
-export using craftbuild::int32;
-export using craftbuild::int64;
-export using craftbuild::uint8;
-export using craftbuild::uint16;
-export using craftbuild::uint32;
-export using craftbuild::uint64;
-export using craftbuild::byte32;
-export using craftbuild::float32;
-export using craftbuild::float64;
-export using craftbuild::floatr;
+export using craftbuild::i8;
+export using craftbuild::i16;
+export using craftbuild::i32;
+export using craftbuild::i64;
+export using craftbuild::u8;
+export using craftbuild::u16;
+export using craftbuild::u32;
+export using craftbuild::u64;
+export using craftbuild::f32;
+export using craftbuild::f64;
+export using craftbuild::f128;
+export using craftbuild::fsize;
 export using craftbuild::usize;
+
+export using craftbuild::operator""fz;

@@ -7,35 +7,35 @@ import misc.list;
 import misc.number;
 
 export namespace craftbuild {
-    struct WorldGenerationContext {
-        int32 min_y = 0;
-        int32 height = 255;
+    struct WorldGenerationContext final {
+        i32 min_y = 0;
+        i32 height = 255;
 
-        int32 top_y() const;
+        i32 top_y() const;
     };
 
-    class RandomSource {
+    class RandomSource final {
     private:
         std::mt19937 generator;
 
     public:
-        explicit RandomSource(uint32 seed) : generator(seed) {}
+        explicit RandomSource(u32 seed) : generator(seed) {}
 
-        int32 next_int(int32 bound);
-        int32 next_int(int32 min_inclusive, int32 max_inclusive);
+        i32 next_int(i32 bound);
+        i32 next_int(i32 min_inclusive, i32 max_inclusive);
     };
 
     enum class VerticalAnchorType { ABSOLUTE, ABOVE_BOTTOM, BELOW_TOP, };
 
-    struct VerticalAnchor {
+    struct VerticalAnchor final {
         VerticalAnchorType type = VerticalAnchorType::ABSOLUTE;
-        int32 value = 0;
+        i32 value = 0;
 
-        static VerticalAnchor absolute(int32 y);
-        static VerticalAnchor above_bottom(int32 offset);
-        static VerticalAnchor below_top(int32 offset);
+        static VerticalAnchor absolute(i32 y);
+        static VerticalAnchor above_bottom(i32 offset);
+        static VerticalAnchor below_top(i32 offset);
 
-        int32 resolve_y(WorldGenerationContext const& context) const;
+        i32 resolve_y(WorldGenerationContext const& context) const;
     };
 
     enum class HeightProviderType { CONSTANT, UNIFORM, BIASED_TO_BOTTOM, VERY_BIASED_TO_BOTTOM, TRAPEZOID, WEIGHTED_LIST };
@@ -44,7 +44,7 @@ export namespace craftbuild {
     public:
         virtual ~HeightProvider();
 
-        virtual int32 sample(RandomSource& random, WorldGenerationContext const& context) const = 0;
+        virtual i32 sample(RandomSource& random, WorldGenerationContext const& context) const = 0;
         virtual HeightProviderType get_type() const = 0;
     };
 
@@ -60,8 +60,8 @@ export namespace craftbuild {
         static HeightProviderPtr of(VerticalAnchor value);
 
         VerticalAnchor const& get_value() const;
-        int32 sample(RandomSource&, WorldGenerationContext const& context) const override;
-        HeightProviderType get_type() const override;
+        i32 sample(RandomSource&, WorldGenerationContext const& context) const override final;
+        HeightProviderType get_type() const override final;
     };
 
     class UniformHeight final : public HeightProvider {
@@ -74,72 +74,72 @@ export namespace craftbuild {
 
         static HeightProviderPtr of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive);
 
-        int32 sample(RandomSource& random, WorldGenerationContext const& context) const override;
-        HeightProviderType get_type() const override;
+        i32 sample(RandomSource& random, WorldGenerationContext const& context) const override final;
+        HeightProviderType get_type() const override final;
     };
 
     class BiasedToBottomHeight final : public HeightProvider {
     private:
         VerticalAnchor min_inclusive;
         VerticalAnchor max_inclusive;
-        int32 inner = 1;
+        i32 inner = 1;
 
     public:
-        BiasedToBottomHeight(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 inner = 1);
+        BiasedToBottomHeight(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, i32 inner = 1);
 
-        static HeightProviderPtr of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 inner = 1);
+        static HeightProviderPtr of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, i32 inner = 1);
 
-        int32 sample(RandomSource& random, WorldGenerationContext const& context) const override;
-        HeightProviderType get_type() const override;
+        i32 sample(RandomSource& random, WorldGenerationContext const& context) const override final;
+        HeightProviderType get_type() const override final;
     };
 
     class VeryBiasedToBottomHeight final : public HeightProvider {
     private:
         VerticalAnchor min_inclusive;
         VerticalAnchor max_inclusive;
-        int32 inner = 1;
+        i32 inner = 1;
 
     public:
-        VeryBiasedToBottomHeight(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 inner = 1);
+        VeryBiasedToBottomHeight(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, i32 inner = 1);
 
-        static HeightProviderPtr of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 inner = 1);
+        static HeightProviderPtr of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, i32 inner = 1);
 
-        int32 sample(RandomSource& random, WorldGenerationContext const& context) const override;
-        HeightProviderType get_type() const override;
+        i32 sample(RandomSource& random, WorldGenerationContext const& context) const override final;
+        HeightProviderType get_type() const override final;
     };
 
     class TrapezoidHeight final : public HeightProvider {
     private:
         VerticalAnchor min_inclusive;
         VerticalAnchor max_inclusive;
-        int32 plateau = 0;
+        i32 plateau = 0;
 
     public:
-        TrapezoidHeight(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 plateau = 0);
+        TrapezoidHeight(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, i32 plateau = 0);
 
-        static HeightProviderPtr of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, int32 plateau = 0);
+        static HeightProviderPtr of(VerticalAnchor min_inclusive, VerticalAnchor max_inclusive, i32 plateau = 0);
 
-        int32 sample(RandomSource& random, WorldGenerationContext const& context) const override;
-        HeightProviderType get_type() const override;
+        i32 sample(RandomSource& random, WorldGenerationContext const& context) const override final;
+        HeightProviderType get_type() const override final;
     };
 
     class WeightedListHeight final : public HeightProvider {
     public:
         struct Entry {
             HeightProviderPtr provider;
-            int32 weight = 1;
+            i32 weight = 1;
         };
 
     private:
         List<Entry> distribution;
-        int32 total_weight = 0;
+        i32 total_weight = 0;
 
     public:
         explicit WeightedListHeight(List<Entry> distribution);
 
         static HeightProviderPtr of(List<Entry> distribution);
 
-        int32 sample(RandomSource& random, WorldGenerationContext const& context) const override;
-        HeightProviderType get_type() const override;
+        i32 sample(RandomSource& random, WorldGenerationContext const& context) const override final;
+        HeightProviderType get_type() const override final;
     };
 }

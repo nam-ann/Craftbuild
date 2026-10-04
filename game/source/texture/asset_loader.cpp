@@ -13,40 +13,42 @@ ENABLE_WARNING
 module game.texture.asset_loader;
 
 namespace craftbuild {
-    Ref<Texture2D> AssetLoader::load_block_texture(char const* path_suffix, const FaceCount face_count) {
-        if (not path_suffix or not Str(path_suffix)) {
+    namespace asset_loader {
+        Ref<Texture2D> load_block_texture(char const* path_suffix, const FaceCount face_count) {
+            if (not path_suffix or not Str(path_suffix)) {
+                return Ref<Texture2D>();
+            }
+
+            String full_path = base_path.std_str().c_str();
+
+            if (face_count == FaceCount::ONE)        full_path += "1f/";
+            else if (face_count == FaceCount::THREE) full_path += "3f/";
+            else if (face_count == FaceCount::SIX)   full_path += "6f/";
+
+            full_path += path_suffix;
+
+            Ref<Texture2D> tex = ResourceLoader::get_singleton()->load(full_path);
+            if (tex.is_valid()) {
+                log<LogType::VERBOSE>("Loaded: \""f << full_path.ascii() << "\"");
+                return tex;
+            }
+            else log<LogType::ERROR>("Failed to load: \""f << full_path.ascii() << "\"");
             return Ref<Texture2D>();
         }
 
-        String full_path = base_path.std_str().c_str();
+        Ref<PackedScene> load_block_model(char const* path_suffix) {
+            if (path_suffix == nullptr or not Str(path_suffix)) return Ref<PackedScene>();
 
-        if (face_count == FaceCount::ONE)        full_path += "1f/";
-        else if (face_count == FaceCount::THREE) full_path += "3f/";
-        else if (face_count == FaceCount::SIX)   full_path += "6f/";
+            String full_path = Str(""f << base_path << "dynamic/" << path_suffix).std_str().c_str();
 
-        full_path += path_suffix;
+            Ref<PackedScene> model = ResourceLoader::get_singleton()->load(full_path);
+            if (model.is_valid()) {
+                log<LogType::VERBOSE>("Loaded: \""f << full_path.utf8() << "\"");
+                return model;
+            }
+            else log<LogType::ERROR>("Failed to load: \""f << full_path.utf8() << "\"");
 
-        Ref<Texture2D> tex = ResourceLoader::get_singleton()->load(full_path);
-        if (tex.is_valid()) {
-            log<LogType::VERBOSE>("Loaded: \""f << full_path.ascii() << "\"");
-            return tex;
+            return Ref<PackedScene>();
         }
-        else log<LogType::ERROR>("Failed to load: \""f << full_path.ascii() << "\"");
-        return Ref<Texture2D>();
-    }
-
-    Ref<PackedScene> AssetLoader::load_block_model(char const* path_suffix) {
-        if (path_suffix == nullptr or not Str(path_suffix)) return Ref<PackedScene>();
-
-        String full_path = Str(""f << base_path << "dynamic/" << path_suffix).std_str().c_str();
-
-        Ref<PackedScene> model = ResourceLoader::get_singleton()->load(full_path);
-        if (model.is_valid()) {
-            log<LogType::VERBOSE>("Loaded: \""f << full_path.utf8() << "\"");
-            return model;
-        }
-        else log<LogType::ERROR>("Failed to load: \""f << full_path.utf8() << "\"");
-
-        return Ref<PackedScene>();
     }
 }

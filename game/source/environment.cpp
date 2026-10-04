@@ -26,9 +26,9 @@ namespace craftbuild {
         set_rotation(Vector3(day_angle, -0.75f, 0.0f));
     }
 
-    void Sun::_process(float64 delta) {
-        day_angle += day_speed * static_cast<float32>(delta);
-        if (day_angle > static_cast<float32>(Math_TAU)) day_angle -= static_cast<float32>(Math_TAU);
+    void Sun::_process(f64 delta) {
+        day_angle += day_speed * static_cast<f32>(delta);
+        if (day_angle > static_cast<f32>(Math_TAU)) day_angle -= static_cast<f32>(Math_TAU);
 
         set_rotation(Vector3(day_angle, -0.75f, 0.0f));
     }

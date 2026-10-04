@@ -16,21 +16,21 @@ export namespace craftbuild {
     struct Hasher;
 
     template <>
-    struct Hasher<uint8> {
-        usize operator()(uint8 value) const {
-            return std::hash<uint8>{}(value);
+    struct Hasher<u8> final {
+        usize operator()(u8 value) const {
+            return std::hash<u8>{}(value);
         }
     };
 
     template <>
-    struct Hasher<uint32> {
-        usize operator()(uint32 value) const {
-            return std::hash<uint32>{}(value);
+    struct Hasher<u32> final {
+        usize operator()(u32 value) const {
+            return std::hash<u32>{}(value);
         }
     };
 
     template <>
-    struct Hasher<unsigned __int64> {
+    struct Hasher<unsigned __int64> final {
         static unsigned __int64 splitmix64(unsigned __int64 x) {
             x += 0x9e3779b97f4a7c15;
             x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9;
@@ -45,7 +45,7 @@ export namespace craftbuild {
     };
 
     template <typename T1, typename T2>
-    struct Hasher<std::pair<T1, T2>> {
+    struct Hasher<std::pair<T1, T2>> final {
         usize operator()(std::pair<T1, T2> const& value) const {
             auto h1 = std::hash<T1>{}(value.first);
             auto h2 = std::hash<T2>{}(value.second);
@@ -55,17 +55,17 @@ export namespace craftbuild {
     };
 
     template <typename T>
-    struct Hasher<godot::Ref<T>> {
+    struct Hasher<godot::Ref<T>> final {
         usize operator()(godot::Ref<T> const& value) const { return usize(*value); }
     };
 
     template <typename T>
-    struct Hasher<T*> {
+    struct Hasher<T*> final {
         usize operator()(T* value) const { return usize(value); }
     };
 
     template <typename T>
-    struct Hasher<std::vector<T>> {
+    struct Hasher<std::vector<T>> final {
         usize operator()(std::vector<T> const& value) const {
             usize hash = 0;
             for (const auto& elem : value) {
@@ -76,7 +76,5 @@ export namespace craftbuild {
     };
 
     template <typename T>
-    concept Hashable = requires(T t) {
-        Hasher<T>{}(t);
-    };
+    concept Hashable = requires(T t) { Hasher<T>{}(t); };
 }

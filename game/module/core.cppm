@@ -25,9 +25,9 @@ export namespace craftbuild {
     inline bool log_verbose = true;
     inline bool colored_log = true;
 
-    inline int32 render_distance = 32;
-    inline int32 cpu_sleep_time = 180;
+    inline i32 render_distance = 32;
+    inline i32 cpu_sleep_time = 180;
 
-    inline constexpr floatr MATH_PI = (floatr)Math_PI;
-    inline constexpr floatr MAXIMUM_CAMERA_ANGLE = (floatr)2.0000002384185791015625f;
+    inline constexpr fsize MATH_PI = (fsize)Math_PI;
+    inline constexpr fsize MAXIMUM_CAMERA_ANGLE = (fsize)2.0000002384185791015625f;
 }

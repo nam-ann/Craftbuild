@@ -45,38 +45,38 @@ import game.texture.atlas_texture;
 using namespace godot;
 
 export namespace craftbuild {
-    class Main : public Node3D {
+    class Main final : public Node3D {
         GDCLASS(Main, Node3D)
 
     private:
-        List<Pos2D<int32>> ready_chunks_queue;
+        List<Pos2D<i32>> ready_chunks_queue;
         mutable std::mutex ready_chunks_queue_mutex;
 
-        Dict<Pos2D<int32>, std::pair<Ptr<Chunk>, ChunkRender>> chunks;
+        Dict<Pos2D<i32>, std::pair<Ptr<Chunk>, ChunkRender>> chunks;
         mutable std::shared_mutex chunks_mutex;
 
-        Set<Pos2D<int32>> requested_chunks;
+        Set<Pos2D<i32>> requested_chunks;
         mutable std::mutex requested_chunks_mutex;
 
         Ref<ShaderMaterial> world_material;
-        std::atomic<int32> world_seed = 0;
+        std::atomic<i32> world_seed = 0;
         Str world_name = "My World";
         Str player_name = "Player";
-        std::tuple<String, int32> server_socket = std::tuple(String("127.0.0.1"), 8888);
+        std::tuple<String, i32> server_socket = std::tuple(String("127.0.0.1"), 8888);
 
         void* player_ptr = nullptr;
         mutable std::shared_mutex player_mutex;
 
         std::atomic<bool> running = true;
-        std::atomic<floatr> player_x = 0.0;
-        std::atomic<floatr> player_y = 0.0;
-        std::atomic<floatr> player_z = 0.0;
+        std::atomic<fsize> player_x = 0.0;
+        std::atomic<fsize> player_y = 0.0;
+        std::atomic<fsize> player_z = 0.0;
         std::jthread gc_thread;
         std::jthread log_thread;
         std::jthread network_thread;
         std::jthread scheduler_thread;
         ThreadPool mesh_pool{ 4 };
-        Set<Pos2D<int32>> pending_mesh_jobs;
+        Set<Pos2D<i32>> pending_mesh_jobs;
         mutable std::mutex pending_jobs_mutex;
 
         std::atomic<bool> pausing = true;
@@ -92,7 +92,7 @@ export namespace craftbuild {
 
     public:
         void _ready() override;
-        void _process(float64 delta) override;
+        void _process(f64 delta) override;
         void _exit_tree() override;
 
         void init_singleplayer();
@@ -105,15 +105,15 @@ export namespace craftbuild {
         void start_scheduler_thread();
         void submit_jobs();
         void create_chunk_collision(ChunkRender& chunk_render, PackedVector3Array const& collision_faces);
-        void update_chunk_mesh(ChunkRender& chunk_render, Pos2D<int32>& pos, Ref<ArrayMesh> const& mesh, int32 submesh_idx);
+        void update_chunk_mesh(ChunkRender& chunk_render, Pos2D<i32>& pos, Ref<ArrayMesh> const& mesh, i32 submesh_idx);
         void unload_distant_chunks();
 
-        Ptr<Chunk> get_chunk(int32 cx, int32 cy);
-        Ptr<Chunk> get_or_create_chunk(int32 cx, int32 cy);
-        ChunkRender& ref_mesh(int32 cx, int32 cy);
-        uint32 get_global_block_id(int32 wx, int32 wy, int32 wz);
-        void set_chunk(Ptr<Chunk>& chunk, int32 cx, int32 cy);
-        void set_global_block_id(uint32 block_id, int32 wx, int32 wy, int32 wz);
+        Ptr<Chunk> get_chunk(i32 cx, i32 cy);
+        Ptr<Chunk> get_or_create_chunk(i32 cx, i32 cy);
+        ChunkRender& ref_mesh(i32 cx, i32 cy);
+        u32 get_global_block_id(i32 wx, i32 wy, i32 wz);
+        void set_chunk(Ptr<Chunk>& chunk, i32 cx, i32 cy);
+        void set_global_block_id(u32 block_id, i32 wx, i32 wy, i32 wz);
 
         void save_userdata(char const* path = "user://game/userdata.cbdata");
         bool load_userdata(char const* path = "user://game/userdata.cbdata");
@@ -125,15 +125,14 @@ export namespace craftbuild {
         void chat(const String msg);
 
         Vector3 get_player_position();
-        void set_seed_and_world_name(int32 seed, const String name);
-        void set_render_distance(int32 rd);
-        void set_cpu_sleep_time(int32 stc);
+        void set_seed_and_world_name(i32 seed, const String name);
+        void set_render_distance(i32 rd);
+        void set_cpu_sleep_time(i32 stc);
         void set_server_socket(String ip, int32_t port);
 
         static void _bind_methods();
 
         friend class Player;
         friend class CommandInterpreter;
-        friend void craftbuild_mod_main();
     };
 }

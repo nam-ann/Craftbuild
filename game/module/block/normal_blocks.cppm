@@ -8,15 +8,15 @@ import game.block;
 import game.block.block_data;
 
 export namespace craftbuild {
-	struct Air : public Block1F {};
-	struct Dirt : public Block1F {};
-	struct Grass : public Block3F {};
-	struct Stone : public Block1F {};
-	struct Pebble : public Block1F {};
-	struct OakLog : public Block3F {};
-	struct OakPlanks : public Block1F {};
-	struct OakLeaves : public Block1F { Set<uint32> init_tags() override { return { TagRegistry::get_id("transparent") }; } };
-	struct DiamondBlock : public Block1F {};
-	struct DiamondOre : public Block1F {};
-	struct Bedrock : public Block1F {};
+	struct Air final : public Block1F {};
+	struct Dirt final : public Block1F {};
+	struct Grass final : public Block3F {};
+	struct Stone final : public Block1F {};
+	struct Pebble final : public Block1F {};
+	struct OakLog final : public Block3F {};
+	struct OakPlanks final : public Block1F {};
+	struct OakLeaves final : public Block1F { Set<u32> init_tags() override final { return { tag_registry::get_id("transparent") }; } };
+	struct DiamondBlock final : public Block1F {};
+	struct DiamondOre final : public Block1F {};
+	struct Bedrock final : public Block1F {};
 }
