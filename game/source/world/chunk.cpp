@@ -357,28 +357,24 @@ namespace craftbuild {
         for (auto* m : mutexes_to_lock) locks.emplace(std::shared_lock(*m));
 
         auto is_complex_block = [this, AIR](u32 id) -> bool {
-            auto& block = block_registry::get_block(id);
-            return block.get_texture_layer(Face::TOP) == -1;
+            return block_registry::get_block(id).get_texture_layer(Face::TOP) == -1;
         };
 
-        auto transparent_or_air = [this, &neighbors, AIR, TRANSPARENT, &is_complex_block](i32 bx, i32 by, i32 bz) -> bool {
-            if (by < 0 or by >= Chunk::HEIGHT) return true;
-
+        auto transparent_or_air = [this, &neighbors, AIR, TRANSPARENT, &is_complex_block](i32 bx, u8 by, i32 bz) -> bool {
             if (bx < Chunk::WIDTH and bx >= 0 and bz < Chunk::WIDTH and bz >= 0) {
-                auto id = get_block({ u8(bx), u8(by), u8(bz) });
+                auto id = get_block({ u8(bx), by, u8(bz) });
                 if (id == AIR or is_complex_block(id)) return true;
 
-                auto tag_ptr = get_tag({ u8(bx), u8(by), u8(bz) });
+                auto tag_ptr = get_tag({ u8(bx), by, u8(bz) });
                 return tag_ptr and tag_ptr->contains(TRANSPARENT);
             }
 
-            u8 nid = 0;
-            if (bx >= Chunk::WIDTH)       nid = 0;
-            else if (bx < 0)              nid = 1;
-            else if (bz >= Chunk::WIDTH)  nid = 2;
-            else if (bz < 0)              nid = 3;
+            u8 const nid = bx >= Chunk::WIDTH ? 0 :
+                           bx < 0             ? 1 :
+                           bz >= Chunk::WIDTH ? 2 :
+                           bz < 0             ? 3 : 0;
 
-            auto& neighbor_ptr = neighbors[nid];
+            auto const& neighbor_ptr = neighbors[nid];
 			if (not neighbor_ptr) return true;
 
 			Chunk& neighbor = neighbor_ptr.value();
@@ -387,18 +383,18 @@ namespace craftbuild {
             u8 lx = u8((bx % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH);
             u8 lz = u8((bz % Chunk::WIDTH + Chunk::WIDTH) % Chunk::WIDTH);
 
-            auto id = neighbor.get_block({ lx, u8(by), lz });
+            auto const id = neighbor.get_block({ lx, by, lz });
             if (id == AIR or is_complex_block(id)) return true;
 
-			auto tag_ptr = neighbor.get_tag({ lx, u8(by), lz });
+			auto const tag_ptr = neighbor.get_tag({ lx, by, lz });
             return tag_ptr and tag_ptr->contains(TRANSPARENT);
         };
 
-        auto get_block_layer = [this, AIR, &is_complex_block](i32 bx, i32 by, i32 bz, Face face) -> i32 {
-            u32 id = get_block({ u8(bx), u8(by), u8(bz) });
+        auto get_block_layer = [this, AIR, &is_complex_block](u8 bx, u8 by, u8 bz, Face face) -> i32 {
+            u32 id = get_block({ bx, by, bz });
             if (id == AIR or is_complex_block(id)) return -1;
-            auto& block = block_registry::get_block(id);
-            return block.get_texture_layer(face);
+
+            return block_registry::get_block(id).get_texture_layer(face);
         };
 
         static constexpr i64 dims[3] = { Chunk::WIDTH, Chunk::HEIGHT, Chunk::WIDTH };

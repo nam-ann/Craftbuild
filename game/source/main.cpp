@@ -116,7 +116,7 @@ namespace craftbuild {
         Player* player = static_cast<Player*>(player_ptr);
         if (not player) return;
 
-		const auto player_pos = player->get_global_position();
+		auto const player_pos = player->get_global_position();
         player_x.store(player_pos.x, std::memory_order_relaxed);
         player_y.store(player_pos.y, std::memory_order_relaxed);
         player_z.store(player_pos.z, std::memory_order_relaxed);
