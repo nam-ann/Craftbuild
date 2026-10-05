@@ -313,9 +313,7 @@ namespace craftbuild {
         memcpy(final_payload.ptrw(), &uncompressed_size, sizeof(u32));
         memcpy(final_payload.ptrw() + sizeof(u32), compressed_pba.ptr(), compressed_pba.size());
 
-        String base64_godot_str = Marshalls::get_singleton()->raw_to_base64(final_payload);
-
-        return (std::string)base64_godot_str.utf8();
+        return std::string(Marshalls::get_singleton()->raw_to_base64(final_payload).utf8());
     }
 
     Ptr<Chunk> World::get_chunk(i32 cx, i32 cy) {
@@ -336,7 +334,7 @@ namespace craftbuild {
 
         const Str path = "user://game/saves/"f << world_name;
         const String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(ry) + ".cbregion").std_str().c_str());
-        const std::string std_path = (std::string)real_path.utf8();
+        const std::string std_path = std::string(real_path.utf8());
 
         const auto chunk_pos = Pos2D<i32>{ cx, cy };
 
@@ -464,7 +462,7 @@ namespace craftbuild {
 
     void World::save_world(Str const& path) {
         String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/" + world_name + ".cbworld").std_str().c_str());
-        std::string std_path = (std::string)real_path.utf8();
+        std::string std_path = std::string(real_path.utf8());
 
         // Tạo thư mục
         std::filesystem::create_directories(std::filesystem::path(std_path).parent_path());
@@ -519,7 +517,7 @@ namespace craftbuild {
 
     bool World::load_world(Str const& path) {
         String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/" + world_name + ".cbworld").std_str().c_str());
-        std::string std_path = (std::string)real_path.utf8();
+        std::string std_path = std::string(real_path.utf8());
 
         std::ifstream ifs(std_path, std::ios::binary);
         if (not ifs.is_open()) return false;
@@ -564,7 +562,7 @@ namespace craftbuild {
 
     void World::save_region(Str const& path, i32 rx, i32 ry) {
         String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(ry) + ".cbregion").std_str().c_str());
-        std::string std_path = (std::string)real_path.utf8();
+        std::string std_path = std::string(real_path.utf8());
 
         std::filesystem::create_directories(std::filesystem::path(std_path).parent_path());
 
@@ -648,8 +646,8 @@ namespace craftbuild {
     }
 
     bool World::load_region(Str const& path, i32 rx, i32 ry) {
-        String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(ry) + ".cbregion").std_str().c_str());
-        std::string std_path = (std::string)real_path.utf8();
+        String real_path = ProjectSettings::get_singleton()->globalize_path(Str(""f << path << "/regions/" << rx << "_" << ry << ".cbregion").std_str().c_str());
+        std::string std_path = std::string(real_path.utf8());
 
         std::ifstream ifs(std_path, std::ios::binary);
         if (not ifs.is_open()) return false;

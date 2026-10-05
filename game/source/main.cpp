@@ -122,21 +122,30 @@ namespace craftbuild {
         player_z.store(player_pos.z, std::memory_order_relaxed);
 
         static Pos3D<fsize> last_sent_pos;
-        if ((player_pos - last_sent_pos) > Pos3D<fsize>(0.01f, 0.01f, 0.01f)) {
-            if (not server_ptr) {
+
+        if (not server_ptr) {
+            if (player_pos - last_sent_pos > Pos3D<fsize>(0.01f, 0.01f, 0.01f)) {
                 last_sent_pos = player_pos;
                 send_queue.store({ "Update player pos", { player_name.std_str(), std::to_string(player_pos.x), std::to_string(player_pos.y), std::to_string(player_pos.z)} });
             }
-            else server_ptr.value().update(player_name, player_pos);
-        }
 
-        static auto last_sent_get_player_request = std::chrono::high_resolution_clock::now();
-        if (auto elapsed = std::chrono::high_resolution_clock::now() - last_sent_get_player_request; elapsed >= 1s) {
-            if (not server_ptr) {
+            static auto last_sent_get_player_request = std::chrono::high_resolution_clock::now();
+            auto elapsed = std::chrono::high_resolution_clock::now() - last_sent_get_player_request;
+            
+            if (elapsed >= 1s) {
                 last_sent_get_player_request = std::chrono::high_resolution_clock::now();
                 send_queue.store({ "Get players data", { player_name.std_str() } });
             }
-            else if (Player* player = static_cast<Player*>(player_ptr)) {
+        }
+        else {
+            if (player_pos - last_sent_pos > Pos3D<fsize>(0.01f, 0.01f, 0.01f)) {
+                server_ptr.value().update(player_name, player_pos);
+            }
+
+            static auto last_sent_get_player_request = std::chrono::high_resolution_clock::now();
+            auto elapsed = std::chrono::high_resolution_clock::now() - last_sent_get_player_request;
+            
+            if (Player* player = static_cast<Player*>(player_ptr); player and elapsed >= 1s) {
                 std::unique_lock lock(player_mutex);
                 auto& player_data = server_ptr.value().players[player_name];
 
@@ -953,9 +962,9 @@ namespace craftbuild {
     }
 
     void Main::chat(String const msg) {
-        if (not server_ptr) send_queue.store({ "Chat", { (std::string)msg.utf8() } });
+        if (not server_ptr) send_queue.store({ "Chat", { std::string(msg.utf8()) } });
         else {
-            Str output = server_ptr.value().chat((std::string)msg.utf8());
+            Str output = server_ptr.value().chat(std::string(msg.utf8()));
 			emit_signal("chat_output", output.std_str().c_str());
         }
         Input* input = Input::get_singleton();
@@ -968,8 +977,8 @@ namespace craftbuild {
 	}
 
     void Main::set_seed_and_world_name(i32 seed, const String name) {
-        if (not server_ptr) send_queue.store({ "Set seed and world name", { std::to_string(seed), (std::string)name.utf8() } });
-        else server_ptr.value().set_seed_and_world_name(seed, (std::string)name.utf8());
+        if (not server_ptr) send_queue.store({ "Set seed and world name", { std::to_string(seed), std::string(name.utf8()) } });
+        else server_ptr.value().set_seed_and_world_name(seed, std::string(name.utf8()));
     }
 
     void Main::set_render_distance(i32 rd) {
