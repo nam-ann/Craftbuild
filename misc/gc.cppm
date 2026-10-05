@@ -109,17 +109,17 @@ namespace craftbuild {
                 }
             }
 
-            usize it = 0;
-            while (it != len(all_objects)) {
-                GCObject* obj = all_objects[it];
+            usize idx = 0;
+            while (idx != len(all_objects)) {
+                GCObject* obj = all_objects[idx];
 
                 if (not obj->__marked__) {
-                    all_objects.pop(it);
-                    delete obj; obj = nullptr;
+                    all_objects.pop(idx);
+                    delete obj;
                 }
                 else {
                     obj->__marked__ = false;
-                    ++it;
+                    ++idx;
                 }
             }
         }
