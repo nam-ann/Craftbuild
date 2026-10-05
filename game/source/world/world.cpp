@@ -449,11 +449,11 @@ namespace craftbuild {
 
     Str World::chat(Str const& msg) {
         if (msg) {
-            std::string _msg = msg.std_str();
+            auto _msg = msg.std_str();
             log<LogType::NORMAL>("[Player] "f << _msg);
             if (_msg.starts_with("/")) {
                 CommandInterpreter* interpreter = static_cast<CommandInterpreter*>(command_ptr);
-                return interpreter->execute_command(_msg.erase(0, 1)).std_str().c_str();
+                return interpreter->execute_command(_msg.erase(0, 1));
             }
             else return msg;
         }
@@ -461,13 +461,13 @@ namespace craftbuild {
     }
 
     void World::save_world(Str const& path) {
-        String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/" + world_name + ".cbworld").std_str().c_str());
-        std::string std_path = std::string(real_path.utf8());
+        auto const real_path = ProjectSettings::get_singleton()->globalize_path(Str(""f << path << "/" << world_name << ".cbworld").std_str().c_str());
+        auto const std_path = std::string_view(real_path.utf8());
 
         // Tạo thư mục
         std::filesystem::create_directories(std::filesystem::path(std_path).parent_path());
 
-        std::ofstream ofs(std_path, std::ios::binary);
+        std::ofstream ofs(std_path.data(), std::ios::binary);
         if (not ofs.is_open()) {
             log<LogType::ERROR>("Cannot open save file: "f << std_path);
             return;
@@ -516,10 +516,9 @@ namespace craftbuild {
     }
 
     bool World::load_world(Str const& path) {
-        String real_path = ProjectSettings::get_singleton()->globalize_path(Str(""f << path << "/" << world_name << ".cbworld").std_str().c_str());
-        std::string std_path = std::string(real_path.utf8());
-
-        std::ifstream ifs(std_path, std::ios::binary);
+        auto const real_path = ProjectSettings::get_singleton()->globalize_path(Str(""f << path << "/" << world_name << ".cbworld").std_str().c_str());
+        
+        std::ifstream ifs(real_path.utf8(), std::ios::binary);
         if (not ifs.is_open()) return false;
 
         log<LogType::INFO>("Loading world...");
@@ -561,19 +560,19 @@ namespace craftbuild {
     }
 
     void World::save_region(Str const& path, i32 rx, i32 ry) {
-        String real_path = ProjectSettings::get_singleton()->globalize_path(Str(""f << path << "/regions/" << rx << "_" << ry << ".cbregion").std_str().c_str());
-        std::string std_path = std::string(real_path.utf8());
+        auto const real_path = ProjectSettings::get_singleton()->globalize_path(Str(""f << path << "/regions/" << rx << "_" << ry << ".cbregion").std_str().c_str());
+        auto const std_path = std::string_view(real_path.utf8());
 
         std::filesystem::create_directories(std::filesystem::path(std_path).parent_path());
 
-        std::ofstream ofs(std_path, std::ios::binary);
+        std::ofstream ofs(std_path.data(), std::ios::binary);
         if (not ofs.is_open()) {
             log<LogType::ERROR>("Cannot open save file: "f << std_path);
             return;
         }
 
-        const i32 cx = rx * 16;
-        const i32 cy = ry * 16;
+        i32 const cx = rx * 16;
+        i32 const cy = ry * 16;
 
         for (i32 x : range<i32>(cx, cx + 16)) {
             for (i32 z : range<i32>(cy, cy + 16)) {
@@ -646,10 +645,9 @@ namespace craftbuild {
     }
 
     bool World::load_region(Str const& path, i32 rx, i32 ry) {
-        String real_path = ProjectSettings::get_singleton()->globalize_path(Str(""f << path << "/regions/" << rx << "_" << ry << ".cbregion").std_str().c_str());
-        std::string std_path = std::string(real_path.utf8());
-
-        std::ifstream ifs(std_path, std::ios::binary);
+        auto const real_path = ProjectSettings::get_singleton()->globalize_path(Str(""f << path << "/regions/" << rx << "_" << ry << ".cbregion").std_str().c_str());
+        
+        std::ifstream ifs(real_path.utf8(), std::ios::binary);
         if (not ifs.is_open()) return false;
 
         i32 const w_rx = rx * 16;

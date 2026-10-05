@@ -15,9 +15,7 @@ module game.texture.asset_loader;
 namespace craftbuild {
     namespace asset_loader {
         Ref<Texture2D> load_block_texture(char const* path_suffix, const FaceCount face_count) {
-            if (not path_suffix or not Str(path_suffix)) {
-                return Ref<Texture2D>();
-            }
+            if (not path_suffix or std::strlen(path_suffix) == 0) return Ref<Texture2D>();
 
             String full_path = base_path.std_str().c_str();
 
@@ -29,15 +27,15 @@ namespace craftbuild {
 
             Ref<Texture2D> tex = ResourceLoader::get_singleton()->load(full_path);
             if (tex.is_valid()) {
-                log<LogType::VERBOSE>("Loaded: \""f << full_path.ascii() << "\"");
+                log<LogType::VERBOSE>("Loaded: \""f << full_path.utf8() << "\"");
                 return tex;
             }
-            else log<LogType::ERROR>("Failed to load: \""f << full_path.ascii() << "\"");
+            else log<LogType::ERROR>("Failed to load: \""f << full_path.utf8() << "\"");
             return Ref<Texture2D>();
         }
 
         Ref<PackedScene> load_block_model(char const* path_suffix) {
-            if (path_suffix == nullptr or not Str(path_suffix)) return Ref<PackedScene>();
+            if (not path_suffix or std::strlen(path_suffix) == 0) return Ref<PackedScene>();
 
             String full_path = Str(""f << base_path << "dynamic/" << path_suffix).std_str().c_str();
 
