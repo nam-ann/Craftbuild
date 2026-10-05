@@ -213,11 +213,11 @@ namespace craftbuild {
         Dict<Pos3D<u8>, Dict<u32, Str>> new_meta_ids;
         Dict<Pos3D<u8>, Set<u32>> new_tag_ids;
 
-        auto iadd_block_metadata = [&](Pos3D<u8> const& pos, u32 meta_id, Str const& meta_data = "") {
+        auto iadd_block_metadata = [&new_meta_ids](Pos3D<u8> const& pos, u32 meta_id, Str const& meta_data = "") {
             new_meta_ids[pos][meta_id] = meta_data;
         };
 
-        auto itag_block = [&](Pos3D<u8> const& pos, u32 tag_id) {
+        auto itag_block = [&new_tag_ids](Pos3D<u8> const& pos, u32 tag_id) {
             new_tag_ids[pos].emplace(tag_id);
         };
 
@@ -246,20 +246,21 @@ namespace craftbuild {
         usize const biome_count = len(biome_registry::registry);
         for (auto x : range<u8>(WIDTH)) {
             for (auto z : range<u8>(WIDTH)) {
-                i32 global_x = chunk_pos.x * WIDTH + x;
-                i32 global_z = chunk_pos.y * WIDTH + z;
+                i32 const global_x = chunk_pos.x * WIDTH + x;
+                i32 const global_z = chunk_pos.y * WIDTH + z;
 
                 Biome const current_biome = get_blended_biome(global_x, global_z, noise, biome_count);
 
-                f32 base_noise = noise->get_noise_2d(fsize(global_x) * current_biome.base_noise, fsize(global_z) * current_biome.base_noise);
-                f32 base_elevation = ((base_noise + 1.0f) * 0.5f) * current_biome.base_height;
+                f32 const base_noise = noise->get_noise_2d(fsize(global_x) * current_biome.base_noise, fsize(global_z) * current_biome.base_noise);
+                f32 const base_elevation = ((base_noise + 1.0f) * 0.5f) * current_biome.base_height;
+                
                 f32 detail_elevation = 0.0f;
                 if (current_biome.detail_noise > 0.0f and current_biome.detail_height > 0.0f) {
-                    const f32 detail_noise = noise->get_noise_2d(fsize(global_x) * current_biome.detail_noise, fsize(global_z) * current_biome.detail_noise);
+                    f32 const detail_noise = noise->get_noise_2d(fsize(global_x) * current_biome.detail_noise, fsize(global_z) * current_biome.detail_noise);
                     detail_elevation = detail_noise * current_biome.detail_height;
                 }
-                f32 terrain_base_y = current_biome.min_height + base_elevation + detail_elevation;
 
+                f32 const terrain_base_y = current_biome.min_height + base_elevation + detail_elevation;
                 i32 solid_depth = -1;
 
                 for (auto y : range<i16>(HEIGHT - 1, -1)) {
@@ -268,19 +269,19 @@ namespace craftbuild {
                         continue;
                     }
 
-                    f32 cave_noise = noise->get_noise_3d(
+                    f32 const cave_noise = noise->get_noise_3d(
                         global_x * CHEESE_CAVE.frequency,
                         y * CHEESE_CAVE.frequency,
                         global_z * CHEESE_CAVE.frequency
                     );
 
-                    f32 noise_3d = noise->get_noise_3d(
+                    f32 const noise_3d = noise->get_noise_3d(
                         fsize(global_x) * 0.2f,
                         fsize(y) * 0.3f,
                         fsize(global_z) * 0.2f
                     );
 
-                    f32 density = terrain_base_y - f32(y) + (noise_3d * 25.0f);
+                    f32 const density = terrain_base_y - f32(y) + (noise_3d * 25.0f);
                     auto block_id = AIR;
 
                     if (cave_noise <= CHEESE_CAVE.threshold) {
@@ -350,7 +351,7 @@ namespace craftbuild {
 
         std::ranges::sort(mutexes_to_lock);
 
-        auto result = std::ranges::unique(mutexes_to_lock);
+        auto const result = std::ranges::unique(mutexes_to_lock);
         mutexes_to_lock.resize(result.begin() - mutexes_to_lock.begin());
 
         List<std::shared_lock<std::shared_mutex>> locks;
@@ -360,7 +361,7 @@ namespace craftbuild {
             return block_registry::get_block(id).get_texture_layer(Face::TOP) == -1;
         };
 
-        auto transparent_or_air = [this, &neighbors, AIR, TRANSPARENT, &is_complex_block](i32 bx, u8 by, i32 bz) -> bool {
+        auto transparent = [this, &neighbors, AIR, TRANSPARENT, &is_complex_block](i32 bx, u8 by, i32 bz) -> bool {
             if (bx < Chunk::WIDTH and bx >= 0 and bz < Chunk::WIDTH and bz >= 0) {
                 auto id = get_block({ u8(bx), by, u8(bz) });
                 if (id == AIR or is_complex_block(id)) return true;
@@ -391,7 +392,7 @@ namespace craftbuild {
         };
 
         auto get_block_layer = [this, AIR, &is_complex_block](u8 bx, u8 by, u8 bz, Face face) -> i32 {
-            u32 id = get_block({ bx, by, bz });
+            u32 const id = get_block({ bx, by, bz });
             if (id == AIR or is_complex_block(id)) return -1;
 
             return block_registry::get_block(id).get_texture_layer(face);
@@ -418,15 +419,15 @@ namespace craftbuild {
 
                 for (x[v] = 0; x[v] < dims[v]; ++x[v]) {
                     for (x[u] = 0; x[u] < dims[u]; ++x[u]) {
-                        bool const a_trans = transparent_or_air(x[0], x[1], x[2]);
-                        bool const b_trans = transparent_or_air(x[0] + q[0], x[1] + q[1], x[2] + q[2]);
+                        bool const a_trans = transparent(x[0], x[1], x[2]);
+                        bool const b_trans = transparent(x[0] + q[0], x[1] + q[1], x[2] + q[2]);
 
                         if (x[d] >= 0 and not a_trans and b_trans) {
-                            i32 layer = get_block_layer(x[0], x[1], x[2], front_faces[d]);
+                            i32 const layer = get_block_layer(x[0], x[1], x[2], front_faces[d]);
                             if (layer >= 0) mask[x[u] + x[v] * dims[u]] = { layer, false };
                         }
                         else if (x[d] + 1 < dims[d] and a_trans and not b_trans) {
-                            i32 layer = get_block_layer(x[0] + q[0], x[1] + q[1], x[2] + q[2], back_faces[d]);
+                            i32 const layer = get_block_layer(x[0] + q[0], x[1] + q[1], x[2] + q[2], back_faces[d]);
                             if (layer >= 0) mask[x[u] + x[v] * dims[u]] = { layer, true };
                         }
                     }
@@ -435,27 +436,24 @@ namespace craftbuild {
                 for (auto j : range<i64>(dims[v])) {
                     i64 i = 0;
                     while (i < dims[u]) {
-                        FaceMask current_face = mask[i + j * dims[u]];
+                        FaceMask const current_face = mask[i + j * dims[u]];
                         if (current_face.layer() < 0) {
                             ++i;
                             continue;
                         }
 
                         i32 width = 1;
-                        while (i + width < dims[u] and mask[(i + width) + j * dims[u]] == current_face) width++;
+                        while (i + width < dims[u] and mask[i + width + j * dims[u]] == current_face) ++width;
 
                         i32 height = 1;
-                        bool can_grow = true;
                         while (j + height < dims[v]) {
                             for (i32 k : range(width)) {
-                                if (not (mask[(i + k) + (j + height) * dims[u]] == current_face)) {
-                                    can_grow = false;
-                                    break;
-                                }
+                                if (mask[(i + k) + (j + height) * dims[u]] != current_face) goto CANT_GROW_MORE;
                             }
-                            if (not can_grow) break;
                             ++height;
                         }
+
+                    CANT_GROW_MORE:
 
                         f32 du[3] = {}; du[u] = f32(width);
                         f32 dv[3] = {}; dv[v] = f32(height);
@@ -465,16 +463,16 @@ namespace craftbuild {
                         start[u] = f32(i);
                         start[v] = f32(j);
 
-                        u8 avg_y = u8(start[1]);
-                        u8 s_idx = get_submesh_index(avg_y);
+                        u8 const avg_y = u8(start[1]);
+                        u8 const s_idx = get_submesh_index(avg_y);
 
                         auto& data = chunk_data[s_idx];
                         u64& vertex_offset = vertex_offsets[s_idx];
 
-                        Pos3D p0(start[0], start[1], start[2]);
-                        Pos3D p1(start[0] + du[0], start[1] + du[1], start[2] + du[2]);
-                        Pos3D p2(start[0] + du[0] + dv[0], start[1] + du[1] + dv[1], start[2] + du[2] + dv[2]);
-                        Pos3D p3(start[0] + dv[0], start[1] + dv[1], start[2] + dv[2]);
+                        auto const p0 = Pos3D(start[0], start[1], start[2]);
+                        auto const p1 = Pos3D(start[0] + du[0], start[1] + du[1], start[2] + du[2]);
+                        auto const p2 = Pos3D(start[0] + du[0] + dv[0], start[1] + du[1] + dv[1], start[2] + du[2] + dv[2]);
+                        auto const p3 = Pos3D(start[0] + dv[0], start[1] + dv[1], start[2] + dv[2]);
 
                         auto get_uv = [&p0, current_face, width, height, d](Pos3D<f32> const& p) -> Pos2D<fsize> {
                             f32 const dx = p.x - p0.x;
@@ -512,10 +510,10 @@ namespace craftbuild {
                             uvs.append(get_uv(p1));
                         }
 
-                        Pos3D<fsize> normal(0, 0, 0);
-                        if (d == 0)      normal.x = current_face.back_face() ? -1.0f : 1.0f;
-                        else if (d == 1) normal.y = current_face.back_face() ? -1.0f : 1.0f;
-                        else if (d == 2) normal.z = current_face.back_face() ? -1.0f : 1.0f;
+                        auto normal = Pos3D(0.0fz, 0.0fz, 0.0fz);
+
+                        d == 0 ? normal.x :
+                        d == 1 ? normal.y : normal.z = current_face.back_face() ? -1.0fz : 1.0fz;
 
                         for (auto n : range<i32>(4)) normals.append(normal);
 
@@ -536,7 +534,7 @@ namespace craftbuild {
 
                         for (i32 v_idx : range(height))
                             for (i32 u_idx : range(width))
-                                mask[(i + u_idx) + (j + v_idx) * dims[u]] = { -1, false };
+                                mask[i + u_idx + (j + v_idx) * dims[u]] = { -1, false };
 
                         i += width;
                     }
