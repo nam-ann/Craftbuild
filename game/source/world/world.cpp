@@ -516,7 +516,7 @@ namespace craftbuild {
     }
 
     bool World::load_world(Str const& path) {
-        String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/" + world_name + ".cbworld").std_str().c_str());
+        String real_path = ProjectSettings::get_singleton()->globalize_path(Str(""f << path << "/" << world_name << ".cbworld").std_str().c_str());
         std::string std_path = std::string(real_path.utf8());
 
         std::ifstream ifs(std_path, std::ios::binary);
@@ -561,7 +561,7 @@ namespace craftbuild {
     }
 
     void World::save_region(Str const& path, i32 rx, i32 ry) {
-        String real_path = ProjectSettings::get_singleton()->globalize_path((path + "/regions/" + Str(rx) + "_" + Str(ry) + ".cbregion").std_str().c_str());
+        String real_path = ProjectSettings::get_singleton()->globalize_path(Str(""f << path << "/regions/" << rx << "_" << ry << ".cbregion").std_str().c_str());
         std::string std_path = std::string(real_path.utf8());
 
         std::filesystem::create_directories(std::filesystem::path(std_path).parent_path());
@@ -579,7 +579,7 @@ namespace craftbuild {
             for (i32 z : range<i32>(cy, cy + 16)) {
                 auto chunk_ptr = get_chunk(x, z);
 
-                const bool chunk_exists = chunk_ptr and chunk_ptr.value().generated.load(std::memory_order_acquire);
+                bool const chunk_exists = chunk_ptr and chunk_ptr.value().generated.load(std::memory_order_acquire);
                 ofs.write(reinterpret_cast<char const*>(&chunk_exists), sizeof(bool));
 
                 if (not chunk_exists) continue;
@@ -592,7 +592,7 @@ namespace craftbuild {
                 ofs.write(reinterpret_cast<char const*>(&chunk.block_ids_size), sizeof(u8));
                 ofs.write(reinterpret_cast<char const*>(&chunk.block_ids[0]), sizeof(u32) * 256);
 
-                u8 id2block_size = static_cast<u8>(chunk.id2block.size());
+                u8 id2block_size = u8(chunk.id2block.size());
                 ofs.write(reinterpret_cast<char const*>(&id2block_size), sizeof(u8));
                 for (auto const& [global_id, local_id] : chunk.id2block) {
                     ofs.write(reinterpret_cast<char const*>(&global_id), sizeof(u32));
@@ -652,8 +652,8 @@ namespace craftbuild {
         std::ifstream ifs(std_path, std::ios::binary);
         if (not ifs.is_open()) return false;
 
-        const i32 w_rx = rx * 16;
-        const i32 w_rz = ry * 16;
+        i32 const w_rx = rx * 16;
+        i32 const w_rz = ry * 16;
 
         for (i32 cx : range<i32>(w_rx, w_rx + 16)) {
             for (i32 cy : range<i32>(w_rz, w_rz + 16)) {
@@ -730,7 +730,7 @@ namespace craftbuild {
                 ifs.read(reinterpret_cast<char*>(&extended_block_size), sizeof(u64));
 
                 for (auto j : range(extended_block_size)) {
-                    Pos3D<u8> pos;
+                    Pos3D<u8> pos = {};
 
                     ifs.read(reinterpret_cast<char*>(&pos.x), sizeof(u8));
                     ifs.read(reinterpret_cast<char*>(&pos.y), sizeof(u8));
