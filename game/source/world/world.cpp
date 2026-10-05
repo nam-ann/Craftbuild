@@ -462,12 +462,12 @@ namespace craftbuild {
 
     void World::save_world(Str const& path) {
         auto const real_path = ProjectSettings::get_singleton()->globalize_path(Str(""f << path << "/" << world_name << ".cbworld").std_str().c_str());
-        auto const std_path = std::string_view(real_path.utf8());
+        auto const std_path = std::string(real_path.utf8());
 
         // Tạo thư mục
         std::filesystem::create_directories(std::filesystem::path(std_path).parent_path());
 
-        std::ofstream ofs(std_path.data(), std::ios::binary);
+        std::ofstream ofs(std_path, std::ios::binary);
         if (not ofs.is_open()) {
             log<LogType::ERROR>("Cannot open save file: "f << std_path);
             return;
@@ -561,11 +561,11 @@ namespace craftbuild {
 
     void World::save_region(Str const& path, i32 rx, i32 ry) {
         auto const real_path = ProjectSettings::get_singleton()->globalize_path(Str(""f << path << "/regions/" << rx << "_" << ry << ".cbregion").std_str().c_str());
-        auto const std_path = std::string_view(real_path.utf8());
+        auto const std_path = std::string(real_path.utf8());
 
         std::filesystem::create_directories(std::filesystem::path(std_path).parent_path());
 
-        std::ofstream ofs(std_path.data(), std::ios::binary);
+        std::ofstream ofs(std_path, std::ios::binary);
         if (not ofs.is_open()) {
             log<LogType::ERROR>("Cannot open save file: "f << std_path);
             return;

@@ -20,7 +20,10 @@ export namespace craftbuild {
 		Obj(Args&&... args) : __val__(std::forward<Args>(args)...), GCObject(&__val__) {}
 
 		void get_refs(List<GCObject*>& refs) noexcept override final {
-			if constexpr (Traceable<T>) __val__._get_refs(refs);
+			if constexpr (Traceable<T>) {
+				try { __val__._get_refs(refs); }
+				catch (...) {} // Ignore
+			}
 		}
 
 	private:
